@@ -137,19 +137,34 @@
           <h1 class="game-title">POSE NINJA FRUIT</h1>
           <p class="modal-desc">웹캠 또는 전면 카메라 앞에 서서 양손을 휘둘러 날아오는 과일을 베어보세요!</p>
           
-          <!-- Mode Selection Buttons -->
+          <!-- Special Game Modes Selector Tabs -->
+          <div class="game-mode-tabs-container">
+            <button id="btn-mode-classic" class="game-mode-tab active" data-mode="CLASSIC">
+              <span class="tab-emoji">🗡️</span>
+              <span class="tab-name">클래식 닌자</span>
+            </button>
+            <button id="btn-mode-strange" class="game-mode-tab" data-mode="DOCTOR_STRANGE">
+              <span class="tab-emoji">🔮</span>
+              <span class="tab-name">닥터 스트레인지</span>
+            </button>
+            <button id="btn-mode-ufo" class="game-mode-tab" data-mode="UFO_FISH">
+              <span class="tab-emoji">🛸</span>
+              <span class="tab-name">UFO 물고기</span>
+            </button>
+          </div>
+
+          <!-- Player Count Toggle (Solo vs Duo) -->
           <div class="mode-select-container">
-            <button id="btn-mode-solo" class="mode-select-btn active">👤 1인 모드 (Solo)</button>
-            <button id="btn-mode-duo" class="mode-select-btn">👥 2인 대결 모드 (2P Duo)</button>
+            <button id="btn-mode-solo" class="mode-select-btn active">👤 1인 플레이 (Solo)</button>
+            <button id="btn-mode-duo" class="mode-select-btn">👥 2인 대결 (Duo)</button>
           </div>
 
           <div class="instructions-card">
-            <div id="instruction-players">⚔️ <strong>1인 모드</strong>: 양손(왼손 하늘색 / 오른손 파란색)을 빠르게 휘둘러 베기!</div>
-            <div>⚡ <strong>필살기 (10개 절단 시)</strong>: 우측 상단 가이드의 자음(ㄱ, ㄴ, ㅅ, ㅈ) 포즈를 취하면 화면 전체 베기!</div>
-            <div>🎯 <strong>난이도 적응형 스폰</strong>: 10개까지 1개씩, 20개까지 2개씩, 30개 넘으면 3개씩 출현!</div>
-            <div>🎨 <strong>랜덤 비주얼 테마</strong>: 픽셀아트, 클레이모피즘, 페이퍼컷, 사이버네온 스타일!</div>
-            <div>💖 <strong>하트 보너스</strong>: 반짝이는 핑크 하트를 베면 생명(+1)이 회복됩니다!</div>
-            <div>💣 <strong>폭탄 주의</strong>: 폭탄을 베면 즉시 게임이 종료됩니다.</div>
+            <div id="instruction-mode-desc">⚔️ <strong>클래식 닌자 모드</strong>: 양손 독립 검기로 날아오는 과일을 베어보세요!</div>
+            <div id="instruction-special">⚡ <strong>필살기 (12개 절단 시)</strong>: 한글 자음(ㄱ, ㄴ, ㅅ, ㅈ) 포즈를 0.5초 유지하면 전멸기 발동!</div>
+            <div id="instruction-players">👤 <strong>1인 모드</strong>: 화면의 모든 대상을 홀로 베어 최고 점수에 도전하세요!</div>
+            <div>💖 <strong>하트 보너스</strong>: 반짝이는 하트를 베면 생명(+1)이 회복됩니다!</div>
+            <div>💣 <strong>폭탄/기뢰 주의</strong>: 베는 순간 즉시 게임이 종료됩니다.</div>
           </div>
 
           <button id="start-btn" class="primary-btn">게임 시작하기</button>
@@ -270,6 +285,28 @@
               <div class="guide-info">
                 <div class="guide-title">4. 니은(ㄴ) 파도</div>
                 <div class="guide-desc">한 팔은 아래로 수직, 다른 팔은 옆으로 수평(ㄴ)</div>
+              </div>
+            </div>
+
+            <!-- 5. DOCTOR STRANGE PORTAL -->
+            <div class="guide-card" style="border-color: rgba(245, 158, 11, 0.5);">
+              <div class="guide-fig-wrap">
+                <svg viewBox="0 0 100 100" class="pose-stickman">
+                  <path d="M42,28 Q50,18 58,28 L64,52 L36,52 Z" fill="#b91c1c" opacity="0.85"/>
+                  <circle cx="50" cy="22" r="8" fill="#facc15"/>
+                  <line x1="50" y1="30" x2="50" y2="65" stroke="#facc15" stroke-width="4" stroke-linecap="round"/>
+                  <line x1="50" y1="65" x2="35" y2="90" stroke="#facc15" stroke-width="4" stroke-linecap="round"/>
+                  <line x1="50" y1="65" x2="65" y2="90" stroke="#facc15" stroke-width="4" stroke-linecap="round"/>
+                  <polyline points="46,38 34,42 28,34" fill="none" stroke="#38bdf8" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  <polyline points="54,38 70,30 84,20" fill="none" stroke="#f97316" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+                  <circle cx="80" cy="26" r="16" fill="none" stroke="#f59e0b" stroke-width="3" stroke-dasharray="4,2"/>
+                  <circle cx="28" cy="34" r="3.5" fill="#ffffff"/>
+                  <circle cx="84" cy="20" r="4.5" fill="#ffffff"/>
+                </svg>
+              </div>
+              <div class="guide-info">
+                <div class="guide-title" style="color: #f59e0b;">5. 닥터 스트레인지 차원 포털</div>
+                <div class="guide-desc">한 손은 가슴 앞 정면 가드, 다른 손은 크게 뻗어 포털 열기!</div>
               </div>
             </div>
           </div>

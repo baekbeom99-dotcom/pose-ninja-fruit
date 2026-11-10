@@ -186,10 +186,16 @@ export class BladeManager {
     this.p2RightBlade = new Blade('P2_RIGHT', CONFIG.BLADE.COLORS.P2_RIGHT, 'P2');
 
     this.isTwoPlayerMode = false;
+    this.isDoctorStrangeMode = false;
+    this.mandalaAngle = 0;
   }
 
   setMode(twoPlayer = false) {
     this.isTwoPlayerMode = twoPlayer;
+  }
+
+  setDoctorStrangeMode(enabled = false) {
+    this.isDoctorStrangeMode = enabled;
   }
 
   /**
@@ -254,17 +260,58 @@ export class BladeManager {
     const p1R = this.p1RightBlade.getSegment();
     if (p1R) segments.push(p1R);
 
+    // Doctor Strange Mode: Laser blade line segment connecting Left Hand and Right Hand!
+    if (this.isDoctorStrangeMode && this.p1LeftBlade.currentPos && this.p1RightBlade.currentPos) {
+      segments.push({
+        p1: this.p1LeftBlade.currentPos,
+        p2: this.p1RightBlade.currentPos,
+        bladeName: 'DOCTOR_STRANGE_BEAM_P1',
+        owner: 'P1'
+      });
+    }
+
     if (this.isTwoPlayerMode) {
       const p2L = this.p2LeftBlade.getSegment();
       if (p2L) segments.push(p2L);
       const p2R = this.p2RightBlade.getSegment();
       if (p2R) segments.push(p2R);
+
+      if (this.isDoctorStrangeMode && this.p2LeftBlade.currentPos && this.p2RightBlade.currentPos) {
+        segments.push({
+          p1: this.p2LeftBlade.currentPos,
+          p2: this.p2RightBlade.currentPos,
+          bladeName: 'DOCTOR_STRANGE_BEAM_P2',
+          owner: 'P2'
+        });
+      }
     }
 
     return segments;
   }
 
   draw(ctx) {
+    this.mandalaAngle += 0.05;
+
+    // In Doctor Strange Mode, draw connecting Eldritch magic energy rays & mandalas
+    if (this.isDoctorStrangeMode) {
+      if (this.p1LeftBlade.currentPos && this.p1RightBlade.currentPos) {
+        this._drawDoctorStrangeBeam(ctx, this.p1LeftBlade.currentPos, this.p1RightBlade.currentPos, '#f59e0b', '#f97316');
+      }
+      if (this.isTwoPlayerMode && this.p2LeftBlade.currentPos && this.p2RightBlade.currentPos) {
+        this._drawDoctorStrangeBeam(ctx, this.p2LeftBlade.currentPos, this.p2RightBlade.currentPos, '#ec4899', '#f43f5e');
+      }
+
+      // Draw Eldritch Mandalas at each active hand
+      if (this.p1LeftBlade.currentPos) this._drawEldritchMandala(ctx, this.p1LeftBlade.currentPos, '#f59e0b', '#f97316');
+      if (this.p1RightBlade.currentPos) this._drawEldritchMandala(ctx, this.p1RightBlade.currentPos, '#f59e0b', '#f97316');
+
+      if (this.isTwoPlayerMode) {
+        if (this.p2LeftBlade.currentPos) this._drawEldritchMandala(ctx, this.p2LeftBlade.currentPos, '#ec4899', '#f43f5e');
+        if (this.p2RightBlade.currentPos) this._drawEldritchMandala(ctx, this.p2RightBlade.currentPos, '#ec4899', '#f43f5e');
+      }
+    }
+
+    // Standard trail drawing
     this.p1LeftBlade.draw(ctx);
     this.p1RightBlade.draw(ctx);
 
@@ -272,5 +319,135 @@ export class BladeManager {
       this.p2LeftBlade.draw(ctx);
       this.p2RightBlade.draw(ctx);
     }
+  }
+
+  /**
+   * Draws fiery Doctor Strange Eldritch Beam between hands
+   */
+  _drawDoctorStrangeBeam(ctx, p1, p2, glowColor, sparkColor) {
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.globalCompositeOperation = 'lighter';
+
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < 10) {
+      ctx.restore();
+      return;
+    }
+
+    // 1. Wide Fiery Energy Glow
+    ctx.shadowColor = sparkColor;
+    ctx.shadowBlur = 28;
+    ctx.strokeStyle = glowColor;
+    ctx.lineWidth = 16;
+    ctx.beginPath();
+    ctx.moveTo(p1.x, p1.y);
+    ctx.lineTo(p2.x, p2.y);
+    ctx.stroke();
+
+    // 2. Focused Amber Ray
+    ctx.shadowBlur = 16;
+    ctx.shadowColor = '#fef08a';
+    ctx.strokeStyle = '#fde047';
+    ctx.lineWidth = 8;
+    ctx.beginPath();
+    ctx.moveTo(p1.x, p1.y);
+    ctx.lineTo(p2.x, p2.y);
+    ctx.stroke();
+
+    // 3. Ultra-White Intense Laser Core
+    ctx.shadowBlur = 8;
+    ctx.shadowColor = '#ffffff';
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 3.5;
+    ctx.beginPath();
+    ctx.moveTo(p1.x, p1.y);
+    ctx.lineTo(p2.x, p2.y);
+    ctx.stroke();
+
+    // 4. Crackling Eldritch Lightning Sparks along the connecting line
+    const segments = 12;
+    ctx.beginPath();
+    ctx.moveTo(p1.x, p1.y);
+    for (let i = 1; i < segments; i++) {
+      const t = i / segments;
+      const nx = -dy / dist;
+      const ny = dx / dist;
+      const jitter = (Math.sin(Date.now() * 0.02 + i * 2.1) + Math.cos(Date.now() * 0.015 + i * 1.7)) * 7;
+      const px = p1.x + t * dx + nx * jitter;
+      const py = p1.y + t * dy + ny * jitter;
+      ctx.lineTo(px, py);
+    }
+    ctx.lineTo(p2.x, p2.y);
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2.0;
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  /**
+   * Draws rotating mystical Eldritch Mandala magic shield glyph around wrist
+   */
+  _drawEldritchMandala(ctx, pos, mainColor, glowColor) {
+    ctx.save();
+    ctx.translate(pos.x, pos.y);
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.shadowColor = glowColor;
+    ctx.shadowBlur = 20;
+
+    const r = 36;
+
+    // Outer Runic Ring
+    ctx.save();
+    ctx.rotate(this.mandalaAngle);
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    ctx.strokeStyle = mainColor;
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+
+    // Outer Ring Tick Notches (12 runes)
+    for (let i = 0; i < 12; i++) {
+      const a = (i * Math.PI * 2) / 12;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(a) * (r - 4), Math.sin(a) * (r - 4));
+      ctx.lineTo(Math.cos(a) * (r + 4), Math.sin(a) * (r + 4));
+      ctx.strokeStyle = '#fde047';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // Inner Intersecting Geometric Squares (8-pointed star mandala)
+    ctx.save();
+    ctx.rotate(-this.mandalaAngle * 1.5);
+    const sqR = r * 0.65;
+    ctx.strokeStyle = '#fef08a';
+    ctx.lineWidth = 1.8;
+
+    // Square 1
+    ctx.strokeRect(-sqR, -sqR, sqR * 2, sqR * 2);
+
+    // Square 2 (rotated 45 deg)
+    ctx.rotate(Math.PI / 4);
+    ctx.strokeRect(-sqR, -sqR, sqR * 2, sqR * 2);
+    ctx.restore();
+
+    // Central Mystic Glowing Eye
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 0.25, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 0.40, 0, Math.PI * 2);
+    ctx.strokeStyle = mainColor;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.restore();
   }
 }

@@ -269,6 +269,52 @@ export class SoundManager {
       osc.stop(startTime + 0.35);
     });
   }
+
+  playPortalOpen() {
+    if (!this.ctx || this.isMuted) return;
+    this.resume();
+
+    const now = this.ctx.currentTime;
+    // Mystical deep dimensional swell & chord
+    const freqs = [196.0, 293.66, 392.0, 587.33, 880.0];
+    freqs.forEach((f, idx) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(f * 0.8, now);
+      osc.frequency.exponentialRampToValueAtTime(f * 1.5, now + 0.6);
+
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.25 / freqs.length, now + 0.2 + idx * 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(now);
+      osc.stop(now + 1.2);
+    });
+  }
+
+  playCosmicFishSlice() {
+    if (!this.ctx || this.isMuted) return;
+    this.resume();
+
+    const now = this.ctx.currentTime;
+    // Crystalline starlight space chime
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(1760, now);
+    osc.frequency.exponentialRampToValueAtTime(440, now + 0.2);
+
+    gain.gain.setValueAtTime(0.4, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.2);
+  }
 }
 
 export const soundManager = new SoundManager();

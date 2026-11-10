@@ -75,7 +75,7 @@ class App {
     const unlockAudioAndStart = () => {
       soundManager.init();
       soundManager.resume();
-      this.gameEngine.startNewGame(this.ui.isTwoPlayer);
+      this.gameEngine.startNewGame(this.ui.isTwoPlayer, this.ui.selectedGameMode);
     };
 
     if (this.startBtn) {
@@ -98,6 +98,13 @@ class App {
       const now = performance.now();
       // Inject into P1 Right Blade as pointer emulation
       this.gameEngine.blades.p1RightBlade.update({ x, y }, now);
+
+      // In Doctor Strange mode without webcam, provide left hand anchor for mouse testing
+      if (this.gameEngine && this.gameEngine.gameMode === 'DOCTOR_STRANGE') {
+        const lx = this.gameEngine.width * 0.25;
+        const ly = this.gameEngine.height * 0.5;
+        this.gameEngine.blades.p1LeftBlade.update({ x: lx, y: ly }, now);
+      }
     };
 
     window.addEventListener('mousedown', (e) => {

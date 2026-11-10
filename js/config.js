@@ -20,7 +20,14 @@ export const CONFIG = {
       P1_LEFT: { CORE: '#ffffff', GLOW: '#00e5ff', SPARK: '#38bdf8' },   // Cyan
       P1_RIGHT: { CORE: '#ffffff', GLOW: '#3b82f6', SPARK: '#60a5fa' },  // Blue
       P2_LEFT: { CORE: '#ffffff', GLOW: '#ff007f', SPARK: '#f43f5e' },   // Magenta / Pink
-      P2_RIGHT: { CORE: '#ffffff', GLOW: '#f59e0b', SPARK: '#fcd34d' }   // Gold / Amber
+      P2_RIGHT: { CORE: '#ffffff', GLOW: '#f59e0b', SPARK: '#fcd34d' },  // Gold / Amber
+      DOCTOR_STRANGE: {
+        CORE: '#ffffff',
+        INNER: '#fef08a',
+        GLOW: '#f59e0b',
+        SPARK: '#ea580c',
+        MANDALA: '#f97316'
+      }
     }
   },
 
@@ -138,5 +145,86 @@ export const CONFIG = {
       juiceColor: '#ffaa00',
       rindColor: '#94a3b8'
     }
+  },
+
+  // Space Fishes for UFO Flying Fish Mode (Zero-G Swimming Entities)
+  FISHES: {
+    NEON_GOLDFISH: {
+      type: 'NEON_GOLDFISH',
+      radius: 80,
+      points: 1,
+      color: '#06b6d4',
+      fleshColor: '#38bdf8',
+      juiceColor: '#00f2fe',
+      rindColor: '#facc15',
+      name: '네온 금붕어'
+    },
+    CYBER_CLOWNFISH: {
+      type: 'CYBER_CLOWNFISH',
+      radius: 76,
+      points: 1,
+      color: '#f97316',
+      fleshColor: '#ffffff',
+      juiceColor: '#fb923c',
+      rindColor: '#38bdf8',
+      name: '사이버 광대어'
+    },
+    COSMIC_JELLYFISH: {
+      type: 'COSMIC_JELLYFISH',
+      radius: 84,
+      points: 2,
+      color: '#a855f7',
+      fleshColor: '#ec4899',
+      juiceColor: '#d946ef',
+      rindColor: '#f472b6',
+      name: '우주 해파리'
+    },
+    ALAMO_FLYING_FISH: {
+      type: 'ALAMO_FLYING_FISH',
+      radius: 88,
+      points: 2,
+      color: '#3b82f6',
+      fleshColor: '#60a5fa',
+      juiceColor: '#93c5fd',
+      rindColor: '#e0f2fe',
+      name: '은하 날치'
+    },
+    MECHA_PUFFERFISH: {
+      type: 'MECHA_PUFFERFISH',
+      radius: 92,
+      points: 3,
+      color: '#10b981',
+      fleshColor: '#34d399',
+      juiceColor: '#6ee7b7',
+      rindColor: '#facc15',
+      name: '메카 복어'
+    },
+    COSMIC_STAR: {
+      type: 'COSMIC_STAR',
+      radius: 84,
+      points: 5,
+      color: '#facc15',
+      fleshColor: '#fbbf24',
+      juiceColor: '#fde047',
+      rindColor: '#ec4899',
+      name: '스타피쉬 하트'
+    },
+    ALIEN_BOMB: {
+      type: 'ALIEN_BOMB',
+      radius: 80,
+      points: 0,
+      color: '#475569',
+      fleshColor: '#ef4444',
+      juiceColor: '#f97316',
+      rindColor: '#0f172a',
+      name: '우주 기뢰'
+    }
+  },
+
+  // Game Modes
+  MODES: {
+    CLASSIC: 'CLASSIC',
+    DOCTOR_STRANGE: 'DOCTOR_STRANGE',
+    UFO_FISH: 'UFO_FISH'
   }
 };

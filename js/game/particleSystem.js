@@ -180,12 +180,146 @@ class LightningSlash {
   }
 }
 
+class DoctorStrangePortal {
+  constructor(w, h) {
+    this.x = w / 2;
+    this.y = h / 2;
+    this.targetRadius = Math.min(w, h) * 0.42;
+    this.radius = 20;
+    this.life = 1.35;
+    this.initialLife = 1.35;
+    this.isDead = false;
+    this.sparksAngle = 0;
+  }
+
+  update(dt) {
+    this.life -= dt;
+    this.sparksAngle += dt * 8.5;
+    const elapsed = this.initialLife - this.life;
+    if (elapsed < 0.28) {
+      this.radius = 20 + (elapsed / 0.28) * (this.targetRadius - 20);
+    } else if (this.life < 0.28) {
+      this.radius = Math.max(0, (this.life / 0.28) * this.targetRadius);
+    } else {
+      this.radius = this.targetRadius;
+    }
+
+    if (this.life <= 0) {
+      this.isDead = true;
+    }
+  }
+
+  draw(ctx) {
+    const alpha = Math.min(1.0, this.life / 0.25);
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.globalCompositeOperation = 'lighter';
+
+    // 1. Cosmic Void Inside the Portal
+    ctx.beginPath();
+    ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+    const voidGrad = ctx.createRadialGradient(0, 0, 5, 0, 0, this.radius);
+    voidGrad.addColorStop(0, 'rgba(15, 23, 42, 0.95)');
+    voidGrad.addColorStop(0.7, 'rgba(88, 28, 135, 0.65)');
+    voidGrad.addColorStop(1, 'rgba(234, 88, 12, 0.3)');
+    ctx.fillStyle = voidGrad;
+    ctx.fill();
+
+    // 2. Fiery Eldritch Ring with Glowing Sparks
+    ctx.shadowColor = '#f97316';
+    ctx.shadowBlur = 36;
+    ctx.strokeStyle = '#f59e0b';
+    ctx.lineWidth = 14 * alpha;
+    ctx.beginPath();
+    ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Inner bright yellow ring
+    ctx.strokeStyle = '#fef08a';
+    ctx.lineWidth = 6 * alpha;
+    ctx.beginPath();
+    ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // 3. Fast Rotating Fiery Sparks Spitting Outwards
+    const sparkCount = 42;
+    for (let i = 0; i < sparkCount; i++) {
+      const a = (i * Math.PI * 2) / sparkCount + this.sparksAngle;
+      const rOffset = (Math.sin(a * 4 + this.sparksAngle * 2)) * 14;
+      const sx = Math.cos(a) * (this.radius + rOffset);
+      const sy = Math.sin(a) * (this.radius + rOffset);
+
+      // Tangent spark trail
+      const tx = sx - Math.sin(a) * (20 + (i % 3) * 12);
+      const ty = sy + Math.cos(a) * (20 + (i % 3) * 12);
+
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(tx, ty);
+      ctx.strokeStyle = (i % 2 === 0) ? '#fde047' : '#ffffff';
+      ctx.lineWidth = 3.5 * alpha;
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+}
+
 export class ParticleSystem {
   constructor() {
     this.particles = [];
     this.splatters = [];
     this.shockwaves = [];
     this.lightningSlashes = [];
+    this.portals = [];
+  }
+
+  createDoctorStrangePortal(w, h) {
+    this.portals.push(new DoctorStrangePortal(w, h));
+
+    // Swirling Eldritch Fire Sparks
+    const cx = w / 2;
+    const cy = h / 2;
+    for (let i = 0; i < 95; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const dist = Math.min(w, h) * (0.35 + Math.random() * 0.12);
+      const speed = 180 + Math.random() * 320;
+      const color = Math.random() > 0.3 ? '#f59e0b' : '#fde047';
+      this.particles.push(
+        new Particle(
+          cx + Math.cos(angle) * dist,
+          cy + Math.sin(angle) * dist,
+          -Math.sin(angle) * speed,
+          Math.cos(angle) * speed,
+          color,
+          3.5 + Math.random() * 4.5,
+          0.9 + Math.random() * 0.4,
+          50
+        )
+      );
+    }
+  }
+
+  createStarlightBubbles(x, y, color = '#38bdf8') {
+    this.shockwaves.push(new Shockwave(x, y, color, 120, 0.38));
+    this.splatters.push(new Splatter(x, y, color, 28, 2.5));
+
+    for (let i = 0; i < 35; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 120 + Math.random() * 320;
+      this.particles.push(
+        new Particle(
+          x,
+          y,
+          Math.cos(angle) * speed,
+          Math.sin(angle) * speed,
+          color,
+          3.5 + Math.random() * 4.5,
+          0.7 + Math.random() * 0.5,
+          80
+        )
+      );
+    }
   }
 
   createFruitSplash(x, y, juiceColor, normal = null, isPixel = false) {
@@ -312,6 +446,13 @@ export class ParticleSystem {
   }
 
   update(dt) {
+    for (let i = this.portals.length - 1; i >= 0; i--) {
+      this.portals[i].update(dt);
+      if (this.portals[i].isDead) {
+        this.portals.splice(i, 1);
+      }
+    }
+
     for (let i = this.lightningSlashes.length - 1; i >= 0; i--) {
       this.lightningSlashes[i].update(dt);
       if (this.lightningSlashes[i].isDead) {
@@ -346,6 +487,7 @@ export class ParticleSystem {
   }
 
   drawParticles(ctx) {
+    this.portals.forEach(p => p.draw(ctx));
     this.lightningSlashes.forEach(s => s.draw(ctx));
     this.shockwaves.forEach(w => w.draw(ctx));
     this.particles.forEach(p => p.draw(ctx));
@@ -356,5 +498,6 @@ export class ParticleSystem {
     this.splatters = [];
     this.shockwaves = [];
     this.lightningSlashes = [];
+    this.portals = [];
   }
 }

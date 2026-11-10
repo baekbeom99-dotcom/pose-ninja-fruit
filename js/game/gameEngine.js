@@ -37,6 +37,7 @@ export class GameEngine {
 
     this.state = GameState.READY;
     this.isTwoPlayerMode = false;
+    this.gameMode = CONFIG.MODES.CLASSIC;
     this.p1Score = 0;
     this.p2Score = 0;
     this.lives = CONFIG.GAME.START_LIVES;
@@ -174,27 +175,38 @@ export class GameEngine {
     this.ui.updateUltimateGauge(0, this.ultimateThreshold, false, this.currentConsonantPose);
   }
 
-  startNewGame(twoPlayer = false) {
+  startNewGame(twoPlayer = false, gameMode = 'CLASSIC') {
     this.isTwoPlayerMode = !!twoPlayer;
+    this.gameMode = gameMode || CONFIG.MODES.CLASSIC;
     this.p1Score = 0;
     this.p2Score = 0;
     this.lives = CONFIG.GAME.START_LIVES;
 
+    const isDocStrange = this.gameMode === CONFIG.MODES.DOCTOR_STRANGE;
     this.blades.setMode(this.isTwoPlayerMode);
-    this.ui.updateHUDMode(this.isTwoPlayerMode);
+    this.blades.setDoctorStrangeMode(isDocStrange);
+    this.fruitManager.setGameMode(this.gameMode);
+
+    this.ui.updateHUDMode(this.isTwoPlayerMode, this.gameMode);
     this.ui.updateScores(0, 0, this.isTwoPlayerMode);
     this.ui.updateLives(this.lives, CONFIG.GAME.MAX_LIVES);
 
-    // Pick Random Visual Theme
-    const themeIdx = Math.floor(Math.random() * CONFIG.THEMES.length);
-    this.currentTheme = CONFIG.THEMES[themeIdx];
-    this.fruitManager.setTheme(this.currentTheme.id);
-    this.ui.setThemeBadge(this.currentTheme);
+    // Pick Theme
+    if (this.gameMode === CONFIG.MODES.UFO_FISH) {
+      this.ui.setThemeBadge({ name: 'UFO 우주 아쿠아리움 (Space Aquarium)', badgeColor: '#06b6d4', icon: '🛸' });
+    } else if (isDocStrange) {
+      this.ui.setThemeBadge({ name: '닥터 스트레인지 엘드리치 매직', badgeColor: '#f59e0b', icon: '🔮' });
+    } else {
+      const themeIdx = Math.floor(Math.random() * CONFIG.THEMES.length);
+      this.currentTheme = CONFIG.THEMES[themeIdx];
+      this.fruitManager.setTheme(this.currentTheme.id);
+      this.ui.setThemeBadge(this.currentTheme);
+    }
 
     // Reset Ultimate Move
     this.ultimateCount = 0;
     this.isUltimateReady = false;
-    this._pickRandomConsonantPose();
+    this._pickPoseForMode();
     this.gestureDetector.reset();
     this.ui.updateChargingProgress(0);
     this.ui.updateUltimateGauge(0, this.ultimateThreshold, false, this.currentConsonantPose);
@@ -206,9 +218,14 @@ export class GameEngine {
     this.ui.hideGameOverModal();
   }
 
-  _pickRandomConsonantPose() {
-    const randIdx = Math.floor(Math.random() * CONSONANT_POSES.length);
-    this.currentConsonantPose = CONSONANT_POSES[randIdx];
+  _pickPoseForMode() {
+    if (this.gameMode === CONFIG.MODES.DOCTOR_STRANGE) {
+      this.currentConsonantPose = CONSONANT_POSES.find(p => p.id === 'PORTAL') || CONSONANT_POSES[0];
+    } else {
+      const standardPoses = CONSONANT_POSES.filter(p => p.id !== 'PORTAL');
+      const randIdx = Math.floor(Math.random() * standardPoses.length);
+      this.currentConsonantPose = standardPoses[randIdx] || CONSONANT_POSES[0];
+    }
   }
 
   activateUltimateMove(owner = 'P1') {
@@ -222,7 +239,7 @@ export class GameEngine {
 
     this.fruitManager.sliceAllFruits(owner);
 
-    this._pickRandomConsonantPose();
+    this._pickPoseForMode();
     this.gestureDetector.reset();
     this.ui.updateChargingProgress(0);
     this.ui.updateUltimateGauge(0, this.ultimateThreshold, false, this.currentConsonantPose);

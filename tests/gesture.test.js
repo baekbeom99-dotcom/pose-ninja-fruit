@@ -58,6 +58,14 @@ function runTests() {
     assert(result.matched === false, 'Hands at waist do not trigger SIOT');
   }
 
+  // Test 5: Doctor Strange PORTAL gesture (Left guard, Right wide circular open)
+  {
+    detector.reset();
+    const lm = createMockLandmarks({ lwY: 0.35, rwY: 0.30, lwX: 0.42, rwX: 0.88, headY: 0.25 });
+    const result = detector.evaluate('PORTAL', lm, 0.1, true);
+    assert(result.matched === true, 'PORTAL matches Doctor Strange sling-ring guard and circle open');
+  }
+
   console.log(`\nGesture Tests: ${passed}/${total} passed.`);
   if (passed !== total) process.exit(1);
 }

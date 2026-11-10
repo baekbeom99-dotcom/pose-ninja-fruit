@@ -54,6 +54,14 @@ export class UIManager {
     this.btnModeDuo = document.getElementById('btn-mode-duo');
     this.instructionPlayers = document.getElementById('instruction-players');
 
+    // Special Game Modes Tabs
+    this.btnModeClassic = document.getElementById('btn-mode-classic');
+    this.btnModeStrange = document.getElementById('btn-mode-strange');
+    this.btnModeUfo = document.getElementById('btn-mode-ufo');
+    this.instructionModeDesc = document.getElementById('instruction-mode-desc');
+    this.instructionSpecial = document.getElementById('instruction-special');
+    this.selectedGameMode = 'CLASSIC';
+
     this.onExitRequested = () => {};
 
     this.comboTimeout = null;
@@ -68,7 +76,7 @@ export class UIManager {
   }
 
   _bindControls() {
-    // Mode Buttons
+    // Player Count Toggle
     if (this.btnModeSolo && this.btnModeDuo) {
       this.btnModeSolo.addEventListener('click', () => {
         this.setMode(false);
@@ -77,6 +85,21 @@ export class UIManager {
         this.setMode(true);
       });
     }
+
+    // Special Game Modes Tabs
+    const tabs = [
+      { btn: this.btnModeClassic, mode: 'CLASSIC' },
+      { btn: this.btnModeStrange, mode: 'DOCTOR_STRANGE' },
+      { btn: this.btnModeUfo, mode: 'UFO_FISH' }
+    ];
+
+    tabs.forEach(({ btn, mode }) => {
+      if (btn) {
+        btn.addEventListener('click', () => {
+          this.setGameMode(mode);
+        });
+      }
+    });
 
     // Fullscreen Toggle
     if (this.btnFullscreen) {
@@ -112,6 +135,46 @@ export class UIManager {
     if (this.btnGuide) this.btnGuide.addEventListener('click', openGuide);
     if (this.ultimatePoseCard) this.ultimatePoseCard.addEventListener('click', openGuide);
     if (this.closeGuideBtn) this.closeGuideBtn.addEventListener('click', closeGuide);
+  }
+
+  setGameMode(mode = 'CLASSIC') {
+    this.selectedGameMode = mode;
+
+    [this.btnModeClassic, this.btnModeStrange, this.btnModeUfo].forEach(btn => {
+      if (btn) btn.classList.remove('active');
+    });
+
+    if (mode === 'DOCTOR_STRANGE') {
+      if (this.btnModeStrange) this.btnModeStrange.classList.add('active');
+      if (this.instructionModeDesc) {
+        this.instructionModeDesc.innerHTML =
+          '🔮 <strong>닥터 스트레인지 모드</strong>: 양손 사이를 잇는 마법 광선 검으로 모든 과일을 절단!';
+      }
+      if (this.instructionSpecial) {
+        this.instructionSpecial.innerHTML =
+          '🌀 <strong>차원 포털 오픈</strong>: 왼손 정면 가드 + 오른손 원을 그려 포털을 열면 화면 전체 전멸!';
+      }
+    } else if (mode === 'UFO_FISH') {
+      if (this.btnModeUfo) this.btnModeUfo.classList.add('active');
+      if (this.instructionModeDesc) {
+        this.instructionModeDesc.innerHTML =
+          '🛸 <strong>UFO 우주 물고기 모드</strong>: 중력 없이 우주를 유영하는 네온 금붕어, 사이버 광대어, 우주 해파리를 베어보세요!';
+      }
+      if (this.instructionSpecial) {
+        this.instructionSpecial.innerHTML =
+          '🌊 <strong>사인파 & 8자 순찰 궤적</strong>: 규칙적이고 부드러운 우주 파동 궤적으로 비행하는 물고기를 베어보세요!';
+      }
+    } else {
+      if (this.btnModeClassic) this.btnModeClassic.classList.add('active');
+      if (this.instructionModeDesc) {
+        this.instructionModeDesc.innerHTML =
+          '⚔️ <strong>클래식 닌자 모드</strong>: 양손 독립 검기로 높이 솟구치는 과일을 베어보세요!';
+      }
+      if (this.instructionSpecial) {
+        this.instructionSpecial.innerHTML =
+          '⚡ <strong>필살기 (12개 절단 시)</strong>: 한글 자음(ㄱ, ㄴ, ㅅ, ㅈ) 포즈를 0.5초 유지하면 전멸기 발동!';
+      }
+    }
   }
 
   setMode(twoPlayer) {

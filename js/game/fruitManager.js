@@ -8,6 +8,7 @@
  */
 import { CONFIG } from '../config.js';
 import { Fruit, HalfFruit } from './fruit.js';
+import { Fish, HalfFish } from './fish.js';
 import { checkSegmentCircleCollision } from './collision.js';
 import { soundManager } from '../audio/soundManager.js';
 
@@ -20,6 +21,7 @@ export class FruitManager {
     this.nextSpawnInterval = 1.0;
     this.currentTheme = 'CLAYMORPHISM';
     this.totalSlicedCount = 0;
+    this.gameMode = 'CLASSIC'; // 'CLASSIC', 'DOCTOR_STRANGE', 'UFO_FISH'
 
     // Callbacks to UI and GameEngine
     this.onScore = () => {};
@@ -33,6 +35,10 @@ export class FruitManager {
 
   setTheme(themeId) {
     this.currentTheme = themeId;
+  }
+
+  setGameMode(mode = 'CLASSIC') {
+    this.gameMode = mode;
   }
 
   reset() {
@@ -54,18 +60,120 @@ export class FruitManager {
   }
 
   /**
-   * Spawns new fruits respecting the maximum onscreen density.
-   * Features high ballistic launch heights (reaching top 6%~18% of screen)
-   * and diverse launch angles (Tower Pop, Diagonal Cross, Rainbow Arc, Side Ejection, V-Volley).
+   * Spawns new fruits or space fish respecting the maximum onscreen density.
+   * Routes to mode-specific spawn routines (Classic, Doctor Strange workout, UFO Flying Fish).
    */
   spawnWave(canvasWidth, canvasHeight, currentLives = 5) {
     const maxAllowed = this.getMaxAllowedOnscreen();
     const availableSlots = maxAllowed - this.fruits.length;
 
     if (availableSlots <= 0) {
-      return; // Screen already has maximum fruits for this difficulty tier
+      return;
     }
 
+    if (this.gameMode === 'UFO_FISH') {
+      this._spawnFishWave(canvasWidth, canvasHeight, availableSlots, currentLives);
+    } else if (this.gameMode === 'DOCTOR_STRANGE') {
+      this._spawnDoctorStrangeWave(canvasWidth, canvasHeight, availableSlots, currentLives);
+    } else {
+      this._spawnClassicWave(canvasWidth, canvasHeight, availableSlots, currentLives);
+    }
+
+    this.nextSpawnInterval =
+      CONFIG.GAME.SPAWN_INTERVAL_MIN +
+      Math.random() * (CONFIG.GAME.SPAWN_INTERVAL_MAX - CONFIG.GAME.SPAWN_INTERVAL_MIN);
+  }
+
+  /* ---------------- 1. UFO FLYING FISH MODE (Zero-G Sinuous Waves) ---------------- */
+  _spawnFishWave(canvasWidth, canvasHeight, availableSlots, currentLives) {
+    const fishKeys = Object.keys(CONFIG.FISHES).filter(
+      k => k !== 'ALIEN_BOMB' && k !== 'COSMIC_STAR'
+    );
+
+    const getRandomFishConfig = () => {
+      const starChance = currentLives < 5
+        ? CONFIG.GAME.HEART_BONUS_PROBABILITY * 1.5
+        : CONFIG.GAME.HEART_BONUS_PROBABILITY;
+
+      if (Math.random() < starChance) return CONFIG.FISHES.COSMIC_STAR;
+      if (Math.random() < CONFIG.GAME.BOMB_PROBABILITY) return CONFIG.FISHES.ALIEN_BOMB;
+
+      const key = fishKeys[Math.floor(Math.random() * fishKeys.length)];
+      return CONFIG.FISHES[key];
+    };
+
+    let remainingSlots = availableSlots;
+    while (remainingSlots > 0) {
+      const cfg = getRandomFishConfig();
+      const pathTypeRand = Math.random();
+
+      if (pathTypeRand < 0.45) {
+        // Path 1: Sinuous Sine Wave (좌우 파동 유영)
+        const fromLeft = Math.random() < 0.5;
+        const startX = fromLeft ? -cfg.radius - 20 : canvasWidth + cfg.radius + 20;
+        const startY = canvasHeight * (0.22 + Math.random() * 0.55);
+        const speedX = fromLeft ? (170 + Math.random() * 110) : -(170 + Math.random() * 110);
+
+        this.fruits.push(
+          new Fish(cfg, startX, startY, 'SINE_WAVE', {
+            vx: speedX,
+            amplitude: 65 + Math.random() * 75,
+            frequency: 1.8 + Math.random() * 1.2,
+            phase: Math.random() * Math.PI * 2
+          })
+        );
+      } else if (pathTypeRand < 0.70) {
+        // Path 2: Lissajous Figure-8 Patrol (8자 순찰 비행)
+        const startAngle = Math.random() * Math.PI * 2;
+        const cx = canvasWidth * 0.5;
+        const cy = canvasHeight * 0.45;
+        const amp = canvasWidth * 0.28;
+
+        this.fruits.push(
+          new Fish(cfg, cx, cy, 'LISSAJOUS_8', {
+            centerX: cx,
+            centerY: cy,
+            amplitude: amp,
+            frequency: 1.4 + Math.random() * 0.6,
+            phase: startAngle
+          })
+        );
+      } else if (pathTypeRand < 0.88) {
+        // Path 3: Pulsing Dash & Glide (제트 분사 유영)
+        const fromLeft = Math.random() < 0.5;
+        const startX = fromLeft ? -cfg.radius - 20 : canvasWidth + cfg.radius + 20;
+        const startY = canvasHeight * (0.25 + Math.random() * 0.50);
+        const vx = fromLeft ? (200 + Math.random() * 100) : -(200 + Math.random() * 100);
+        const vy = (Math.random() - 0.5) * 80;
+
+        this.fruits.push(
+          new Fish(cfg, startX, startY, 'PULSE_DASH', {
+            vx,
+            vy,
+            frequency: 2.2 + Math.random() * 1.0
+          })
+        );
+      } else {
+        // Path 4: Screen Ricochet (무중력 반사 유영)
+        const startX = Math.random() < 0.5 ? 50 : canvasWidth - 50;
+        const startY = canvasHeight * (0.3 + Math.random() * 0.4);
+        const speed = 220 + Math.random() * 80;
+        const angle = Math.random() * Math.PI * 2;
+
+        this.fruits.push(
+          new Fish(cfg, startX, startY, 'RICOCHET', {
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed
+          })
+        );
+      }
+
+      remainingSlots--;
+    }
+  }
+
+  /* ---------------- 2. DOCTOR STRANGE MODE (High-Intensity Workout Trajectories) ---------------- */
+  _spawnDoctorStrangeWave(canvasWidth, canvasHeight, availableSlots, currentLives) {
     const fruitKeys = Object.keys(CONFIG.FRUITS).filter(
       k => k !== 'BOMB' && k !== 'HEART_BONUS'
     );
@@ -75,21 +183,13 @@ export class FruitManager {
         ? CONFIG.GAME.HEART_BONUS_PROBABILITY * 1.5 
         : CONFIG.GAME.HEART_BONUS_PROBABILITY;
 
-      if (Math.random() < heartChance) {
-        return CONFIG.FRUITS.HEART_BONUS;
-      }
-
-      if (Math.random() < CONFIG.GAME.BOMB_PROBABILITY) {
-        return CONFIG.FRUITS.BOMB;
-      }
-
+      if (Math.random() < heartChance) return CONFIG.FRUITS.HEART_BONUS;
+      if (Math.random() < CONFIG.GAME.BOMB_PROBABILITY) return CONFIG.FRUITS.BOMB;
       const key = fruitKeys[Math.floor(Math.random() * fruitKeys.length)];
       return CONFIG.FRUITS[key];
     };
 
     const g = CONFIG.PHYSICS.GRAVITY;
-
-    // Helper: calculate exact ballistic vy to reach designated high target apex
     const calcLaunchVy = (startY, targetApexY) => {
       const dy = Math.max(120, startY - targetApexY);
       return -Math.sqrt(2 * g * dy);
@@ -98,17 +198,104 @@ export class FruitManager {
     let remainingSlots = availableSlots;
 
     while (remainingSlots > 0) {
-      // Coordinated multi-projectile formations when 2+ slots are open
+      if (remainingSlots >= 2 && Math.random() < 0.60) {
+        // Doctor Strange Workout Formation 1: High Lateral Scissor Cross (양팔 대각선 회전 베기)
+        const cfg1 = getRandomConfig();
+        const cfg2 = getRandomConfig();
+        const startY1 = canvasHeight + cfg1.radius + 15;
+        const startY2 = canvasHeight + cfg2.radius + 15;
+        const targetApex1 = canvasHeight * (0.06 + Math.random() * 0.08); // High top
+        const targetApex2 = canvasHeight * (0.12 + Math.random() * 0.10);
+
+        // Sweeping widely across opposite sides to force tilted/vertical beam angles
+        this.fruits.push(new Fruit(cfg1, canvasWidth * 0.08, startY1, 280 + Math.random() * 90, calcLaunchVy(startY1, targetApex1), this.currentTheme));
+        this.fruits.push(new Fruit(cfg2, canvasWidth * 0.92, startY2, -(280 + Math.random() * 90), calcLaunchVy(startY2, targetApex2), this.currentTheme));
+        remainingSlots -= 2;
+        continue;
+      }
+
+      // Single High-Movement Projectile:
+      const cfg = getRandomConfig();
+      const style = Math.floor(Math.random() * 4);
+
+      if (style === 0) {
+        // Overhead Rainbow Beam Sweep (머리 위 수평 빔 유도 아치)
+        const fromLeft = Math.random() < 0.5;
+        const startX = fromLeft ? canvasWidth * 0.05 : canvasWidth * 0.95;
+        const startY = canvasHeight + cfg.radius + 15;
+        const targetApex = canvasHeight * (0.05 + Math.random() * 0.08);
+        const vy = calcLaunchVy(startY, targetApex);
+        const tApex = -vy / g;
+        const targetDist = canvasWidth * 0.78;
+        const vx = fromLeft ? (targetDist / (2 * tApex)) : -(targetDist / (2 * tApex));
+        this.fruits.push(new Fruit(cfg, startX, startY, vx, vy, this.currentTheme));
+      } else if (style === 1) {
+        // Side Wall Diagonal Slingshot (벽면 고각 사격)
+        const fromLeft = Math.random() < 0.5;
+        const startX = fromLeft ? (-cfg.radius - 10) : (canvasWidth + cfg.radius + 10);
+        const startY = canvasHeight * (0.42 + Math.random() * 0.25);
+        const targetApex = canvasHeight * (0.08 + Math.random() * 0.10);
+        const vy = calcLaunchVy(startY, targetApex);
+        const vx = fromLeft ? (360 + Math.random() * 120) : -(360 + Math.random() * 120);
+        this.fruits.push(new Fruit(cfg, startX, startY, vx, vy, this.currentTheme));
+      } else if (style === 2) {
+        // High Scissor Pop (중앙 고각 솟구침)
+        const startX = canvasWidth * (0.25 + Math.random() * 0.50);
+        const startY = canvasHeight + cfg.radius + 15;
+        const targetApex = canvasHeight * (0.05 + Math.random() * 0.06); // Top 5%~11%
+        const vy = calcLaunchVy(startY, targetApex);
+        const vx = (Math.random() - 0.5) * 110;
+        this.fruits.push(new Fruit(cfg, startX, startY, vx, vy, this.currentTheme));
+      } else {
+        // Double Inward Sweeper (저공 런지 유도)
+        const fromLeft = Math.random() < 0.5;
+        const startX = fromLeft ? canvasWidth * 0.15 : canvasWidth * 0.85;
+        const startY = canvasHeight + cfg.radius + 15;
+        const targetApex = canvasHeight * (0.12 + Math.random() * 0.12);
+        const vy = calcLaunchVy(startY, targetApex);
+        const vx = fromLeft ? (260 + Math.random() * 120) : -(260 + Math.random() * 120);
+        this.fruits.push(new Fruit(cfg, startX, startY, vx, vy, this.currentTheme));
+      }
+
+      remainingSlots--;
+    }
+  }
+
+  /* ---------------- 3. CLASSIC NINJA MODE (High Ballistic Arcs) ---------------- */
+  _spawnClassicWave(canvasWidth, canvasHeight, availableSlots, currentLives) {
+    const fruitKeys = Object.keys(CONFIG.FRUITS).filter(
+      k => k !== 'BOMB' && k !== 'HEART_BONUS'
+    );
+
+    const getRandomConfig = () => {
+      const heartChance = currentLives < 5 
+        ? CONFIG.GAME.HEART_BONUS_PROBABILITY * 1.5 
+        : CONFIG.GAME.HEART_BONUS_PROBABILITY;
+
+      if (Math.random() < heartChance) return CONFIG.FRUITS.HEART_BONUS;
+      if (Math.random() < CONFIG.GAME.BOMB_PROBABILITY) return CONFIG.FRUITS.BOMB;
+      const key = fruitKeys[Math.floor(Math.random() * fruitKeys.length)];
+      return CONFIG.FRUITS[key];
+    };
+
+    const g = CONFIG.PHYSICS.GRAVITY;
+    const calcLaunchVy = (startY, targetApexY) => {
+      const dy = Math.max(120, startY - targetApexY);
+      return -Math.sqrt(2 * g * dy);
+    };
+
+    let remainingSlots = availableSlots;
+
+    while (remainingSlots > 0) {
       if (remainingSlots >= 2 && Math.random() < 0.45) {
         const formation = Math.floor(Math.random() * 3);
 
         if (formation === 0) {
-          // Formation 1: Double V-Volley (Splits outwards from bottom center)
           const cfg1 = getRandomConfig();
           const cfg2 = getRandomConfig();
           const startX = canvasWidth * 0.5 + (Math.random() - 0.5) * 50;
           const startY = canvasHeight + Math.max(cfg1.radius, cfg2.radius) + 15;
-          const targetApex = canvasHeight * (0.07 + Math.random() * 0.10); // Soars to top 7%~17%
+          const targetApex = canvasHeight * (0.07 + Math.random() * 0.10);
           const vy = calcLaunchVy(startY, targetApex);
           const spreadVx = 180 + Math.random() * 90;
 
@@ -117,7 +304,6 @@ export class FruitManager {
           remainingSlots -= 2;
           continue;
         } else if (formation === 1) {
-          // Formation 2: Double Edge Converge (Left & Right sweep inwards)
           const cfg1 = getRandomConfig();
           const cfg2 = getRandomConfig();
           const startY1 = canvasHeight + cfg1.radius + 15;
@@ -131,7 +317,6 @@ export class FruitManager {
           remainingSlots -= 2;
           continue;
         } else {
-          // Formation 3: High Double Cross (Deep diagonal crossing)
           const cfg1 = getRandomConfig();
           const cfg2 = getRandomConfig();
           const startY = canvasHeight + 85;
@@ -144,30 +329,26 @@ export class FruitManager {
         }
       }
 
-      // Single projectile with rich varied launch angles:
       const cfg = getRandomConfig();
       const style = Math.floor(Math.random() * 5);
 
       if (style === 0) {
-        // Pattern 1: Tower Pop (Near-vertical 82°~88°, soaring high to screen top)
         const startX = canvasWidth * (0.30 + Math.random() * 0.40);
         const startY = canvasHeight + cfg.radius + 15;
-        const targetApex = canvasHeight * (0.05 + Math.random() * 0.08); // Soars to top 5%~13%
+        const targetApex = canvasHeight * (0.05 + Math.random() * 0.08);
         const vy = calcLaunchVy(startY, targetApex);
         const vx = (Math.random() - 0.5) * 70;
         this.fruits.push(new Fruit(cfg, startX, startY, vx, vy, this.currentTheme));
       } else if (style === 1) {
-        // Pattern 2: Deep Diagonal Cross (60°~75°, sweeping from left or right across screen)
         const fromLeft = Math.random() < 0.5;
         const startX = fromLeft ? canvasWidth * (0.08 + Math.random() * 0.15) : canvasWidth * (0.77 + Math.random() * 0.15);
         const startY = canvasHeight + cfg.radius + 15;
-        const targetApex = canvasHeight * (0.08 + Math.random() * 0.12); // Top 8%~20%
+        const targetApex = canvasHeight * (0.08 + Math.random() * 0.12);
         const vy = calcLaunchVy(startY, targetApex);
         const speedX = 220 + Math.random() * 160;
         const vx = fromLeft ? speedX : -speedX;
         this.fruits.push(new Fruit(cfg, startX, startY, vx, vy, this.currentTheme));
       } else if (style === 2) {
-        // Pattern 3: Panoramic Rainbow Arc (45°~55°, giant sweeping arc across the entire screen)
         const fromLeft = Math.random() < 0.5;
         const startX = fromLeft ? canvasWidth * 0.04 : canvasWidth * 0.96;
         const startY = canvasHeight + cfg.radius + 15;
@@ -178,7 +359,6 @@ export class FruitManager {
         const vx = fromLeft ? (targetDistance / (2 * tApex)) : -(targetDistance / (2 * tApex));
         this.fruits.push(new Fruit(cfg, startX, startY, vx, vy, this.currentTheme));
       } else if (style === 3) {
-        // Pattern 4: Side-Wall Ejection (35°~50°, shoots out from screen side border)
         const fromLeft = Math.random() < 0.5;
         const startX = fromLeft ? (-cfg.radius - 10) : (canvasWidth + cfg.radius + 10);
         const startY = canvasHeight * (0.50 + Math.random() * 0.25);
@@ -187,7 +367,6 @@ export class FruitManager {
         const vx = fromLeft ? (320 + Math.random() * 140) : -(320 + Math.random() * 140);
         this.fruits.push(new Fruit(cfg, startX, startY, vx, vy, this.currentTheme));
       } else {
-        // Pattern 5: High Floater Lob (High apex with gentle spin for clean slicing)
         const startX = canvasWidth * (0.20 + Math.random() * 0.60);
         const startY = canvasHeight + cfg.radius + 15;
         const targetApex = canvasHeight * (0.06 + Math.random() * 0.08);
@@ -200,10 +379,6 @@ export class FruitManager {
 
       remainingSlots--;
     }
-
-    this.nextSpawnInterval =
-      CONFIG.GAME.SPAWN_INTERVAL_MIN +
-      Math.random() * (CONFIG.GAME.SPAWN_INTERVAL_MAX - CONFIG.GAME.SPAWN_INTERVAL_MIN);
   }
 
   update(dt, activeSegments, canvasWidth, canvasHeight, currentTime, currentLives) {
@@ -256,23 +431,35 @@ export class FruitManager {
     let slicedCount = 0;
     const isPixel = this.currentTheme === 'PIXEL_ART';
 
+    // Doctor Strange Dimensional Portal Ultimate
+    if (this.gameMode === 'DOCTOR_STRANGE') {
+      soundManager.playPortalOpen();
+      this.particles.createDoctorStrangePortal(CONFIG.CANVAS.WIDTH, CONFIG.CANVAS.HEIGHT);
+    }
+
     for (let i = this.fruits.length - 1; i >= 0; i--) {
       const fruit = this.fruits[i];
       if (fruit.isDead) continue;
 
-      if (fruit.type === 'BOMB') {
+      if (fruit.type === 'BOMB' || fruit.type === 'ALIEN_BOMB') {
         this.particles.createBladeSparks(fruit.x, fruit.y, '#facc15');
         this.fruits.splice(i, 1);
         continue;
       }
 
-      if (fruit.type === 'HEART_BONUS') {
+      if (fruit.type === 'HEART_BONUS' || fruit.type === 'COSMIC_STAR') {
         this.particles.createHeartHealParticles(fruit.x, fruit.y);
         this.onHeart(fruit, { x: fruit.x, y: fruit.y }, owner);
       } else {
         const cutAngle = (Math.random() - 0.5) * Math.PI;
         const normal = { x: Math.sin(cutAngle), y: -Math.cos(cutAngle) };
-        this.particles.createFruitSplash(fruit.x, fruit.y, fruit.config.juiceColor, normal, isPixel);
+
+        if (this.gameMode === 'UFO_FISH') {
+          this.particles.createStarlightBubbles(fruit.x, fruit.y, fruit.config.juiceColor || '#38bdf8');
+        } else {
+          this.particles.createFruitSplash(fruit.x, fruit.y, fruit.config.juiceColor, normal, isPixel);
+        }
+
         const halves = fruit.slice(cutAngle, normal);
         this.halfFruits.push(...halves);
         this.totalSlicedCount++;
@@ -287,23 +474,28 @@ export class FruitManager {
   }
 
   _handleSlice(fruit, cutAngle, normal, hitPoint, currentTime, owner = 'P1') {
-    if (fruit.type === 'BOMB') {
+    if (fruit.type === 'BOMB' || fruit.type === 'ALIEN_BOMB') {
       soundManager.playBomb();
       this.particles.createBombExplosion(hitPoint.x, hitPoint.y);
       this.onBomb(fruit, owner);
       return;
     }
 
-    if (fruit.type === 'HEART_BONUS') {
+    if (fruit.type === 'HEART_BONUS' || fruit.type === 'COSMIC_STAR') {
       soundManager.playHeartRecovery();
       this.particles.createHeartHealParticles(hitPoint.x, hitPoint.y);
       this.onHeart(fruit, hitPoint, owner);
       return;
     }
 
-    soundManager.playSlice();
-    const isPixel = this.currentTheme === 'PIXEL_ART';
-    this.particles.createFruitSplash(hitPoint.x, hitPoint.y, fruit.config.juiceColor, normal, isPixel);
+    if (this.gameMode === 'UFO_FISH') {
+      soundManager.playCosmicFishSlice();
+      this.particles.createStarlightBubbles(hitPoint.x, hitPoint.y, fruit.config.juiceColor || '#38bdf8');
+    } else {
+      soundManager.playSlice();
+      const isPixel = this.currentTheme === 'PIXEL_ART';
+      this.particles.createFruitSplash(hitPoint.x, hitPoint.y, fruit.config.juiceColor, normal, isPixel);
+    }
 
     const halves = fruit.slice(cutAngle, normal);
     this.halfFruits.push(...halves);
