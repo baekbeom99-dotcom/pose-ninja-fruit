@@ -23,6 +23,8 @@ export class UIManager {
     this.comboTitle = document.getElementById('combo-title');
     this.comboScore = document.getElementById('combo-score');
     this.healContainer = document.getElementById('heal-container');
+    this.headingContainer = document.getElementById('heading-container');
+    this.headingBannerText = document.getElementById('heading-banner-text');
     this.startModal = document.getElementById('start-modal');
     this.gameoverModal = document.getElementById('gameover-modal');
     this.guideModal = document.getElementById('guide-modal');
@@ -64,6 +66,7 @@ export class UIManager {
 
     this.comboTimeout = null;
     this.healTimeout = null;
+    this.headingTimeout = null;
     this.ultimateTimeout = null;
     this.ringCircumference = 2 * Math.PI * 44;
     this.highScore = parseInt(localStorage.getItem('pose_ninja_highscore') || '0', 10);
@@ -318,6 +321,26 @@ export class UIManager {
     this.healTimeout = setTimeout(() => {
       this.healContainer.classList.remove('active');
     }, 850);
+  }
+
+  showHeadingDefuse(owner = 'P1', bonusPoints = 10) {
+    if (!this.headingContainer) return;
+    if (this.headingTimeout) {
+      clearTimeout(this.headingTimeout);
+    }
+
+    const tag = this.isTwoPlayer ? `${owner} ` : '';
+    if (this.headingBannerText) {
+      this.headingBannerText.textContent = `${tag}헤딩 성공! 폭탄 방어 (+${bonusPoints}점)!`;
+    }
+
+    this.headingContainer.classList.remove('active');
+    void this.headingContainer.offsetWidth;
+    this.headingContainer.classList.add('active');
+
+    this.headingTimeout = setTimeout(() => {
+      this.headingContainer.classList.remove('active');
+    }, 950);
   }
 
   showCombo(count, bonusPoints, owner = 'P1') {

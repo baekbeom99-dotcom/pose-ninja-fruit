@@ -28,6 +28,7 @@ export class FruitManager {
     this.onBomb = () => {};
     this.onCombo = () => {};
     this.onHeart = () => {};
+    this.onHeadingDefuse = () => {};
 
     this.sliceHistory = [];
   }
@@ -380,11 +381,32 @@ export class FruitManager {
     }
   }
 
-  update(dt, activeSegments, canvasWidth, canvasHeight, currentTime, currentLives) {
+  update(dt, activeSegments, canvasWidth, canvasHeight, currentTime, currentLives, headHitboxes = []) {
     this.spawnTimer += dt;
     if (this.spawnTimer >= this.nextSpawnInterval || this.fruits.length === 0) {
       this.spawnTimer = 0;
       this.spawnWave(canvasWidth, canvasHeight, currentLives);
+    }
+
+    // 1. Bomb Heading Detection (폭탄은 머리로 들이받아 안전하게 격파/디퓨즈!)
+    if (headHitboxes && headHitboxes.length > 0) {
+      for (let i = this.fruits.length - 1; i >= 0; i--) {
+        const fruit = this.fruits[i];
+        if (fruit.isDead) continue;
+        if (fruit.type === 'BOMB' || fruit.type === 'ALIEN_BOMB') {
+          let headed = false;
+          for (const head of headHitboxes) {
+            const dist = Math.hypot(fruit.x - head.x, fruit.y - head.y);
+            if (dist <= fruit.radius + head.radius) {
+              headed = true;
+              this.fruits.splice(i, 1);
+              this._handleBombHeading(fruit, head, currentTime);
+              break;
+            }
+          }
+          if (headed) continue;
+        }
+      }
     }
 
     const touchRadius = CONFIG.BLADE.TOUCH_RADIUS || 28;
@@ -403,6 +425,15 @@ export class FruitManager {
 
       if (!fruit.isDead && activeSegments.length > 0) {
         for (const seg of activeSegments) {
+          // Spatial optimization: skip segment if fruit is clearly too far
+          const minX = Math.min(seg.p1.x, seg.p2.x) - fruit.radius - touchRadius;
+          const maxX = Math.max(seg.p1.x, seg.p2.x) + fruit.radius + touchRadius;
+          const minY = Math.min(seg.p1.y, seg.p2.y) - fruit.radius - touchRadius;
+          const maxY = Math.max(seg.p1.y, seg.p2.y) + fruit.radius + touchRadius;
+          if (fruit.x < minX || fruit.x > maxX || fruit.y < minY || fruit.y > maxY) {
+            continue;
+          }
+
           const col = checkSegmentCircleCollision(seg.p1, seg.p2, fruit, touchRadius);
           if (col.hit) {
             this._handleSlice(fruit, col.cutAngle, col.normal, col.closestPoint, currentTime, seg.owner || 'P1');
@@ -510,6 +541,17 @@ export class FruitManager {
     }
 
     this.onScore(pointsAwarded, fruit, hitPoint, owner);
+  }
+
+  _handleBombHeading(fruit, head, currentTime) {
+    soundManager.playHeadingDefuse();
+    this.particles.createBladeSparks(fruit.x, fruit.y, '#38bdf8');
+    this.particles.createBladeSparks(fruit.x, fruit.y, '#facc15');
+    this.particles.createShockwave(fruit.x, fruit.y, '#38bdf8', 160);
+
+    const bonusPoints = 10;
+    this.onScore(bonusPoints, fruit, { x: fruit.x, y: fruit.y }, head.owner);
+    this.onHeadingDefuse(fruit, head, bonusPoints);
   }
 
   draw(ctx) {

@@ -21,7 +21,7 @@ function runTests() {
     assert(bananaCfg.radius >= 90, `Banana radius is enlarged (${bananaCfg.radius}px >= 90px)`);
   }
 
-  // Test 2: Slicing fruit creates two HalfFruit entities
+  // Test 2: Slicing fruit creates two HalfFruit entities with 3.0s lifetime
   {
     const melonCfg = CONFIG.FRUITS.WATERMELON;
     const fruit = new Fruit(melonCfg, 500, 400, 50, -400);
@@ -31,9 +31,25 @@ function runTests() {
     assert(halves.length === 2, 'Slice creates exactly 2 halves');
     assert(halves[0].isLeftHalf === true, 'Half 1 is left half');
     assert(halves[1].isLeftHalf === false, 'Half 2 is right half');
+    assert(halves[0].life === 3.0, 'HalfFruit has 3.0s initial fadeout life');
   }
 
-  // Test 3: Slicing a bomb returns empty halves
+  // Test 3: HalfFruit fades and dies after 3.0 seconds
+  {
+    const appleCfg = CONFIG.FRUITS.APPLE;
+    const half = new HalfFruit(appleCfg, 200, 300, 10, 10, 0, true);
+    assert(half.isDead === false, 'HalfFruit initially alive');
+
+    half.update(1.5);
+    assert(Math.abs(half.life - 1.5) < 0.001, 'HalfFruit life reduced to 1.5s after 1.5s update');
+    assert(half.isDead === false, 'HalfFruit still alive at 1.5s');
+
+    half.update(1.6);
+    assert(half.life <= 0, 'HalfFruit life <= 0 after 3.1s');
+    assert(half.isDead === true, 'HalfFruit isDead = true after 3.0s expiration');
+  }
+
+  // Test 4: Slicing a bomb returns empty halves
   {
     const bombCfg = CONFIG.FRUITS.BOMB;
     const bomb = new Fruit(bombCfg, 500, 400, 0, -300);
@@ -43,7 +59,7 @@ function runTests() {
     assert(halves.length === 0, 'Bomb yields no halves');
   }
 
-  // Test 4: FruitRenderer exports all expected fruit methods
+  // Test 5: FruitRenderer exports all expected fruit methods
   {
     assert(typeof FruitRenderer.drawWatermelon === 'function', 'drawWatermelon exists');
     assert(typeof FruitRenderer.drawApple === 'function', 'drawApple exists');

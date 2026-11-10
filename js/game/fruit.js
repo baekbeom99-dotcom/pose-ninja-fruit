@@ -19,22 +19,44 @@ export class HalfFruit {
     this.rotation = cutAngle;
     this.angularVelocity = isLeftHalf ? -CONFIG.PHYSICS.HALF_ANGULAR_VELOCITY : CONFIG.PHYSICS.HALF_ANGULAR_VELOCITY;
     this.isDead = false;
+
+    // 3-second smooth fadeout before removal
+    this.maxLife = 3.0;
+    this.life = 3.0;
   }
 
   update(dt) {
+    this.life -= dt;
+    if (this.life <= 0) {
+      this.isDead = true;
+      return;
+    }
+
     this.vy += CONFIG.PHYSICS.GRAVITY * dt;
     this.vx *= CONFIG.PHYSICS.AIR_RESISTANCE;
     this.x += this.vx * dt;
     this.y += this.vy * dt;
     this.rotation += this.angularVelocity * dt;
 
-    if (this.y > CONFIG.CANVAS.HEIGHT + 180) {
-      this.isDead = true;
+    // Floor dampening: keep sliced debris visible bouncing/sliding at the screen bottom while fading
+    const floorY = CONFIG.CANVAS.HEIGHT - this.radius * 0.35;
+    if (this.y > floorY) {
+      this.y = floorY;
+      if (this.vy > 0) {
+        this.vy = -this.vy * 0.22;
+      }
+      this.vx *= 0.88;
+      this.angularVelocity *= 0.85;
     }
   }
 
   draw(ctx) {
+    if (this.isDead || this.life <= 0) return;
+
+    const alpha = Math.max(0, Math.min(1.0, this.life / this.maxLife));
+
     ctx.save();
+    ctx.globalAlpha = alpha;
     ctx.translate(this.x, this.y);
     ctx.rotate(this.rotation);
 
@@ -55,6 +77,7 @@ export class HalfFruit {
 
     // Draw realistic sliced cross-section cut face
     ctx.save();
+    ctx.globalAlpha = alpha;
     ctx.translate(this.x, this.y);
     ctx.rotate(this.rotation);
     FruitRenderer.drawCutFaceDetails(ctx, this.config, this.radius);

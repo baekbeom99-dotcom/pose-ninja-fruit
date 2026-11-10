@@ -188,6 +188,7 @@ export class BladeManager {
     this.isTwoPlayerMode = false;
     this.isDoctorStrangeMode = false;
     this.mandalaAngle = 0;
+    this.headHitboxes = [];
   }
 
   setMode(twoPlayer = false) {
@@ -211,15 +212,55 @@ export class BladeManager {
     this.p1LeftBlade.update(p1Coords.left, currentTime);
     this.p1RightBlade.update(p1Coords.right, currentTime);
 
+    // Extract Head Hitboxes for Bomb Heading Defense
+    this.headHitboxes = [];
+    if (p1Pose) {
+      const h1 = this._extractHead(p1Pose, canvasWidth, canvasHeight, mirror, 0);
+      if (h1) this.headHitboxes.push(h1);
+    }
+
     // Update Player 2 if in 2-Player mode
     if (this.isTwoPlayerMode) {
       const p2Coords = this._extractWristCoords(p2Pose, canvasWidth, canvasHeight, mirror);
       this.p2LeftBlade.update(p2Coords.left, currentTime);
       this.p2RightBlade.update(p2Coords.right, currentTime);
+
+      if (p2Pose) {
+        const h2 = this._extractHead(p2Pose, canvasWidth, canvasHeight, mirror, 1);
+        if (h2) this.headHitboxes.push(h2);
+      }
     } else {
       this.p2LeftBlade.update(null, currentTime);
       this.p2RightBlade.update(null, currentTime);
     }
+  }
+
+  _extractHead(landmarks, canvasWidth, canvasHeight, mirror, playerIdx) {
+    if (!landmarks || landmarks.length === 0) return null;
+    const nose = landmarks[0];
+    if (!nose || (nose.visibility !== undefined && nose.visibility < 0.25)) return null;
+
+    // Use nose and eye landmarks to find forehead center
+    const leftEye = landmarks[2] || landmarks[1];
+    const rightEye = landmarks[5] || landmarks[4];
+    const avgEyeY = (leftEye && rightEye) ? (leftEye.y + rightEye.y) * 0.5 : nose.y;
+    // Forehead is slightly above eyes
+    const headNormY = Math.min(nose.y, avgEyeY) - 0.045;
+    const headNormX = nose.x;
+
+    const x = mirror ? (1 - headNormX) * canvasWidth : headNormX * canvasWidth;
+    const y = Math.max(20, headNormY * canvasHeight);
+
+    return {
+      x,
+      y,
+      radius: 64, // Generous head contact radius
+      owner: playerIdx === 0 ? 'P1' : 'P2'
+    };
+  }
+
+  getHeadHitboxes() {
+    return this.headHitboxes;
   }
 
   _extractWristCoords(landmarks, canvasWidth, canvasHeight, mirror) {
@@ -319,10 +360,50 @@ export class BladeManager {
       this.p2LeftBlade.draw(ctx);
       this.p2RightBlade.draw(ctx);
     }
+
+    // Draw Head Shield / Header Defense Halo around active heads
+    this.headHitboxes.forEach(h => this._drawHeadShield(ctx, h));
+  }
+
+  _drawHeadShield(ctx, head) {
+    ctx.save();
+    ctx.translate(head.x, head.y);
+
+    const isP1 = head.owner === 'P1';
+    const mainColor = isP1 ? '#38bdf8' : '#fb923c';
+    const glowColor = isP1 ? 'rgba(56, 189, 248, 0.28)' : 'rgba(251, 146, 60, 0.28)';
+
+    // Pulsing energy headband aura
+    const pulse = Math.sin(Date.now() * 0.006) * 3;
+    const r = head.radius + pulse;
+
+    // Glowing protective arc over forehead
+    ctx.beginPath();
+    ctx.arc(0, 0, r, -Math.PI * 0.85, -Math.PI * 0.15);
+    ctx.strokeStyle = glowColor;
+    ctx.lineWidth = 10;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(0, 0, r, -Math.PI * 0.82, -Math.PI * 0.18);
+    ctx.strokeStyle = mainColor;
+    ctx.lineWidth = 3.5;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+
+    // Floating Header badge
+    ctx.fillStyle = mainColor;
+    ctx.font = 'bold 12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('⚽ 헤딩', 0, -r - 6);
+
+    ctx.restore();
   }
 
   /**
    * Draws fiery Doctor Strange Eldritch Beam between hands
+   * Highly optimized: uses concentric additive GPU blending (zero-cost shadowBlur)
    */
   _drawDoctorStrangeBeam(ctx, p1, p2, glowColor, sparkColor) {
     ctx.save();
@@ -337,76 +418,84 @@ export class BladeManager {
       return;
     }
 
-    // 1. Wide Fiery Energy Glow
-    ctx.shadowColor = sparkColor;
-    ctx.shadowBlur = 28;
-    ctx.strokeStyle = glowColor;
-    ctx.lineWidth = 16;
+    // High-performance GPU-accelerated concentric glow passes (0 shadowBlur for solid 60 FPS!)
+    // 1. Broad outer atmospheric energy halo
+    ctx.strokeStyle = 'rgba(234, 88, 12, 0.22)';
+    ctx.lineWidth = 26;
     ctx.beginPath();
     ctx.moveTo(p1.x, p1.y);
     ctx.lineTo(p2.x, p2.y);
     ctx.stroke();
 
-    // 2. Focused Amber Ray
-    ctx.shadowBlur = 16;
-    ctx.shadowColor = '#fef08a';
-    ctx.strokeStyle = '#fde047';
-    ctx.lineWidth = 8;
+    // 2. Focused amber fiery ray
+    ctx.strokeStyle = 'rgba(245, 158, 11, 0.55)';
+    ctx.lineWidth = 14;
     ctx.beginPath();
     ctx.moveTo(p1.x, p1.y);
     ctx.lineTo(p2.x, p2.y);
     ctx.stroke();
 
-    // 3. Ultra-White Intense Laser Core
-    ctx.shadowBlur = 8;
-    ctx.shadowColor = '#ffffff';
+    // 3. Bright yellow electric beam
+    ctx.strokeStyle = 'rgba(254, 240, 138, 0.85)';
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.moveTo(p1.x, p1.y);
+    ctx.lineTo(p2.x, p2.y);
+    ctx.stroke();
+
+    // 4. Pure white laser core
     ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 3.5;
+    ctx.lineWidth = 2.5;
     ctx.beginPath();
     ctx.moveTo(p1.x, p1.y);
     ctx.lineTo(p2.x, p2.y);
     ctx.stroke();
 
-    // 4. Crackling Eldritch Lightning Sparks along the connecting line
-    const segments = 12;
+    // 5. Fast crackling lightning sparks
+    const segments = 8;
+    const nx = -dy / dist;
+    const ny = dx / dist;
+    const timeFactor = Date.now() * 0.012;
     ctx.beginPath();
     ctx.moveTo(p1.x, p1.y);
     for (let i = 1; i < segments; i++) {
       const t = i / segments;
-      const nx = -dy / dist;
-      const ny = dx / dist;
-      const jitter = (Math.sin(Date.now() * 0.02 + i * 2.1) + Math.cos(Date.now() * 0.015 + i * 1.7)) * 7;
-      const px = p1.x + t * dx + nx * jitter;
-      const py = p1.y + t * dy + ny * jitter;
-      ctx.lineTo(px, py);
+      const jitter = Math.sin(timeFactor + i * 2.5) * 6;
+      ctx.lineTo(p1.x + t * dx + nx * jitter, p1.y + t * dy + ny * jitter);
     }
     ctx.lineTo(p2.x, p2.y);
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 2.0;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+    ctx.lineWidth = 1.8;
     ctx.stroke();
 
     ctx.restore();
   }
 
   /**
-   * Draws rotating mystical Eldritch Mandala magic shield glyph around wrist
+   * Draws rotating mystical Eldritch Mandala magic shield glyph around wrist (Optimized)
    */
   _drawEldritchMandala(ctx, pos, mainColor, glowColor) {
     ctx.save();
     ctx.translate(pos.x, pos.y);
     ctx.globalCompositeOperation = 'lighter';
-    ctx.shadowColor = glowColor;
-    ctx.shadowBlur = 20;
 
     const r = 36;
 
-    // Outer Runic Ring
+    // Outer Runic Halo & Ring
     ctx.save();
     ctx.rotate(this.mandalaAngle);
+
+    // Glowing aura ring
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(245, 158, 11, 0.35)';
+    ctx.lineWidth = 6;
+    ctx.stroke();
+
     ctx.beginPath();
     ctx.arc(0, 0, r, 0, Math.PI * 2);
     ctx.strokeStyle = mainColor;
-    ctx.lineWidth = 2.5;
+    ctx.lineWidth = 2.2;
     ctx.stroke();
 
     // Outer Ring Tick Notches (12 runes)
@@ -416,7 +505,7 @@ export class BladeManager {
       ctx.moveTo(Math.cos(a) * (r - 4), Math.sin(a) * (r - 4));
       ctx.lineTo(Math.cos(a) * (r + 4), Math.sin(a) * (r + 4));
       ctx.strokeStyle = '#fde047';
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 1.8;
       ctx.stroke();
     }
     ctx.restore();
@@ -426,7 +515,7 @@ export class BladeManager {
     ctx.rotate(-this.mandalaAngle * 1.5);
     const sqR = r * 0.65;
     ctx.strokeStyle = '#fef08a';
-    ctx.lineWidth = 1.8;
+    ctx.lineWidth = 1.6;
 
     // Square 1
     ctx.strokeRect(-sqR, -sqR, sqR * 2, sqR * 2);
@@ -438,14 +527,14 @@ export class BladeManager {
 
     // Central Mystic Glowing Eye
     ctx.beginPath();
-    ctx.arc(0, 0, r * 0.25, 0, Math.PI * 2);
+    ctx.arc(0, 0, r * 0.22, 0, Math.PI * 2);
     ctx.fillStyle = '#ffffff';
     ctx.fill();
 
     ctx.beginPath();
-    ctx.arc(0, 0, r * 0.40, 0, Math.PI * 2);
+    ctx.arc(0, 0, r * 0.38, 0, Math.PI * 2);
     ctx.strokeStyle = mainColor;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 1.8;
     ctx.stroke();
 
     ctx.restore();

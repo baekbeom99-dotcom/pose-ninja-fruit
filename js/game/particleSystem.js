@@ -225,18 +225,24 @@ class DoctorStrangePortal {
     ctx.fillStyle = voidGrad;
     ctx.fill();
 
-    // 2. Fiery Eldritch Ring with Glowing Sparks
-    ctx.shadowColor = '#f97316';
-    ctx.shadowBlur = 36;
-    ctx.strokeStyle = '#f59e0b';
-    ctx.lineWidth = 14 * alpha;
+    // 2. Fiery Eldritch Ring with High-Performance Additive Concentric Passes
+    // Outer atmospheric orange halo
+    ctx.strokeStyle = 'rgba(249, 115, 22, 0.35)';
+    ctx.lineWidth = 24 * alpha;
     ctx.beginPath();
     ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
     ctx.stroke();
 
-    // Inner bright yellow ring
+    // Mid amber fiery ring
+    ctx.strokeStyle = '#f59e0b';
+    ctx.lineWidth = 12 * alpha;
+    ctx.beginPath();
+    ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Inner bright yellow core ring
     ctx.strokeStyle = '#fef08a';
-    ctx.lineWidth = 6 * alpha;
+    ctx.lineWidth = 4 * alpha;
     ctx.beginPath();
     ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
     ctx.stroke();

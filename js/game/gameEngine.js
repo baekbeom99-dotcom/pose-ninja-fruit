@@ -134,6 +134,12 @@ export class GameEngine {
       if (this.state !== GameState.PLAYING) return;
       this.ui.showCombo(count, bonus, owner);
     };
+
+    this.fruitManager.onHeadingDefuse = (bomb, head, bonusPoints = 10) => {
+      if (this.state !== GameState.PLAYING) return;
+      this.triggerScreenShake(0.35, 14);
+      this.ui.showHeadingDefuse(head.owner, bonusPoints);
+    };
   }
 
   _setupResizeHandler() {
@@ -315,7 +321,8 @@ export class GameEngine {
     // 5. Update Game & Fruits
     if (this.state === GameState.PLAYING) {
       const activeSegments = this.blades.getActiveSegments();
-      this.fruitManager.update(dt, activeSegments, this.width, this.height, currentTime, this.lives);
+      const headHitboxes = this.blades.getHeadHitboxes();
+      this.fruitManager.update(dt, activeSegments, this.width, this.height, currentTime, this.lives, headHitboxes);
     }
 
     this.lastPoses = poses;

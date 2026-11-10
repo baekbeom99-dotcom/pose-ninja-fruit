@@ -20,9 +20,19 @@ export class HalfFish {
     this.angularVelocity = isLeftHalf ? -3.5 : 3.5;
     this.isDead = false;
     this.themeId = themeId;
+
+    // 3-second smooth fadeout
+    this.maxLife = 3.0;
+    this.life = 3.0;
   }
 
   update(dt) {
+    this.life -= dt;
+    if (this.life <= 0) {
+      this.isDead = true;
+      return;
+    }
+
     // Drifts in zero gravity with slight air friction
     this.vx *= 0.992;
     this.vy *= 0.992;
@@ -41,7 +51,11 @@ export class HalfFish {
   }
 
   draw(ctx) {
+    if (this.isDead || this.life <= 0) return;
+
+    const alpha = Math.max(0, Math.min(1.0, this.life / this.maxLife));
     ctx.save();
+    ctx.globalAlpha = alpha;
     ctx.translate(this.x, this.y);
     ctx.rotate(this.rotation);
 
