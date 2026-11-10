@@ -24,8 +24,6 @@ class App {
   }
 
   async init() {
-    this.ui.setStatus('카메라 및 AI 모델 로드 중...', false);
-
     // 1. Initialize GameEngine
     this.gameEngine = new GameEngine(
       this.video,
@@ -42,27 +40,35 @@ class App {
     // 3. Setup Button Listeners & Web Audio unlock
     this._setupEventListeners();
 
-    // 4. Initialize Camera & MediaPipe in parallel
-    try {
-      this.ui.setStatus('웹캠 권한 요청 중...', false);
-      await this.camera.start();
+    // 4. Add Mouse & Touch fallback interaction
+    this._setupMouseTouchFallback();
 
-      this.ui.setStatus('MediaPipe Pose 모델 초기화 중...', false);
+    // 5. Connect Camera first
+    let cameraConnected = false;
+    try {
+      this.ui.setStatus('카메라 연결 요청 중...', false);
+      await this.camera.start();
+      cameraConnected = true;
+      this.ui.setStatus('카메라 연결 성공. AI 모션 인식 모델 로드 중...', false);
+    } catch (camErr) {
+      console.warn('Camera access failed:', camErr);
+      this.ui.setStatus('카메라가 연결되지 않았습니다. 마우스/터치로 플레이할 수 있습니다.', false);
+    }
+
+    // 6. Initialize MediaPipe PoseLandmarker
+    try {
       await this.poseTracker.init((statusMsg) => {
         this.ui.setStatus(statusMsg, false);
       });
-
       this.ui.setStatus('준비 완료! 시작 버튼을 눌러주세요.', true);
-    } catch (err) {
-      console.warn('Camera / MediaPipe setup failed or blocked:', err);
-      this.ui.setStatus(
-        '카메라를 찾을 수 없거나 차단되었습니다. 마우스/터치로도 플레이할 수 있습니다!',
-        true
-      );
+    } catch (modelErr) {
+      console.error('MediaPipe PoseLandmarker initialization failed:', modelErr);
+      if (cameraConnected) {
+        this.ui.setStatus('AI 모델 로드 실패. 마우스/터치로 플레이할 수 있습니다.', true);
+      } else {
+        this.ui.setStatus('마우스 또는 터치로 플레이할 수 있습니다.', true);
+      }
     }
-
-    // 5. Add Mouse & Touch fallback interaction
-    this._setupMouseTouchFallback();
   }
 
   _setupEventListeners() {
@@ -82,7 +88,7 @@ class App {
   }
 
   /**
-   * Allows mouse / touch drag to simulate a blade if webcam is unavailable
+   * Allows mouse / touch drag to simulate a blade if webcam is unavailable or in addition
    */
   _setupMouseTouchFallback() {
     let isDown = false;
