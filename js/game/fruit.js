@@ -166,7 +166,8 @@ export class Fruit {
 }
 
 /**
- * Procedural Vector Graphics Renderer matching Reference Vector Art Style
+ * Procedural Vector Graphics Renderer matching Reference Kawaii Character Art Style
+ * Based on iStock kawaii character set (cute faces, blush cheeks, border-free pastel silhouettes).
  */
 export class FruitRenderer {
   static drawFruitBody(ctx, config, animTimer = 0) {
@@ -198,11 +199,129 @@ export class FruitRenderer {
     }
   }
 
-  /* ---------------- 1. WATERMELON (둥근 수박) ---------------- */
+  /**
+   * Universal Cute/Kawaii Face Template (iStock Kawaii Character Style)
+   * - Wide-spaced dark charcoal eyes with cute white specular twinkles
+   * - Soft blushing circular cheeks
+   * - Sweet upward curve smile arc (⌣)
+   */
+  static drawKawaiiFace(ctx, cx, cy, r, options = {}) {
+    const {
+      eyeDist = r * 0.44,
+      eyeR = r * 0.082,
+      smileR = r * 0.15,
+      smileOffsetY = r * 0.07,
+      blushOffsetX = r * 0.48,
+      blushOffsetY = r * 0.08,
+      blushR = r * 0.12,
+      blushColor = '#ff8a80',
+      eyeColor = '#1e1b18',
+      expression = 'smile', // 'smile', 'wink', 'happy', 'bomb'
+      tiltAngle = 0
+    } = options;
+
+    ctx.save();
+    ctx.translate(cx, cy);
+    if (tiltAngle) ctx.rotate(tiltAngle);
+
+    // 1. Rosy Blushing Cheeks
+    ctx.fillStyle = blushColor;
+    ctx.beginPath();
+    ctx.arc(-blushOffsetX, blushOffsetY, blushR, 0, Math.PI * 2);
+    ctx.arc(blushOffsetX, blushOffsetY, blushR, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 2. Eyes
+    ctx.fillStyle = eyeColor;
+    ctx.strokeStyle = eyeColor;
+    ctx.lineWidth = r * 0.055;
+    ctx.lineCap = 'round';
+
+    if (expression === 'wink') {
+      // Left eye open dot
+      ctx.beginPath();
+      ctx.arc(-eyeDist / 2, 0, eyeR, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Right eye winking arc ^
+      ctx.beginPath();
+      ctx.arc(eyeDist / 2, eyeR * 0.35, eyeR * 1.25, -Math.PI * 0.85, -Math.PI * 0.15);
+      ctx.stroke();
+
+      // Left eye twinkle dot
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(-eyeDist / 2 + eyeR * 0.30, -eyeR * 0.30, eyeR * 0.36, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (expression === 'happy') {
+      // Both eyes joyful closed arcs ^ ^
+      ctx.beginPath();
+      ctx.arc(-eyeDist / 2, eyeR * 0.35, eyeR * 1.25, -Math.PI * 0.85, -Math.PI * 0.15);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(eyeDist / 2, eyeR * 0.35, eyeR * 1.25, -Math.PI * 0.85, -Math.PI * 0.15);
+      ctx.stroke();
+    } else if (expression === 'bomb') {
+      // Bomb: Mischievous wink with angled eyebrow
+      ctx.beginPath();
+      ctx.arc(-eyeDist / 2, 0, eyeR, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Right winking arc
+      ctx.beginPath();
+      ctx.arc(eyeDist / 2, eyeR * 0.35, eyeR * 1.25, -Math.PI * 0.85, -Math.PI * 0.15);
+      ctx.stroke();
+
+      // Left twinkle
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(-eyeDist / 2 + eyeR * 0.30, -eyeR * 0.30, eyeR * 0.36, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Determined tiny brow
+      ctx.strokeStyle = eyeColor;
+      ctx.lineWidth = r * 0.045;
+      ctx.beginPath();
+      ctx.moveTo(-eyeDist / 2 - eyeR * 1.1, -eyeR * 1.3);
+      ctx.lineTo(-eyeDist / 2 + eyeR * 0.9, -eyeR * 0.8);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(eyeDist / 2 + eyeR * 1.1, -eyeR * 1.3);
+      ctx.lineTo(eyeDist / 2 - eyeR * 0.9, -eyeR * 0.8);
+      ctx.stroke();
+    } else {
+      // Standard cute dots with twinkles
+      ctx.beginPath();
+      ctx.arc(-eyeDist / 2, 0, eyeR, 0, Math.PI * 2);
+      ctx.arc(eyeDist / 2, 0, eyeR, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Twinkles
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(-eyeDist / 2 + eyeR * 0.30, -eyeR * 0.30, eyeR * 0.36, 0, Math.PI * 2);
+      ctx.arc(eyeDist / 2 + eyeR * 0.30, -eyeR * 0.30, eyeR * 0.36, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // 3. Sweet smiling mouth arc (⌣)
+    ctx.strokeStyle = eyeColor;
+    ctx.lineWidth = r * 0.052;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.arc(0, smileOffsetY, smileR, 0.22 * Math.PI, 0.78 * Math.PI, false);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  /* ---------------- 1. WATERMELON (둥근 수박 카와이 캐릭터) ---------------- */
   static drawWatermelon(ctx, config, animTimer) {
     const r = config.radius;
 
-    // 1. Plump Round Green Watermelon Sphere (둥근 수박 몸체)
+    // 1. Plump Round Green Watermelon Sphere
     ctx.beginPath();
     ctx.arc(0, 0, r, 0, Math.PI * 2);
     const rindGrad = ctx.createRadialGradient(-r * 0.28, -r * 0.28, 6, 0, 0, r);
@@ -213,7 +332,7 @@ export class FruitRenderer {
     ctx.fillStyle = rindGrad;
     ctx.fill();
 
-    // 2. Iconic Wavy Dark Green Watermelon Stripes (선명한 수박 줄무늬)
+    // 2. Wavy Dark Green Watermelon Stripes
     ctx.save();
     ctx.beginPath();
     ctx.arc(0, 0, r - 2, 0, Math.PI * 2);
@@ -236,26 +355,42 @@ export class FruitRenderer {
     }
     ctx.restore();
 
-    // 3. Top Stem Pip (상단 꼭지)
+    // 3. Top Stem Pip & Curled Tendril
+    ctx.save();
     ctx.beginPath();
-    ctx.arc(0, -r * 0.94, 5, 0, Math.PI * 2);
+    ctx.arc(0, -r * 0.94, r * 0.06, 0, Math.PI * 2);
     ctx.fillStyle = '#78350f';
     ctx.fill();
 
-    // 4. Smooth Curved Specular Highlight (우측 상단 곡선 광택)
+    ctx.beginPath();
+    ctx.moveTo(0, -r * 0.94);
+    ctx.quadraticCurveTo(r * 0.15, -r * 1.05, r * 0.22, -r * 0.98);
+    ctx.strokeStyle = '#15803d';
+    ctx.lineWidth = r * 0.04;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+    ctx.restore();
+
+    // 4. Smooth Curved White Specular Highlight on Upper-Right
     ctx.beginPath();
     ctx.arc(0, 0, r * 0.74, -Math.PI * 0.28, -Math.PI * 0.04);
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
     ctx.lineWidth = r * 0.09;
     ctx.lineCap = 'round';
     ctx.stroke();
+
+    // 5. Kawaii Cute Face
+    this.drawKawaiiFace(ctx, 0, r * 0.06, r, {
+      blushColor: '#ff4d6d',
+      eyeColor: '#052e16'
+    });
   }
 
-  /* ---------------- 2. APPLE (사과 - Reference Row 2, Col 3) ---------------- */
+  /* ---------------- 2. APPLE (사과 카와이 캐릭터) ---------------- */
   static drawApple(ctx, config, animTimer) {
     const r = config.radius;
 
-    // 1. Brown Angled Stem (갈색 줄기)
+    // 1. Brown Angled Stem
     ctx.beginPath();
     ctx.moveTo(0, -r * 0.50);
     ctx.quadraticCurveTo(-r * 0.08, -r * 0.75, -r * 0.14, -r * 0.94);
@@ -264,7 +399,7 @@ export class FruitRenderer {
     ctx.lineCap = 'round';
     ctx.stroke();
 
-    // 2. Fresh Green Leaf pointing right (싱그러운 나뭇잎)
+    // 2. Fresh Green Leaf pointing right
     ctx.save();
     ctx.beginPath();
     ctx.moveTo(0, -r * 0.54);
@@ -283,18 +418,13 @@ export class FruitRenderer {
     ctx.stroke();
     ctx.restore();
 
-    // 3. Apple Body with Top/Bottom Indentations (사과 몸체)
+    // 3. Apple Body with Top/Bottom Indentations
     ctx.beginPath();
     ctx.moveTo(0, -r * 0.50);
-    // Right upper shoulder
     ctx.bezierCurveTo(r * 0.38, -r * 0.92, r * 0.94, -r * 0.58, r * 0.88, r * 0.08);
-    // Right bottom lobe
     ctx.bezierCurveTo(r * 0.82, r * 0.68, r * 0.38, r * 0.92, r * 0.14, r * 0.86);
-    // Bottom indentation
     ctx.bezierCurveTo(r * 0.05, r * 0.84, -r * 0.05, r * 0.84, -r * 0.14, r * 0.86);
-    // Left bottom lobe
     ctx.bezierCurveTo(-r * 0.38, r * 0.92, -r * 0.82, r * 0.68, -r * 0.88, r * 0.08);
-    // Left upper shoulder
     ctx.bezierCurveTo(-r * 0.94, -r * 0.58, -r * 0.38, -r * 0.92, 0, -r * 0.50);
     ctx.closePath();
 
@@ -306,7 +436,7 @@ export class FruitRenderer {
     ctx.fillStyle = appleGrad;
     ctx.fill();
 
-    // 4. Iconic Curved White Specular Highlight on Right Shoulder (우측 상단 곡선 광택)
+    // 4. Curved White Specular Highlight on Right Shoulder
     ctx.beginPath();
     ctx.moveTo(r * 0.56, -r * 0.48);
     ctx.bezierCurveTo(r * 0.78, -r * 0.30, r * 0.78, 0.05, r * 0.66, r * 0.32);
@@ -315,18 +445,18 @@ export class FruitRenderer {
     ctx.lineCap = 'round';
     ctx.stroke();
 
-    // Subtle small top-left reflection
-    ctx.beginPath();
-    ctx.arc(-r * 0.45, -r * 0.45, r * 0.10, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.40)';
-    ctx.fill();
+    // 5. Kawaii Cute Face
+    this.drawKawaiiFace(ctx, 0, r * 0.12, r, {
+      blushColor: 'rgba(255, 90, 110, 0.65)',
+      eyeColor: '#2b0909'
+    });
   }
 
-  /* ---------------- 3. ORANGE (오렌지 - Reference Row 3, Col 1) ---------------- */
+  /* ---------------- 3. ORANGE (오렌지 카와이 캐릭터) ---------------- */
   static drawOrange(ctx, config, animTimer) {
     const r = config.radius;
 
-    // 1. Plump Round Orange Body (오렌지 둥근 몸체)
+    // 1. Plump Round Orange Body
     ctx.beginPath();
     ctx.arc(0, 0, r, 0, Math.PI * 2);
     const orangeGrad = ctx.createRadialGradient(-r * 0.28, -r * 0.28, 6, 0, 0, r);
@@ -337,7 +467,7 @@ export class FruitRenderer {
     ctx.fillStyle = orangeGrad;
     ctx.fill();
 
-    // 2. Top Star Stem Calyx (상단 초록색 5각 꼭지 잎 - Reference 1:1)
+    // 2. Top Star Stem Calyx
     ctx.save();
     ctx.translate(0, -r * 0.86);
     ctx.beginPath();
@@ -363,7 +493,7 @@ export class FruitRenderer {
     ctx.fill();
     ctx.restore();
 
-    // 3. Smooth Curved White Specular Highlight on Upper-Right (우측 상단 부드러운 광택)
+    // 3. Smooth Curved White Specular Highlight on Upper-Right
     ctx.beginPath();
     ctx.arc(0, 0, r * 0.74, -Math.PI * 0.28, -Math.PI * 0.04);
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.68)';
@@ -371,18 +501,18 @@ export class FruitRenderer {
     ctx.lineCap = 'round';
     ctx.stroke();
 
-    // Inner subtle glow
-    ctx.beginPath();
-    ctx.arc(r * 0.35, -r * 0.35, r * 0.12, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
-    ctx.fill();
+    // 4. Kawaii Cute Face
+    this.drawKawaiiFace(ctx, 0, r * 0.06, r, {
+      blushColor: '#ff8a80',
+      eyeColor: '#2c1203'
+    });
   }
 
-  /* ---------------- 4. BANANA (바나나송이 3배 굵기 - Reference Row 3, Col 4) ---------------- */
+  /* ---------------- 4. BANANA (바나나 카와이 캐릭터) ---------------- */
   static drawBanana(ctx, config, animTimer) {
     const r = config.radius;
 
-    // 1. Brown Top Stem Cap (상단 꼭지 결합부 - 바나나 묶음 캡)
+    // 1. Brown Top Stem Cap
     ctx.save();
     ctx.beginPath();
     ctx.moveTo(r * 0.48, -r * 0.75);
@@ -397,15 +527,12 @@ export class FruitRenderer {
     ctx.stroke();
     ctx.restore();
 
-    // 2. Lower / Rear Banana (뒤쪽 바나나 - 굵고 풍성한 2송이 묶음 볼륨)
+    // 2. Lower / Rear Banana Volume
     ctx.save();
     ctx.beginPath();
     ctx.moveTo(r * 0.62, -r * 0.45);
-    // Outer sweep (very thick belly)
     ctx.bezierCurveTo(r * 0.50, r * 0.35, -r * 0.15, r * 0.72, -r * 0.62, r * 0.40);
-    // Tip
     ctx.lineTo(-r * 0.68, r * 0.36);
-    // Inner sweep
     ctx.bezierCurveTo(-r * 0.20, r * 0.42, r * 0.32, r * 0.15, r * 0.45, -r * 0.48);
     ctx.closePath();
 
@@ -423,16 +550,12 @@ export class FruitRenderer {
     ctx.fill();
     ctx.restore();
 
-    // 3. Main Front Banana (앞쪽 바나나 - 기존보다 3배 이상 굵고 통통한 형태!)
+    // 3. Main Front Banana (3x Thick & Plump Body)
     ctx.save();
     ctx.beginPath();
-    // Start at top stem junction
     ctx.moveTo(r * 0.52, -r * 0.60);
-    // Sweeping outer curve (plump 3x belly width)
     ctx.bezierCurveTo(r * 0.35, r * 0.05, -r * 0.25, r * 0.58, -r * 0.85, 0.05);
-    // Blossom bottom tip
     ctx.lineTo(-r * 0.88, -r * 0.04);
-    // Sweeping inner belly curve (thick, juicy curvature)
     ctx.bezierCurveTo(-r * 0.35, -r * 0.08, r * 0.12, -r * 0.22, r * 0.42, -r * 0.66);
     ctx.closePath();
 
@@ -444,7 +567,7 @@ export class FruitRenderer {
     ctx.fillStyle = frontGrad;
     ctx.fill();
 
-    // 4. Creamy Top Ridge Highlight Ribbon (바나나 능선 밝은 면)
+    // 4. Creamy Top Ridge Highlight Ribbon
     ctx.beginPath();
     ctx.moveTo(r * 0.45, -r * 0.62);
     ctx.bezierCurveTo(r * 0.20, -r * 0.20, -r * 0.25, -r * 0.05, -r * 0.84, -r * 0.02);
@@ -453,13 +576,13 @@ export class FruitRenderer {
     ctx.lineCap = 'round';
     ctx.stroke();
 
-    // 5. Dark Blossom Tip (바나나 끝부분 흑갈색 점)
+    // 5. Dark Blossom Tip
     ctx.beginPath();
     ctx.arc(-r * 0.86, 0, 5, 0, Math.PI * 2);
     ctx.fillStyle = '#451a03';
     ctx.fill();
 
-    // 6. Crisp Curved White Specular Highlight (바나나 외곽선 매끄러운 흰색 광택)
+    // 6. Crisp Curved White Specular Highlight
     ctx.beginPath();
     ctx.moveTo(r * 0.35, -r * 0.45);
     ctx.bezierCurveTo(r * 0.15, -r * 0.02, -r * 0.22, r * 0.32, -r * 0.68, 0.14);
@@ -468,29 +591,31 @@ export class FruitRenderer {
     ctx.lineCap = 'round';
     ctx.stroke();
 
+    // 7. Kawaii Cute Face along Banana Curve
+    this.drawKawaiiFace(ctx, -r * 0.14, r * 0.06, r * 0.85, {
+      blushColor: '#ff8a80',
+      eyeColor: '#291b04',
+      tiltAngle: -0.15
+    });
+
     ctx.restore();
   }
 
-  /* ---------------- 5. PINEAPPLE (파인애플 - Reference Row 1, Col 3) ---------------- */
+  /* ---------------- 5. PINEAPPLE (파인애플 카와이 캐릭터) ---------------- */
   static drawPineapple(ctx, config, animTimer) {
     const r = config.radius;
 
-    // 1. Spiky Tropical 5-Point Crown Leaves (상단 5개의 야자형 왕관 잎 - Reference 1:1)
+    // 1. Spiky Tropical 5-Point Crown Leaves
     ctx.save();
     const leaves = [
-      // Outer left leaf
       { startX: -r * 0.10, startY: -r * 0.35, tipX: -r * 0.58, tipY: -r * 0.72, ctrlX: -r * 0.45, ctrlY: -r * 0.45 },
-      // Inner left leaf
       { startX: -r * 0.05, startY: -r * 0.38, tipX: -r * 0.35, tipY: -r * 0.98, ctrlX: -r * 0.25, ctrlY: -r * 0.65 },
-      // Center tall leaf
       { startX: 0, startY: -r * 0.40, tipX: 0, tipY: -r * 1.08, ctrlX: 0, ctrlY: -r * 0.75 },
-      // Inner right leaf
       { startX: r * 0.05, startY: -r * 0.38, tipX: r * 0.35, tipY: -r * 0.98, ctrlX: r * 0.25, ctrlY: -r * 0.65 },
-      // Outer right leaf
       { startX: r * 0.10, startY: -r * 0.35, tipX: r * 0.58, tipY: -r * 0.72, ctrlX: r * 0.45, ctrlY: -r * 0.45 }
     ];
 
-    leaves.forEach((l, idx) => {
+    leaves.forEach((l) => {
       ctx.beginPath();
       ctx.moveTo(l.startX, l.startY);
       ctx.quadraticCurveTo(l.ctrlX, l.ctrlY, l.tipX, l.tipY);
@@ -506,7 +631,7 @@ export class FruitRenderer {
     });
     ctx.restore();
 
-    // 2. Plump Golden Oval Body (둥글고 풍성한 황금빛 파인애플 몸체)
+    // 2. Plump Golden Oval Body
     ctx.save();
     const bodyCenterY = r * 0.20;
     const bodyR = r * 0.68;
@@ -522,17 +647,16 @@ export class FruitRenderer {
     ctx.fillStyle = bodyGrad;
     ctx.fill();
 
-    // 3. Diamond Lattice Grid Pattern (마름모 격자 무늬 - Reference 1:1)
+    // 3. Diamond Lattice Grid Pattern
     ctx.save();
     ctx.beginPath();
     ctx.ellipse(0, bodyCenterY, bodyR - 2, bodyH - 2, 0, 0, Math.PI * 2);
     ctx.clip();
 
-    ctx.strokeStyle = '#b45309';
-    ctx.lineWidth = 2.8;
+    ctx.strokeStyle = 'rgba(180, 83, 9, 0.40)';
+    ctx.lineWidth = 2.4;
 
     const spacing = r * 0.28;
-    // 45-degree diagonal lines
     for (let offset = -r * 2; offset <= r * 2; offset += spacing) {
       ctx.beginPath();
       ctx.moveTo(offset - r, bodyCenterY - r);
@@ -545,13 +669,12 @@ export class FruitRenderer {
       ctx.stroke();
     }
 
-    // Small warm amber dots in each diamond center
-    ctx.fillStyle = '#b45309';
+    ctx.fillStyle = 'rgba(180, 83, 9, 0.50)';
     for (let x = -bodyR; x <= bodyR; x += spacing) {
       for (let y = bodyCenterY - bodyH; y <= bodyCenterY + bodyH; y += spacing) {
         if ((x * x) / (bodyR * bodyR) + ((y - bodyCenterY) * (y - bodyCenterY)) / (bodyH * bodyH) < 0.70) {
           ctx.beginPath();
-          ctx.arc(x + spacing * 0.5, y + spacing * 0.5, 2.8, 0, Math.PI * 2);
+          ctx.arc(x + spacing * 0.5, y + spacing * 0.5, 2.5, 0, Math.PI * 2);
           ctx.fill();
         }
       }
@@ -566,14 +689,20 @@ export class FruitRenderer {
     ctx.lineCap = 'round';
     ctx.stroke();
 
+    // 5. Kawaii Cute Face
+    this.drawKawaiiFace(ctx, 0, bodyCenterY + r * 0.04, r * 0.90, {
+      blushColor: '#ff8a80',
+      eyeColor: '#291602'
+    });
+
     ctx.restore();
   }
 
-  /* ---------------- 6. BOMB (폭탄 - 캐논볼 벡터 스타일) ---------------- */
+  /* ---------------- 6. BOMB (폭탄 카와이 캐릭터) ---------------- */
   static drawBomb(ctx, config, animTimer) {
     const r = config.radius;
 
-    // 1. Sinuous Fuse with Spark (도화선 및 불꽃 애니메이션)
+    // 1. Sinuous Fuse with Spark
     ctx.save();
     ctx.beginPath();
     ctx.moveTo(0, -r * 0.80);
@@ -606,7 +735,7 @@ export class FruitRenderer {
     ctx.fill();
     ctx.restore();
 
-    // 2. Brass Neck Collar (황동 결합부)
+    // 2. Brass Neck Collar
     ctx.save();
     ctx.beginPath();
     ctx.roundRect(-r * 0.22, -r * 0.90, r * 0.44, r * 0.22, 4);
@@ -617,7 +746,7 @@ export class FruitRenderer {
     ctx.stroke();
     ctx.restore();
 
-    // 3. Charcoal Cannonball Sphere (매끄러운 검은색 구체)
+    // 3. Charcoal Cannonball Sphere
     ctx.beginPath();
     ctx.arc(0, r * 0.08, r * 0.88, 0, Math.PI * 2);
     const bombGrad = ctx.createRadialGradient(-r * 0.28, -r * 0.20, 6, 0, r * 0.08, r * 0.88);
@@ -627,16 +756,23 @@ export class FruitRenderer {
     ctx.fillStyle = bombGrad;
     ctx.fill();
 
-    // 4. White Curved Specular Highlight (좌측 상단 하이라이트)
+    // 4. White Curved Specular Highlight
     ctx.beginPath();
     ctx.arc(0, r * 0.08, r * 0.68, -Math.PI * 0.85, -Math.PI * 0.55);
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.80)';
     ctx.lineWidth = r * 0.09;
     ctx.lineCap = 'round';
     ctx.stroke();
+
+    // 5. Mischievous Kawaii Bomb Face
+    this.drawKawaiiFace(ctx, 0, r * 0.15, r * 0.85, {
+      blushColor: '#fb923c',
+      eyeColor: '#f8fafc',
+      expression: 'bomb'
+    });
   }
 
-  /* ---------------- 7. HEART BONUS (보너스 하트) ---------------- */
+  /* ---------------- 7. HEART BONUS (보너스 하트 카와이 캐릭터) ---------------- */
   static drawHeartBonus(ctx, config, animTimer) {
     const r = config.radius;
     const pulse = Math.sin(animTimer * 5) * 0.05;
@@ -647,10 +783,8 @@ export class FruitRenderer {
     // Heart Shape Path
     ctx.beginPath();
     ctx.moveTo(0, r * 0.72);
-    // Left bottom curve to upper lobe
     ctx.bezierCurveTo(-r * 0.85, r * 0.25, -r * 0.95, -r * 0.45, -r * 0.45, -r * 0.72);
     ctx.bezierCurveTo(-r * 0.15, -r * 0.85, 0, -r * 0.52, 0, -r * 0.35);
-    // Right upper lobe to bottom point
     ctx.bezierCurveTo(0, -r * 0.52, r * 0.15, -r * 0.85, r * 0.45, -r * 0.72);
     ctx.bezierCurveTo(r * 0.95, -r * 0.45, r * 0.85, r * 0.25, 0, r * 0.72);
     ctx.closePath();
@@ -662,6 +796,22 @@ export class FruitRenderer {
     heartGrad.addColorStop(1, '#9f1239');
     ctx.fillStyle = heartGrad;
     ctx.fill();
+
+    // Curved Specular Highlight on Upper-Left Lobe
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.52, -r * 0.60);
+    ctx.bezierCurveTo(-r * 0.75, -r * 0.40, -r * 0.70, -r * 0.10, -r * 0.52, 0.05);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.75)';
+    ctx.lineWidth = r * 0.08;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+
+    // Joyful Kawaii Heart Face
+    this.drawKawaiiFace(ctx, 0, -r * 0.02, r * 0.85, {
+      blushColor: '#ff80ab',
+      eyeColor: '#ffffff',
+      expression: 'happy'
+    });
 
     ctx.restore();
   }
