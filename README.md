@@ -1,7 +1,9 @@
 # 🍎 Pose Ninja Fruit (포즈 닌자 프루트)
 
 > **웹캠 또는 스마트폰 전면 카메라**로 사용자의 골격(Pose)을 실시간 추적하여 양손으로 과일을 베는 모션 인식 인터랙티브 웹 게임입니다.  
-> 별도의 빌드 도구나 Node.js 환경 없이 **순수 HTML, CSS, Vanilla JavaScript, MediaPipe CDN**만으로 구동되며, **GitHub Pages에 커밋하는 즉시 배포**하여 사용할 수 있습니다.
+> 별도의 빌드 도구나 Node.js 환경 없이 **순수 HTML, CSS, Vanilla JavaScript, MediaPipe CDN**만으로 구동되며, GitHub Pages로 무료 HTTPS 배포되어 모바일에서도 카메라 권한을 지원합니다.
+
+### 🎮 [라이브 플레이 바로가기 (Demo)](https://baekbeom99-dotcom.github.io/pose-ninja-fruit/)
 
 ---
 
