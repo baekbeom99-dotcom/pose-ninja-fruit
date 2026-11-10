@@ -128,7 +128,7 @@ export const CONFIG = {
     },
     HEART_BONUS: {
       type: 'HEART_BONUS',
-      radius: 88,
+      radius: 44, // 1/2 size
       points: 5,
       color: '#f43f5e',
       fleshColor: '#fda4af',
@@ -137,7 +137,7 @@ export const CONFIG = {
     },
     BOMB: {
       type: 'BOMB',
-      radius: 80,
+      radius: 54, // 2/3 size
       points: 0,
       color: '#2c3437',
       fleshColor: '#ef4444',

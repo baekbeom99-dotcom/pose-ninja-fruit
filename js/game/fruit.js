@@ -443,71 +443,95 @@ export class FruitRenderer {
     });
   }
 
-  /* ---------------- 4. BANANA (바나나 - Reference Row 3, Col 1) ---------------- */
+  /* ---------------- 4. BANANA (바나나 - 두께 2배 확장) ---------------- */
   static drawBanana(ctx, config, animTimer) {
     const r = config.radius;
 
     ctx.save();
     // 1. Top Flat-Cut Stem (상단 각진 꼭지)
     ctx.beginPath();
-    ctx.moveTo(-r * 0.42, -r * 0.72);
-    ctx.lineTo(-r * 0.28, -r * 0.78);
-    ctx.lineTo(-r * 0.22, -r * 0.62);
-    ctx.lineTo(-r * 0.38, -r * 0.58);
+    ctx.moveTo(-r * 0.50, -r * 0.68);
+    ctx.lineTo(-r * 0.22, -r * 0.82);
+    ctx.lineTo(-r * 0.12, -r * 0.58);
+    ctx.lineTo(-r * 0.42, -r * 0.46);
     ctx.closePath();
     ctx.fillStyle = '#fce068';
     ctx.fill();
 
-    // 2. Main Curved Banana Body (바나나 곡면 몸체)
+    // 2. Main Curved Banana Body - DOUBLED THICKNESS (두 배로 굵어진 통통한 바나나 몸체)
     ctx.beginPath();
-    ctx.moveTo(-r * 0.38, -r * 0.58);
-    ctx.bezierCurveTo(-r * 0.20, -r * 0.10, r * 0.05, r * 0.40, r * 0.52, r * 0.72);
-    ctx.bezierCurveTo(r * 0.65, r * 0.80, r * 0.78, r * 0.75, r * 0.75, r * 0.58);
-    ctx.bezierCurveTo(r * 0.40, r * 0.15, 0, -r * 0.25, -r * 0.22, -r * 0.62);
+    ctx.moveTo(-r * 0.42, -r * 0.46);
+    // Outer belly sweeps much further out (2x thickness)
+    ctx.bezierCurveTo(-r * 0.46, 0.08, -r * 0.04, r * 0.78, r * 0.54, r * 0.85);
+    ctx.bezierCurveTo(r * 0.76, r * 0.88, r * 0.94, r * 0.74, r * 0.82, r * 0.48);
+    // Inner belly scoops in with generous thickness
+    ctx.bezierCurveTo(r * 0.46, r * 0.20, r * 0.14, -r * 0.15, -r * 0.12, -r * 0.58);
     ctx.closePath();
     ctx.fillStyle = '#ffdd40';
     ctx.fill();
 
-    // 3. Inner Pale Facet Highlight Ribbon (안쪽 연노랑 면 하이라이트)
+    // 3. Inner Pale Facet Highlight Ribbon (두꺼워진 바나나에 맞춘 연노랑 능선 면)
     ctx.beginPath();
-    ctx.moveTo(-r * 0.30, -r * 0.54);
-    ctx.bezierCurveTo(-r * 0.10, -r * 0.12, r * 0.12, r * 0.30, r * 0.58, r * 0.64);
-    ctx.bezierCurveTo(r * 0.48, r * 0.42, r * 0.15, r * 0.05, -r * 0.24, -r * 0.46);
+    ctx.moveTo(-r * 0.32, -r * 0.42);
+    ctx.bezierCurveTo(-r * 0.30, 0.10, 0, r * 0.62, r * 0.58, r * 0.74);
+    ctx.bezierCurveTo(r * 0.48, r * 0.40, r * 0.20, 0.05, -r * 0.16, -r * 0.45);
     ctx.closePath();
     ctx.fillStyle = '#fffa85';
     ctx.fill();
 
     // 4. Dark Brown Blossom Tip (하단 갈색 끝점)
     ctx.beginPath();
-    ctx.ellipse(r * 0.68, r * 0.68, r * 0.09, r * 0.09, 0, 0, Math.PI * 2);
+    ctx.ellipse(r * 0.76, r * 0.60, r * 0.11, r * 0.11, 0, 0, Math.PI * 2);
     ctx.fillStyle = '#5a3825';
     ctx.fill();
 
     // 5. Kawaii Face along Banana Spine (바나나 몸통의 카와이 표정)
-    this.drawKawaiiFace(ctx, 0.05 * r, 0.05 * r, r * 0.80, {
+    this.drawKawaiiFace(ctx, 0.08 * r, 0.12 * r, r * 0.95, {
       blushColor: '#ff8a99',
       eyeColor: '#1a1a1a',
-      tiltAngle: 0.52
+      tiltAngle: 0.48
     });
 
     ctx.restore();
   }
 
-  /* ---------------- 5. PINEAPPLE (파인애플 - Reference Row 1, Col 3) ---------------- */
+  /* ---------------- 5. PINEAPPLE (파인애플 - 풍성한 11엽 왕관 잎) ---------------- */
   static drawPineapple(ctx, config, animTimer) {
     const r = config.radius;
 
-    // 1. Spiky Green 5-Blade Crown Leaves (상단 5개 녹색 잎)
+    // 1. Lush Multi-Layered Tropical Crown Leaves (풍성한 다층 녹색 잎)
     ctx.save();
-    const leaves = [
-      { tipX: -r * 0.52, tipY: -r * 0.70, baseL: -r * 0.35, baseR: -r * 0.15 },
-      { tipX: -r * 0.28, tipY: -r * 0.98, baseL: -r * 0.22, baseR: -r * 0.04 },
-      { tipX: 0, tipY: -r * 1.12, baseL: -r * 0.15, baseR: r * 0.15 },
-      { tipX: r * 0.28, tipY: -r * 0.98, baseL: r * 0.04, baseR: r * 0.22 },
-      { tipX: r * 0.52, tipY: -r * 0.70, baseL: r * 0.15, baseR: r * 0.35 }
+
+    // Back Layer Leaves (뒤쪽 풍성하게 퍼지는 잎)
+    const backLeaves = [
+      { tipX: -r * 0.68, tipY: -r * 0.75, baseL: -r * 0.42, baseR: -r * 0.15 },
+      { tipX: -r * 0.42, tipY: -r * 1.05, baseL: -r * 0.30, baseR: -r * 0.08 },
+      { tipX: -r * 0.18, tipY: -r * 1.25, baseL: -r * 0.20, baseR: 0 },
+      { tipX: r * 0.18, tipY: -r * 1.25, baseL: 0, baseR: r * 0.20 },
+      { tipX: r * 0.42, tipY: -r * 1.05, baseL: r * 0.08, baseR: r * 0.30 },
+      { tipX: r * 0.68, tipY: -r * 0.75, baseL: r * 0.15, baseR: r * 0.42 }
     ];
 
-    leaves.forEach(l => {
+    backLeaves.forEach(l => {
+      ctx.beginPath();
+      ctx.moveTo(l.baseL, -r * 0.38);
+      ctx.lineTo(l.tipX, l.tipY);
+      ctx.lineTo(l.baseR, -r * 0.38);
+      ctx.closePath();
+      ctx.fillStyle = '#3d8b43';
+      ctx.fill();
+    });
+
+    // Front Layer Leaves (앞쪽 선명하고 뾰족한 메인 잎)
+    const frontLeaves = [
+      { tipX: -r * 0.50, tipY: -r * 0.85, baseL: -r * 0.35, baseR: -r * 0.12 },
+      { tipX: -r * 0.24, tipY: -r * 1.15, baseL: -r * 0.22, baseR: -r * 0.02 },
+      { tipX: 0, tipY: -r * 1.30, baseL: -r * 0.14, baseR: r * 0.14 },
+      { tipX: r * 0.24, tipY: -r * 1.15, baseL: r * 0.02, baseR: r * 0.22 },
+      { tipX: r * 0.50, tipY: -r * 0.85, baseL: r * 0.12, baseR: r * 0.35 }
+    ];
+
+    frontLeaves.forEach(l => {
       ctx.beginPath();
       ctx.moveTo(l.baseL, -r * 0.40);
       ctx.lineTo(l.tipX, l.tipY);
@@ -561,7 +585,7 @@ export class FruitRenderer {
     ctx.restore();
   }
 
-  /* ---------------- 6. STRAWBERRY (딸기 - Reference Row 3, Col 3) ---------------- */
+  /* ---------------- 6. STRAWBERRY (딸기 - 흰 점 삭제) ---------------- */
   static drawStrawberry(ctx, config, animTimer) {
     const r = config.radius;
 
@@ -587,7 +611,7 @@ export class FruitRenderer {
       ctx.fill();
     });
 
-    // 2. Red Berry Body (빨간 딸기 몸체)
+    // 2. Clean Red Berry Body (흰 점 없는 매끄러운 단색 빨간 딸기)
     ctx.beginPath();
     ctx.moveTo(-r * 0.65, -r * 0.45);
     ctx.bezierCurveTo(-r * 0.85, -r * 0.10, -r * 0.55, r * 0.60, 0, r * 0.82);
@@ -597,30 +621,8 @@ export class FruitRenderer {
     ctx.fillStyle = '#f23c4a';
     ctx.fill();
 
-    // 3. Cream Seed Polka Dots (크림색 땡땡이 씨앗)
-    const seedPositions = [
-      { x: -r * 0.45, y: -r * 0.20 },
-      { x: r * 0.45, y: -r * 0.20 },
-      { x: -r * 0.28, y: -r * 0.32 },
-      { x: r * 0.28, y: -r * 0.32 },
-      { x: 0, y: -r * 0.36 },
-      { x: -r * 0.48, y: 0.08 },
-      { x: r * 0.48, y: 0.08 },
-      { x: -r * 0.32, y: r * 0.35 },
-      { x: r * 0.32, y: r * 0.35 },
-      { x: -r * 0.15, y: r * 0.55 },
-      { x: r * 0.15, y: r * 0.55 },
-      { x: 0, y: r * 0.68 }
-    ];
-    ctx.fillStyle = '#ffe5e8';
-    seedPositions.forEach(s => {
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, r * 0.045, 0, Math.PI * 2);
-      ctx.fill();
-    });
-
-    // 4. Kawaii Face (정중앙 카와이 표정)
-    this.drawKawaiiFace(ctx, 0, 0.06 * r, r * 0.82, {
+    // 3. Kawaii Face (정중앙 카와이 표정)
+    this.drawKawaiiFace(ctx, 0, 0.08 * r, r * 0.85, {
       blushColor: '#ff8595',
       eyeColor: '#1a1a1a'
     });
