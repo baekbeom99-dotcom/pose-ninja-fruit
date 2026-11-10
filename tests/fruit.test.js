@@ -66,6 +66,9 @@ function runTests() {
     assert(typeof FruitRenderer.drawOrange === 'function', 'drawOrange exists');
     assert(typeof FruitRenderer.drawBanana === 'function', 'drawBanana exists');
     assert(typeof FruitRenderer.drawPineapple === 'function', 'drawPineapple exists');
+    assert(typeof FruitRenderer.drawStrawberry === 'function', 'drawStrawberry exists');
+    assert(typeof FruitRenderer.drawPeach === 'function', 'drawPeach exists');
+    assert(typeof FruitRenderer.drawAvocado === 'function', 'drawAvocado exists');
     assert(typeof FruitRenderer.drawBomb === 'function', 'drawBomb exists');
     assert(typeof FruitRenderer.drawHeartBonus === 'function', 'drawHeartBonus exists');
   }

@@ -52,59 +52,86 @@ export const CONFIG = {
     GESTURE_HOLD_TIME: 0.50      // 500ms deliberate martial pose hold
   },
 
-  // Fruit Types - ALL RADII DOUBLED (2x Size Scale, Banana 3x Thickness)
+  // Fruit Types matching Reference Illustration ('Vector Fruits & Vegetable' Kawaii Art)
   FRUITS: {
     WATERMELON: {
       type: 'WATERMELON',
       radius: 96,
       points: 1,
-      color: '#15803d',
-      fleshColor: '#ef4444',
-      juiceColor: '#dc2626',
-      rindColor: '#dcfce7'
+      color: '#52b759',
+      fleshColor: '#e83a45',
+      juiceColor: '#d62839',
+      rindColor: '#d8f0bc'
     },
     ORANGE: {
       type: 'ORANGE',
       radius: 80,
       points: 1,
-      color: '#f97316',
-      fleshColor: '#fb923c',
-      juiceColor: '#ea580c',
-      rindColor: '#ffedd5'
+      color: '#ff8b26',
+      fleshColor: '#ffa726',
+      juiceColor: '#f57c00',
+      rindColor: '#ffe0b2'
     },
     APPLE: {
       type: 'APPLE',
       radius: 80,
       points: 1,
-      color: '#dc2626',
-      fleshColor: '#fef08a',
-      juiceColor: '#b91c1c',
-      rindColor: '#fecaca'
+      color: '#f04351',
+      fleshColor: '#ffebee',
+      juiceColor: '#e53935',
+      rindColor: '#ffcdd2'
     },
     BANANA: {
       type: 'BANANA',
-      radius: 98, // 3x Thicker, plump bunch with generous hitbox
+      radius: 96,
       points: 2,
-      color: '#eab308',
-      fleshColor: '#fef9c3',
-      juiceColor: '#ca8a04',
-      rindColor: '#fef08a'
+      color: '#ffdd40',
+      fleshColor: '#fffa85',
+      juiceColor: '#fbc02d',
+      rindColor: '#fff9c4'
     },
     PINEAPPLE: {
       type: 'PINEAPPLE',
       radius: 98,
       points: 3,
-      color: '#d97706',
-      fleshColor: '#fde047',
-      juiceColor: '#b45309',
-      rindColor: '#65a30d'
+      color: '#ffd147',
+      fleshColor: '#fffa85',
+      juiceColor: '#ffa526',
+      rindColor: '#52b759'
+    },
+    STRAWBERRY: {
+      type: 'STRAWBERRY',
+      radius: 82,
+      points: 2,
+      color: '#f23c4a',
+      fleshColor: '#ffe5e8',
+      juiceColor: '#e53935',
+      rindColor: '#52b759'
+    },
+    PEACH: {
+      type: 'PEACH',
+      radius: 84,
+      points: 2,
+      color: '#ff9f96',
+      fleshColor: '#ffe0dc',
+      juiceColor: '#ff6b7d',
+      rindColor: '#52b759'
+    },
+    AVOCADO: {
+      type: 'AVOCADO',
+      radius: 86,
+      points: 3,
+      color: '#52a338',
+      fleshColor: '#fcf395',
+      juiceColor: '#855333',
+      rindColor: '#52a338'
     },
     HEART_BONUS: {
       type: 'HEART_BONUS',
       radius: 88,
       points: 5,
-      color: '#ec4899',
-      fleshColor: '#f43f5e',
+      color: '#f43f5e',
+      fleshColor: '#fda4af',
       juiceColor: '#fb7185',
       rindColor: '#facc15'
     },
@@ -112,9 +139,9 @@ export const CONFIG = {
       type: 'BOMB',
       radius: 80,
       points: 0,
-      color: '#1e293b',
-      fleshColor: '#ff0044',
-      juiceColor: '#ffaa00',
+      color: '#2c3437',
+      fleshColor: '#ef4444',
+      juiceColor: '#ffa526',
       rindColor: '#94a3b8'
     }
   },

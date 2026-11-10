@@ -166,8 +166,8 @@ export class Fruit {
 }
 
 /**
- * Procedural Vector Graphics Renderer matching Reference Kawaii Character Art Style
- * Based on iStock kawaii character set (cute faces, blush cheeks, border-free pastel silhouettes).
+ * Procedural Vector Graphics Renderer matching Reference Illustration ('Vector Fruits & Vegetable' Kawaii Art)
+ * Based on iStock kawaii character set (cute faces, flat solid colors, border-free silhouettes, capsule highlights).
  */
 export class FruitRenderer {
   static drawFruitBody(ctx, config, animTimer = 0) {
@@ -187,6 +187,15 @@ export class FruitRenderer {
       case 'PINEAPPLE':
         this.drawPineapple(ctx, config, animTimer);
         break;
+      case 'STRAWBERRY':
+        this.drawStrawberry(ctx, config, animTimer);
+        break;
+      case 'PEACH':
+        this.drawPeach(ctx, config, animTimer);
+        break;
+      case 'AVOCADO':
+        this.drawAvocado(ctx, config, animTimer);
+        break;
       case 'BOMB':
         this.drawBomb(ctx, config, animTimer);
         break;
@@ -200,22 +209,22 @@ export class FruitRenderer {
   }
 
   /**
-   * Universal Cute/Kawaii Face Template (iStock Kawaii Character Style)
-   * - Wide-spaced dark charcoal eyes with cute white specular twinkles
-   * - Soft blushing circular cheeks
-   * - Sweet upward curve smile arc (⌣)
+   * Universal Cute/Kawaii Face Template matching Reference Illustration Exactly
+   * - Flat solid dark charcoal dots for eyes (#1a1a1a) with wide baby-like spacing
+   * - Flat solid pink circular dots for blushing cheeks (#ff8a99)
+   * - Clean sweet upward curve stroke for smile (⌣)
    */
   static drawKawaiiFace(ctx, cx, cy, r, options = {}) {
     const {
-      eyeDist = r * 0.44,
+      eyeDist = r * 0.46,
       eyeR = r * 0.082,
       smileR = r * 0.15,
-      smileOffsetY = r * 0.07,
+      smileOffsetY = r * 0.06,
       blushOffsetX = r * 0.48,
-      blushOffsetY = r * 0.08,
-      blushR = r * 0.12,
-      blushColor = '#ff8a80',
-      eyeColor = '#1e1b18',
+      blushOffsetY = r * 0.07,
+      blushR = r * 0.115,
+      blushColor = '#ff8a99',
+      eyeColor = '#1a1a1a',
       expression = 'smile', // 'smile', 'wink', 'happy', 'bomb'
       tiltAngle = 0
     } = options;
@@ -224,37 +233,28 @@ export class FruitRenderer {
     ctx.translate(cx, cy);
     if (tiltAngle) ctx.rotate(tiltAngle);
 
-    // 1. Rosy Blushing Cheeks
+    // 1. Rosy Blushing Cheeks (발그레한 핑크빛 볼터치)
     ctx.fillStyle = blushColor;
     ctx.beginPath();
     ctx.arc(-blushOffsetX, blushOffsetY, blushR, 0, Math.PI * 2);
     ctx.arc(blushOffsetX, blushOffsetY, blushR, 0, Math.PI * 2);
     ctx.fill();
 
-    // 2. Eyes
+    // 2. Eyes (단색 블랙 써클 눈)
     ctx.fillStyle = eyeColor;
     ctx.strokeStyle = eyeColor;
-    ctx.lineWidth = r * 0.055;
+    ctx.lineWidth = r * 0.052;
     ctx.lineCap = 'round';
 
     if (expression === 'wink') {
-      // Left eye open dot
       ctx.beginPath();
       ctx.arc(-eyeDist / 2, 0, eyeR, 0, Math.PI * 2);
       ctx.fill();
 
-      // Right eye winking arc ^
       ctx.beginPath();
       ctx.arc(eyeDist / 2, eyeR * 0.35, eyeR * 1.25, -Math.PI * 0.85, -Math.PI * 0.15);
       ctx.stroke();
-
-      // Left eye twinkle dot
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.arc(-eyeDist / 2 + eyeR * 0.30, -eyeR * 0.30, eyeR * 0.36, 0, Math.PI * 2);
-      ctx.fill();
     } else if (expression === 'happy') {
-      // Both eyes joyful closed arcs ^ ^
       ctx.beginPath();
       ctx.arc(-eyeDist / 2, eyeR * 0.35, eyeR * 1.25, -Math.PI * 0.85, -Math.PI * 0.15);
       ctx.stroke();
@@ -263,23 +263,14 @@ export class FruitRenderer {
       ctx.arc(eyeDist / 2, eyeR * 0.35, eyeR * 1.25, -Math.PI * 0.85, -Math.PI * 0.15);
       ctx.stroke();
     } else if (expression === 'bomb') {
-      // Bomb: Mischievous wink with angled eyebrow
       ctx.beginPath();
       ctx.arc(-eyeDist / 2, 0, eyeR, 0, Math.PI * 2);
       ctx.fill();
 
-      // Right winking arc
       ctx.beginPath();
       ctx.arc(eyeDist / 2, eyeR * 0.35, eyeR * 1.25, -Math.PI * 0.85, -Math.PI * 0.15);
       ctx.stroke();
 
-      // Left twinkle
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.arc(-eyeDist / 2 + eyeR * 0.30, -eyeR * 0.30, eyeR * 0.36, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Determined tiny brow
       ctx.strokeStyle = eyeColor;
       ctx.lineWidth = r * 0.045;
       ctx.beginPath();
@@ -292,17 +283,9 @@ export class FruitRenderer {
       ctx.lineTo(eyeDist / 2 - eyeR * 0.9, -eyeR * 0.8);
       ctx.stroke();
     } else {
-      // Standard cute dots with twinkles
       ctx.beginPath();
       ctx.arc(-eyeDist / 2, 0, eyeR, 0, Math.PI * 2);
       ctx.arc(eyeDist / 2, 0, eyeR, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Twinkles
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.arc(-eyeDist / 2 + eyeR * 0.30, -eyeR * 0.30, eyeR * 0.36, 0, Math.PI * 2);
-      ctx.arc(eyeDist / 2 + eyeR * 0.30, -eyeR * 0.30, eyeR * 0.36, 0, Math.PI * 2);
       ctx.fill();
     }
 
@@ -317,346 +300,245 @@ export class FruitRenderer {
     ctx.restore();
   }
 
-  /* ---------------- 1. WATERMELON (둥근 수박 카와이 캐릭터) ---------------- */
+  /* ---------------- 1. WATERMELON (수박 - Reference Row 3, Col 5: 삼각 웨지 조각) ---------------- */
   static drawWatermelon(ctx, config, animTimer) {
     const r = config.radius;
 
-    // 1. Plump Round Green Watermelon Sphere
-    ctx.beginPath();
-    ctx.arc(0, 0, r, 0, Math.PI * 2);
-    const rindGrad = ctx.createRadialGradient(-r * 0.28, -r * 0.28, 6, 0, 0, r);
-    rindGrad.addColorStop(0, '#4ade80');
-    rindGrad.addColorStop(0.35, '#22c55e');
-    rindGrad.addColorStop(0.75, '#16a34a');
-    rindGrad.addColorStop(1, '#15803d');
-    ctx.fillStyle = rindGrad;
-    ctx.fill();
-
-    // 2. Wavy Dark Green Watermelon Stripes
+    // 1. Outer Green Rind Arc (하단 둥근 초록 껍질)
     ctx.save();
     ctx.beginPath();
-    ctx.arc(0, 0, r - 2, 0, Math.PI * 2);
-    ctx.clip();
+    ctx.moveTo(-r * 0.76, r * 0.44);
+    ctx.quadraticCurveTo(0, r * 1.08, r * 0.76, r * 0.44);
+    ctx.lineTo(r * 0.70, r * 0.28);
+    ctx.quadraticCurveTo(0, r * 0.86, -r * 0.70, r * 0.28);
+    ctx.closePath();
+    ctx.fillStyle = '#52b759';
+    ctx.fill();
 
-    ctx.strokeStyle = '#052e16';
-    ctx.lineWidth = r * 0.15;
-    ctx.lineCap = 'round';
+    // 2. Inner Pale Green/Cream Rim (연두빛 속껍질 띠)
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.70, r * 0.28);
+    ctx.quadraticCurveTo(0, r * 0.86, r * 0.70, r * 0.28);
+    ctx.lineTo(r * 0.64, r * 0.16);
+    ctx.quadraticCurveTo(0, r * 0.72, -r * 0.64, r * 0.16);
+    ctx.closePath();
+    ctx.fillStyle = '#d8f0bc';
+    ctx.fill();
 
-    for (let stripe = -3; stripe <= 3; stripe++) {
-      const baseX = stripe * (r * 0.28);
+    // 3. Red Flesh Triangular Wedge (빨간 과육 삼각 조각)
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.64, r * 0.16);
+    ctx.quadraticCurveTo(0, r * 0.72, r * 0.64, r * 0.16);
+    ctx.quadraticCurveTo(r * 0.24, -r * 0.48, 0, -r * 0.88);
+    ctx.quadraticCurveTo(-r * 0.24, -r * 0.48, -r * 0.64, r * 0.16);
+    ctx.closePath();
+    ctx.fillStyle = '#e83a45';
+    ctx.fill();
+
+    // 4. Black Teardrop Seeds (검은 씨앗들)
+    const seeds = [
+      { x: 0, y: -r * 0.58 },
+      { x: -r * 0.20, y: -r * 0.36 },
+      { x: r * 0.20, y: -r * 0.36 },
+      { x: -r * 0.36, y: -r * 0.10 },
+      { x: r * 0.36, y: -r * 0.10 },
+      { x: -r * 0.35, y: r * 0.22 },
+      { x: r * 0.35, y: r * 0.22 },
+      { x: 0, y: r * 0.32 }
+    ];
+
+    ctx.fillStyle = '#1a1a1a';
+    seeds.forEach(s => {
       ctx.beginPath();
-      for (let y = -r; y <= r; y += 8) {
-        const wave = Math.sin(y * 0.08 + stripe * 1.5) * (r * 0.07);
-        const x = baseX * Math.sqrt(Math.max(0, 1 - (y * y) / (r * r))) + wave;
-        if (y === -r) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      }
-      ctx.stroke();
-    }
-    ctx.restore();
-
-    // 3. Top Stem Pip & Curled Tendril
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(0, -r * 0.94, r * 0.06, 0, Math.PI * 2);
-    ctx.fillStyle = '#78350f';
-    ctx.fill();
-
-    ctx.beginPath();
-    ctx.moveTo(0, -r * 0.94);
-    ctx.quadraticCurveTo(r * 0.15, -r * 1.05, r * 0.22, -r * 0.98);
-    ctx.strokeStyle = '#15803d';
-    ctx.lineWidth = r * 0.04;
-    ctx.lineCap = 'round';
-    ctx.stroke();
-    ctx.restore();
-
-    // 4. Smooth Curved White Specular Highlight on Upper-Right
-    ctx.beginPath();
-    ctx.arc(0, 0, r * 0.74, -Math.PI * 0.28, -Math.PI * 0.04);
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
-    ctx.lineWidth = r * 0.09;
-    ctx.lineCap = 'round';
-    ctx.stroke();
-
-    // 5. Kawaii Cute Face
-    this.drawKawaiiFace(ctx, 0, r * 0.06, r, {
-      blushColor: '#ff4d6d',
-      eyeColor: '#052e16'
+      ctx.ellipse(s.x, s.y, r * 0.04, r * 0.068, 0, 0, Math.PI * 2);
+      ctx.fill();
     });
+
+    // 5. Kawaii Face (정중앙 카와이 표정)
+    this.drawKawaiiFace(ctx, 0, 0.04 * r, r * 0.78, {
+      blushColor: '#ff6b81',
+      eyeColor: '#1a1a1a'
+    });
+
+    ctx.restore();
   }
 
-  /* ---------------- 2. APPLE (사과 카와이 캐릭터) ---------------- */
+  /* ---------------- 2. APPLE (사과 - Reference Row 2, Col 4) ---------------- */
   static drawApple(ctx, config, animTimer) {
     const r = config.radius;
 
-    // 1. Brown Angled Stem
+    // 1. Brown Twig Stem pointing right (갈색 줄기)
     ctx.beginPath();
-    ctx.moveTo(0, -r * 0.50);
-    ctx.quadraticCurveTo(-r * 0.08, -r * 0.75, -r * 0.14, -r * 0.94);
-    ctx.strokeStyle = '#78350f';
-    ctx.lineWidth = r * 0.10;
+    ctx.moveTo(0, -r * 0.45);
+    ctx.quadraticCurveTo(r * 0.05, -r * 0.75, r * 0.12, -r * 0.90);
+    ctx.strokeStyle = '#8b573a';
+    ctx.lineWidth = r * 0.11;
     ctx.lineCap = 'round';
     ctx.stroke();
 
-    // 2. Fresh Green Leaf pointing right
-    ctx.save();
+    // 2. Rounded Green Leaf on Right (오른쪽 둥근 초록 잎)
     ctx.beginPath();
-    ctx.moveTo(0, -r * 0.54);
-    ctx.quadraticCurveTo(r * 0.18, -r * 0.82, r * 0.44, -r * 0.74);
-    ctx.quadraticCurveTo(r * 0.32, -r * 0.50, 0, -r * 0.54);
-    ctx.closePath();
-    ctx.fillStyle = '#22c55e';
+    ctx.ellipse(r * 0.35, -r * 0.72, r * 0.26, r * 0.16, -0.28, 0, Math.PI * 2);
+    ctx.fillStyle = '#52b759';
     ctx.fill();
 
-    // Leaf spine vein
+    // 3. Apple Body with Indentations (빨간 사과 몸체)
     ctx.beginPath();
-    ctx.moveTo(0, -r * 0.54);
-    ctx.quadraticCurveTo(r * 0.20, -r * 0.66, r * 0.40, -r * 0.72);
-    ctx.strokeStyle = '#15803d';
-    ctx.lineWidth = 2;
-    ctx.stroke();
+    ctx.moveTo(0, -r * 0.45);
+    ctx.bezierCurveTo(r * 0.36, -r * 0.88, r * 0.92, -r * 0.55, r * 0.86, r * 0.08);
+    ctx.bezierCurveTo(r * 0.80, r * 0.68, r * 0.36, r * 0.90, r * 0.12, r * 0.84);
+    ctx.bezierCurveTo(r * 0.04, r * 0.82, -r * 0.04, r * 0.82, -r * 0.12, r * 0.84);
+    ctx.bezierCurveTo(-r * 0.36, r * 0.90, -r * 0.80, r * 0.68, -r * 0.86, r * 0.08);
+    ctx.bezierCurveTo(-r * 0.92, -r * 0.55, -r * 0.36, -r * 0.88, 0, -r * 0.45);
+    ctx.closePath();
+    ctx.fillStyle = '#f04351';
+    ctx.fill();
+
+    // 4. White Capsule Gloss Highlight on Upper-Left (좌측 상단 캡슐형 광택)
+    ctx.save();
+    ctx.translate(-r * 0.48, -r * 0.32);
+    ctx.rotate(-0.55);
+    ctx.beginPath();
+    ctx.roundRect(-r * 0.09, -r * 0.20, r * 0.18, r * 0.40, r * 0.09);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
     ctx.restore();
 
-    // 3. Apple Body with Top/Bottom Indentations
-    ctx.beginPath();
-    ctx.moveTo(0, -r * 0.50);
-    ctx.bezierCurveTo(r * 0.38, -r * 0.92, r * 0.94, -r * 0.58, r * 0.88, r * 0.08);
-    ctx.bezierCurveTo(r * 0.82, r * 0.68, r * 0.38, r * 0.92, r * 0.14, r * 0.86);
-    ctx.bezierCurveTo(r * 0.05, r * 0.84, -r * 0.05, r * 0.84, -r * 0.14, r * 0.86);
-    ctx.bezierCurveTo(-r * 0.38, r * 0.92, -r * 0.82, r * 0.68, -r * 0.88, r * 0.08);
-    ctx.bezierCurveTo(-r * 0.94, -r * 0.58, -r * 0.38, -r * 0.92, 0, -r * 0.50);
-    ctx.closePath();
-
-    const appleGrad = ctx.createRadialGradient(-r * 0.25, -r * 0.20, 8, 0, 0, r * 0.95);
-    appleGrad.addColorStop(0, '#f87171');
-    appleGrad.addColorStop(0.35, '#ef4444');
-    appleGrad.addColorStop(0.85, '#dc2626');
-    appleGrad.addColorStop(1, '#991b1b');
-    ctx.fillStyle = appleGrad;
-    ctx.fill();
-
-    // 4. Curved White Specular Highlight on Right Shoulder
-    ctx.beginPath();
-    ctx.moveTo(r * 0.56, -r * 0.48);
-    ctx.bezierCurveTo(r * 0.78, -r * 0.30, r * 0.78, 0.05, r * 0.66, r * 0.32);
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.70)';
-    ctx.lineWidth = r * 0.09;
-    ctx.lineCap = 'round';
-    ctx.stroke();
-
-    // 5. Kawaii Cute Face
-    this.drawKawaiiFace(ctx, 0, r * 0.12, r, {
-      blushColor: 'rgba(255, 90, 110, 0.65)',
-      eyeColor: '#2b0909'
+    // 5. Kawaii Face (카와이 표정)
+    this.drawKawaiiFace(ctx, 0, r * 0.12, r * 0.85, {
+      blushColor: '#ff8595',
+      eyeColor: '#1a1a1a'
     });
   }
 
-  /* ---------------- 3. ORANGE (오렌지 카와이 캐릭터) ---------------- */
+  /* ---------------- 3. ORANGE (오렌지 - Reference Row 1, Col 5) ---------------- */
   static drawOrange(ctx, config, animTimer) {
     const r = config.radius;
 
-    // 1. Plump Round Orange Body
+    // 1. Brown Twig Stem (갈색 꼭지)
     ctx.beginPath();
-    ctx.arc(0, 0, r, 0, Math.PI * 2);
-    const orangeGrad = ctx.createRadialGradient(-r * 0.28, -r * 0.28, 6, 0, 0, r);
-    orangeGrad.addColorStop(0, '#fb923c');
-    orangeGrad.addColorStop(0.6, '#f97316');
-    orangeGrad.addColorStop(0.9, '#ea580c');
-    orangeGrad.addColorStop(1, '#c2410c');
-    ctx.fillStyle = orangeGrad;
-    ctx.fill();
-
-    // 2. Top Star Stem Calyx
-    ctx.save();
-    ctx.translate(0, -r * 0.86);
-    ctx.beginPath();
-    const starPoints = 5;
-    const outerR = r * 0.22;
-    const innerR = r * 0.10;
-    for (let i = 0; i < starPoints * 2; i++) {
-      const radius = i % 2 === 0 ? outerR : innerR;
-      const angle = (i * Math.PI) / starPoints - Math.PI / 2;
-      const x = Math.cos(angle) * radius;
-      const y = Math.sin(angle) * radius;
-      if (i === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    }
-    ctx.closePath();
-    ctx.fillStyle = '#16a34a';
-    ctx.fill();
-
-    // Center brown stem pip
-    ctx.beginPath();
-    ctx.arc(0, 0, r * 0.05, 0, Math.PI * 2);
-    ctx.fillStyle = '#78350f';
-    ctx.fill();
-    ctx.restore();
-
-    // 3. Smooth Curved White Specular Highlight on Upper-Right
-    ctx.beginPath();
-    ctx.arc(0, 0, r * 0.74, -Math.PI * 0.28, -Math.PI * 0.04);
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.68)';
-    ctx.lineWidth = r * 0.09;
+    ctx.moveTo(0, -r * 0.82);
+    ctx.quadraticCurveTo(r * 0.06, -r * 1.02, r * 0.16, -r * 1.12);
+    ctx.strokeStyle = '#8b573a';
+    ctx.lineWidth = r * 0.11;
     ctx.lineCap = 'round';
     ctx.stroke();
 
-    // 4. Kawaii Cute Face
-    this.drawKawaiiFace(ctx, 0, r * 0.06, r, {
-      blushColor: '#ff8a80',
-      eyeColor: '#2c1203'
+    // 2. Horizontal Rounded Green Leaf on Right (우측 수평 초록 잎)
+    ctx.beginPath();
+    ctx.ellipse(r * 0.44, -r * 0.92, r * 0.30, r * 0.16, 0.12, 0, Math.PI * 2);
+    ctx.fillStyle = '#52b759';
+    ctx.fill();
+
+    // 3. Plump Round Orange Body (오렌지 둥근 몸체)
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 0.88, 0, Math.PI * 2);
+    ctx.fillStyle = '#ff8b26';
+    ctx.fill();
+
+    // 4. Kawaii Face (카와이 표정)
+    this.drawKawaiiFace(ctx, 0, r * 0.05, r * 0.85, {
+      blushColor: '#ff6d50',
+      eyeColor: '#1a1a1a'
     });
   }
 
-  /* ---------------- 4. BANANA (바나나 카와이 캐릭터) ---------------- */
+  /* ---------------- 4. BANANA (바나나 - Reference Row 3, Col 1) ---------------- */
   static drawBanana(ctx, config, animTimer) {
     const r = config.radius;
 
-    // 1. Brown Top Stem Cap
     ctx.save();
+    // 1. Top Flat-Cut Stem (상단 각진 꼭지)
     ctx.beginPath();
-    ctx.moveTo(r * 0.48, -r * 0.75);
-    ctx.lineTo(r * 0.82, -r * 0.52);
-    ctx.lineTo(r * 0.76, -r * 0.40);
-    ctx.lineTo(r * 0.42, -r * 0.62);
+    ctx.moveTo(-r * 0.42, -r * 0.72);
+    ctx.lineTo(-r * 0.28, -r * 0.78);
+    ctx.lineTo(-r * 0.22, -r * 0.62);
+    ctx.lineTo(-r * 0.38, -r * 0.58);
     ctx.closePath();
-    ctx.fillStyle = '#78350f';
+    ctx.fillStyle = '#fce068';
     ctx.fill();
-    ctx.strokeStyle = '#451a03';
-    ctx.lineWidth = 2.5;
-    ctx.stroke();
-    ctx.restore();
 
-    // 2. Lower / Rear Banana Volume
-    ctx.save();
+    // 2. Main Curved Banana Body (바나나 곡면 몸체)
     ctx.beginPath();
-    ctx.moveTo(r * 0.62, -r * 0.45);
-    ctx.bezierCurveTo(r * 0.50, r * 0.35, -r * 0.15, r * 0.72, -r * 0.62, r * 0.40);
-    ctx.lineTo(-r * 0.68, r * 0.36);
-    ctx.bezierCurveTo(-r * 0.20, r * 0.42, r * 0.32, r * 0.15, r * 0.45, -r * 0.48);
+    ctx.moveTo(-r * 0.38, -r * 0.58);
+    ctx.bezierCurveTo(-r * 0.20, -r * 0.10, r * 0.05, r * 0.40, r * 0.52, r * 0.72);
+    ctx.bezierCurveTo(r * 0.65, r * 0.80, r * 0.78, r * 0.75, r * 0.75, r * 0.58);
+    ctx.bezierCurveTo(r * 0.40, r * 0.15, 0, -r * 0.25, -r * 0.22, -r * 0.62);
     ctx.closePath();
-
-    const rearGrad = ctx.createLinearGradient(r * 0.5, -r * 0.4, -r * 0.5, r * 0.5);
-    rearGrad.addColorStop(0, '#facc15');
-    rearGrad.addColorStop(0.7, '#eab308');
-    rearGrad.addColorStop(1, '#ca8a04');
-    ctx.fillStyle = rearGrad;
+    ctx.fillStyle = '#ffdd40';
     ctx.fill();
 
-    // Rear blossom tip
+    // 3. Inner Pale Facet Highlight Ribbon (안쪽 연노랑 면 하이라이트)
     ctx.beginPath();
-    ctx.arc(-r * 0.66, r * 0.37, 4.5, 0, Math.PI * 2);
-    ctx.fillStyle = '#451a03';
-    ctx.fill();
-    ctx.restore();
-
-    // 3. Main Front Banana (3x Thick & Plump Body)
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(r * 0.52, -r * 0.60);
-    ctx.bezierCurveTo(r * 0.35, r * 0.05, -r * 0.25, r * 0.58, -r * 0.85, 0.05);
-    ctx.lineTo(-r * 0.88, -r * 0.04);
-    ctx.bezierCurveTo(-r * 0.35, -r * 0.08, r * 0.12, -r * 0.22, r * 0.42, -r * 0.66);
+    ctx.moveTo(-r * 0.30, -r * 0.54);
+    ctx.bezierCurveTo(-r * 0.10, -r * 0.12, r * 0.12, r * 0.30, r * 0.58, r * 0.64);
+    ctx.bezierCurveTo(r * 0.48, r * 0.42, r * 0.15, r * 0.05, -r * 0.24, -r * 0.46);
     ctx.closePath();
-
-    const frontGrad = ctx.createLinearGradient(r * 0.4, -r * 0.5, -r * 0.6, 0.2);
-    frontGrad.addColorStop(0, '#fef08a');
-    frontGrad.addColorStop(0.35, '#fde047');
-    frontGrad.addColorStop(0.85, '#facc15');
-    frontGrad.addColorStop(1, '#eab308');
-    ctx.fillStyle = frontGrad;
+    ctx.fillStyle = '#fffa85';
     ctx.fill();
 
-    // 4. Creamy Top Ridge Highlight Ribbon
+    // 4. Dark Brown Blossom Tip (하단 갈색 끝점)
     ctx.beginPath();
-    ctx.moveTo(r * 0.45, -r * 0.62);
-    ctx.bezierCurveTo(r * 0.20, -r * 0.20, -r * 0.25, -r * 0.05, -r * 0.84, -r * 0.02);
-    ctx.strokeStyle = '#fef9c3';
-    ctx.lineWidth = r * 0.12;
-    ctx.lineCap = 'round';
-    ctx.stroke();
-
-    // 5. Dark Blossom Tip
-    ctx.beginPath();
-    ctx.arc(-r * 0.86, 0, 5, 0, Math.PI * 2);
-    ctx.fillStyle = '#451a03';
+    ctx.ellipse(r * 0.68, r * 0.68, r * 0.09, r * 0.09, 0, 0, Math.PI * 2);
+    ctx.fillStyle = '#5a3825';
     ctx.fill();
 
-    // 6. Crisp Curved White Specular Highlight
-    ctx.beginPath();
-    ctx.moveTo(r * 0.35, -r * 0.45);
-    ctx.bezierCurveTo(r * 0.15, -r * 0.02, -r * 0.22, r * 0.32, -r * 0.68, 0.14);
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.72)';
-    ctx.lineWidth = r * 0.07;
-    ctx.lineCap = 'round';
-    ctx.stroke();
-
-    // 7. Kawaii Cute Face along Banana Curve
-    this.drawKawaiiFace(ctx, -r * 0.14, r * 0.06, r * 0.85, {
-      blushColor: '#ff8a80',
-      eyeColor: '#291b04',
-      tiltAngle: -0.15
+    // 5. Kawaii Face along Banana Spine (바나나 몸통의 카와이 표정)
+    this.drawKawaiiFace(ctx, 0.05 * r, 0.05 * r, r * 0.80, {
+      blushColor: '#ff8a99',
+      eyeColor: '#1a1a1a',
+      tiltAngle: 0.52
     });
 
     ctx.restore();
   }
 
-  /* ---------------- 5. PINEAPPLE (파인애플 카와이 캐릭터) ---------------- */
+  /* ---------------- 5. PINEAPPLE (파인애플 - Reference Row 1, Col 3) ---------------- */
   static drawPineapple(ctx, config, animTimer) {
     const r = config.radius;
 
-    // 1. Spiky Tropical 5-Point Crown Leaves
+    // 1. Spiky Green 5-Blade Crown Leaves (상단 5개 녹색 잎)
     ctx.save();
     const leaves = [
-      { startX: -r * 0.10, startY: -r * 0.35, tipX: -r * 0.58, tipY: -r * 0.72, ctrlX: -r * 0.45, ctrlY: -r * 0.45 },
-      { startX: -r * 0.05, startY: -r * 0.38, tipX: -r * 0.35, tipY: -r * 0.98, ctrlX: -r * 0.25, ctrlY: -r * 0.65 },
-      { startX: 0, startY: -r * 0.40, tipX: 0, tipY: -r * 1.08, ctrlX: 0, ctrlY: -r * 0.75 },
-      { startX: r * 0.05, startY: -r * 0.38, tipX: r * 0.35, tipY: -r * 0.98, ctrlX: r * 0.25, ctrlY: -r * 0.65 },
-      { startX: r * 0.10, startY: -r * 0.35, tipX: r * 0.58, tipY: -r * 0.72, ctrlX: r * 0.45, ctrlY: -r * 0.45 }
+      { tipX: -r * 0.52, tipY: -r * 0.70, baseL: -r * 0.35, baseR: -r * 0.15 },
+      { tipX: -r * 0.28, tipY: -r * 0.98, baseL: -r * 0.22, baseR: -r * 0.04 },
+      { tipX: 0, tipY: -r * 1.12, baseL: -r * 0.15, baseR: r * 0.15 },
+      { tipX: r * 0.28, tipY: -r * 0.98, baseL: r * 0.04, baseR: r * 0.22 },
+      { tipX: r * 0.52, tipY: -r * 0.70, baseL: r * 0.15, baseR: r * 0.35 }
     ];
 
-    leaves.forEach((l) => {
+    leaves.forEach(l => {
       ctx.beginPath();
-      ctx.moveTo(l.startX, l.startY);
-      ctx.quadraticCurveTo(l.ctrlX, l.ctrlY, l.tipX, l.tipY);
-      ctx.quadraticCurveTo(l.ctrlX * 0.7, l.ctrlY * 1.1, l.startX, l.startY);
+      ctx.moveTo(l.baseL, -r * 0.40);
+      ctx.lineTo(l.tipX, l.tipY);
+      ctx.lineTo(l.baseR, -r * 0.40);
       ctx.closePath();
-
-      const leafGrad = ctx.createLinearGradient(l.startX, l.startY, l.tipX, l.tipY);
-      leafGrad.addColorStop(0, '#65a30d');
-      leafGrad.addColorStop(0.6, '#4d7c0f');
-      leafGrad.addColorStop(1, '#15803d');
-      ctx.fillStyle = leafGrad;
+      ctx.fillStyle = '#52b759';
       ctx.fill();
     });
     ctx.restore();
 
-    // 2. Plump Golden Oval Body
+    // 2. Plump Golden Oval Body (둥근 타원형 황금빛 몸체)
     ctx.save();
-    const bodyCenterY = r * 0.20;
+    const bodyCenterY = r * 0.15;
     const bodyR = r * 0.68;
-    const bodyH = r * 0.78;
+    const bodyH = r * 0.82;
 
     ctx.beginPath();
     ctx.ellipse(0, bodyCenterY, bodyR, bodyH, 0, 0, Math.PI * 2);
-    const bodyGrad = ctx.createRadialGradient(-r * 0.22, bodyCenterY - r * 0.25, 8, 0, bodyCenterY, bodyR);
-    bodyGrad.addColorStop(0, '#fde047');
-    bodyGrad.addColorStop(0.5, '#facc15');
-    bodyGrad.addColorStop(0.9, '#eab308');
-    bodyGrad.addColorStop(1, '#ca8a04');
-    ctx.fillStyle = bodyGrad;
+    ctx.fillStyle = '#ffd147';
     ctx.fill();
 
-    // 3. Diamond Lattice Grid Pattern
+    // 3. Orange Diamond Lattice Grid (오렌지색 마름모 격자 선)
     ctx.save();
     ctx.beginPath();
-    ctx.ellipse(0, bodyCenterY, bodyR - 2, bodyH - 2, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, bodyCenterY, bodyR, bodyH, 0, 0, Math.PI * 2);
     ctx.clip();
 
-    ctx.strokeStyle = 'rgba(180, 83, 9, 0.40)';
-    ctx.lineWidth = 2.4;
+    ctx.strokeStyle = '#ffa526';
+    ctx.lineWidth = 3.2;
 
-    const spacing = r * 0.28;
+    const spacing = r * 0.30;
     for (let offset = -r * 2; offset <= r * 2; offset += spacing) {
       ctx.beginPath();
       ctx.moveTo(offset - r, bodyCenterY - r);
@@ -668,37 +550,159 @@ export class FruitRenderer {
       ctx.lineTo(offset - r, bodyCenterY + r);
       ctx.stroke();
     }
-
-    ctx.fillStyle = 'rgba(180, 83, 9, 0.50)';
-    for (let x = -bodyR; x <= bodyR; x += spacing) {
-      for (let y = bodyCenterY - bodyH; y <= bodyCenterY + bodyH; y += spacing) {
-        if ((x * x) / (bodyR * bodyR) + ((y - bodyCenterY) * (y - bodyCenterY)) / (bodyH * bodyH) < 0.70) {
-          ctx.beginPath();
-          ctx.arc(x + spacing * 0.5, y + spacing * 0.5, 2.5, 0, Math.PI * 2);
-          ctx.fill();
-        }
-      }
-    }
     ctx.restore();
 
-    // 4. Curved White Specular Highlight on Right Shoulder
-    ctx.beginPath();
-    ctx.arc(0, bodyCenterY, bodyR * 0.82, -Math.PI * 0.25, 0);
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
-    ctx.lineWidth = r * 0.08;
-    ctx.lineCap = 'round';
-    ctx.stroke();
-
-    // 5. Kawaii Cute Face
-    this.drawKawaiiFace(ctx, 0, bodyCenterY + r * 0.04, r * 0.90, {
-      blushColor: '#ff8a80',
-      eyeColor: '#291602'
+    // 4. Centered Kawaii Face (정중앙 카와이 표정)
+    this.drawKawaiiFace(ctx, 0, bodyCenterY, r * 0.88, {
+      blushColor: '#ff8a99',
+      eyeColor: '#1a1a1a'
     });
 
     ctx.restore();
   }
 
-  /* ---------------- 6. BOMB (폭탄 카와이 캐릭터) ---------------- */
+  /* ---------------- 6. STRAWBERRY (딸기 - Reference Row 3, Col 3) ---------------- */
+  static drawStrawberry(ctx, config, animTimer) {
+    const r = config.radius;
+
+    // 1. Green Stem & Calyx Cap (상단 줄기와 4엽 꽃받침)
+    ctx.beginPath();
+    ctx.moveTo(0, -r * 0.65);
+    ctx.lineTo(0, -r * 0.90);
+    ctx.strokeStyle = '#52b759';
+    ctx.lineWidth = r * 0.12;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+
+    ctx.fillStyle = '#52b759';
+    const lobes = [
+      { cx: -r * 0.42, cy: -r * 0.58, rx: r * 0.20, ry: r * 0.14, rot: -0.4 },
+      { cx: -r * 0.15, cy: -r * 0.62, rx: r * 0.18, ry: r * 0.14, rot: -0.1 },
+      { cx: r * 0.15, cy: -r * 0.62, rx: r * 0.18, ry: r * 0.14, rot: 0.1 },
+      { cx: r * 0.42, cy: -r * 0.58, rx: r * 0.20, ry: r * 0.14, rot: 0.4 }
+    ];
+    lobes.forEach(l => {
+      ctx.beginPath();
+      ctx.ellipse(l.cx, l.cy, l.rx, l.ry, l.rot, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    // 2. Red Berry Body (빨간 딸기 몸체)
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.65, -r * 0.45);
+    ctx.bezierCurveTo(-r * 0.85, -r * 0.10, -r * 0.55, r * 0.60, 0, r * 0.82);
+    ctx.bezierCurveTo(r * 0.55, r * 0.60, r * 0.85, -r * 0.10, r * 0.65, -r * 0.45);
+    ctx.quadraticCurveTo(0, -r * 0.52, -r * 0.65, -r * 0.45);
+    ctx.closePath();
+    ctx.fillStyle = '#f23c4a';
+    ctx.fill();
+
+    // 3. Cream Seed Polka Dots (크림색 땡땡이 씨앗)
+    const seedPositions = [
+      { x: -r * 0.45, y: -r * 0.20 },
+      { x: r * 0.45, y: -r * 0.20 },
+      { x: -r * 0.28, y: -r * 0.32 },
+      { x: r * 0.28, y: -r * 0.32 },
+      { x: 0, y: -r * 0.36 },
+      { x: -r * 0.48, y: 0.08 },
+      { x: r * 0.48, y: 0.08 },
+      { x: -r * 0.32, y: r * 0.35 },
+      { x: r * 0.32, y: r * 0.35 },
+      { x: -r * 0.15, y: r * 0.55 },
+      { x: r * 0.15, y: r * 0.55 },
+      { x: 0, y: r * 0.68 }
+    ];
+    ctx.fillStyle = '#ffe5e8';
+    seedPositions.forEach(s => {
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, r * 0.045, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    // 4. Kawaii Face (정중앙 카와이 표정)
+    this.drawKawaiiFace(ctx, 0, 0.06 * r, r * 0.82, {
+      blushColor: '#ff8595',
+      eyeColor: '#1a1a1a'
+    });
+  }
+
+  /* ---------------- 7. PEACH (복숭아 - Reference Row 3, Col 2) ---------------- */
+  static drawPeach(ctx, config, animTimer) {
+    const r = config.radius;
+
+    // 1. Green Leaf on Top Right (상단 우측 녹색 잎)
+    ctx.beginPath();
+    ctx.ellipse(r * 0.24, -r * 0.72, r * 0.24, r * 0.14, 0.45, 0, Math.PI * 2);
+    ctx.fillStyle = '#52b759';
+    ctx.fill();
+
+    // 2. Peach Body with Bottom-Left Tip (좌하단 꼭지 복숭아 몸체)
+    ctx.beginPath();
+    ctx.moveTo(0, -r * 0.55);
+    ctx.bezierCurveTo(r * 0.40, -r * 0.85, r * 0.90, -r * 0.45, r * 0.84, r * 0.15);
+    ctx.bezierCurveTo(r * 0.75, r * 0.65, r * 0.30, r * 0.85, -r * 0.15, r * 0.82);
+    ctx.lineTo(-r * 0.30, r * 0.84);
+    ctx.bezierCurveTo(-r * 0.55, r * 0.70, -r * 0.88, r * 0.45, -r * 0.84, -r * 0.05);
+    ctx.bezierCurveTo(-r * 0.80, -r * 0.55, -r * 0.35, -r * 0.85, 0, -r * 0.55);
+    ctx.closePath();
+    ctx.fillStyle = '#ff9f96';
+    ctx.fill();
+
+    // 3. White Capsule Gloss Highlight on Upper-Left Shoulder (좌상단 캡슐형 광택)
+    ctx.save();
+    ctx.translate(-r * 0.45, -r * 0.35);
+    ctx.rotate(-0.6);
+    ctx.beginPath();
+    ctx.roundRect(-r * 0.08, -r * 0.18, r * 0.16, r * 0.36, r * 0.08);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+    ctx.restore();
+
+    // 4. Kawaii Face (카와이 표정)
+    this.drawKawaiiFace(ctx, 0, r * 0.10, r * 0.82, {
+      blushColor: '#ff6b7d',
+      eyeColor: '#1a1a1a'
+    });
+  }
+
+  /* ---------------- 8. AVOCADO (아보카도 - Reference Row 1, Col 4) ---------------- */
+  static drawAvocado(ctx, config, animTimer) {
+    const r = config.radius;
+
+    const tracePear = (scale) => {
+      ctx.beginPath();
+      ctx.moveTo(0, -r * 0.85 * scale);
+      ctx.bezierCurveTo(r * 0.45 * scale, -r * 0.85 * scale, r * 0.52 * scale, -r * 0.25 * scale, r * 0.72 * scale, r * 0.25 * scale);
+      ctx.bezierCurveTo(r * 0.85 * scale, r * 0.65 * scale, r * 0.50 * scale, r * 0.95 * scale, 0, r * 0.95 * scale);
+      ctx.bezierCurveTo(-r * 0.50 * scale, r * 0.95 * scale, -r * 0.85 * scale, r * 0.65 * scale, -r * 0.72 * scale, r * 0.25 * scale);
+      ctx.bezierCurveTo(-r * 0.52 * scale, -r * 0.25 * scale, -r * 0.45 * scale, -r * 0.85 * scale, 0, -r * 0.85 * scale);
+      ctx.closePath();
+    };
+
+    // 1. Dark Green Outer Skin Rim
+    tracePear(1.0);
+    ctx.fillStyle = '#52a338';
+    ctx.fill();
+
+    // 2. Pale Creamy Flesh Face
+    tracePear(0.88);
+    ctx.fillStyle = '#fcf395';
+    ctx.fill();
+
+    // 3. Round Brown Pit (하단 갈색 씨앗)
+    ctx.beginPath();
+    ctx.arc(0, r * 0.35, r * 0.32, 0, Math.PI * 2);
+    ctx.fillStyle = '#855333';
+    ctx.fill();
+
+    // 4. Kawaii Face above Pit (씨앗 윗부분 카와이 표정)
+    this.drawKawaiiFace(ctx, 0, -r * 0.28, r * 0.68, {
+      blushColor: '#ff8a99',
+      eyeColor: '#1a1a1a'
+    });
+  }
+
+  /* ---------------- 9. BOMB (폭탄 - 카와이 캐논볼) ---------------- */
   static drawBomb(ctx, config, animTimer) {
     const r = config.radius;
 
@@ -707,7 +711,7 @@ export class FruitRenderer {
     ctx.beginPath();
     ctx.moveTo(0, -r * 0.80);
     ctx.bezierCurveTo(r * 0.15, -r * 1.10, r * 0.35, -r * 0.85, r * 0.48, -r * 1.05);
-    ctx.strokeStyle = '#b45309';
+    ctx.strokeStyle = '#8b573a';
     ctx.lineWidth = 5;
     ctx.lineCap = 'round';
     ctx.stroke();
@@ -717,21 +721,19 @@ export class FruitRenderer {
     const sparkY = -r * 1.05;
     const flicker = Math.sin(animTimer * 20) * 3;
 
-    // Golden glow halo
     ctx.beginPath();
     ctx.arc(sparkX, sparkY, 14 + flicker, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(250, 204, 21, 0.45)';
+    ctx.fillStyle = 'rgba(255, 165, 38, 0.45)';
     ctx.fill();
 
-    // Fire core star
     ctx.beginPath();
     ctx.arc(sparkX, sparkY, 7 + flicker * 0.5, 0, Math.PI * 2);
-    ctx.fillStyle = '#ef4444';
+    ctx.fillStyle = '#f04351';
     ctx.fill();
 
     ctx.beginPath();
     ctx.arc(sparkX, sparkY, 4, 0, Math.PI * 2);
-    ctx.fillStyle = '#fef08a';
+    ctx.fillStyle = '#ffd147';
     ctx.fill();
     ctx.restore();
 
@@ -739,40 +741,35 @@ export class FruitRenderer {
     ctx.save();
     ctx.beginPath();
     ctx.roundRect(-r * 0.22, -r * 0.90, r * 0.44, r * 0.22, 4);
-    ctx.fillStyle = '#d97706';
+    ctx.fillStyle = '#ffa526';
     ctx.fill();
-    ctx.strokeStyle = '#92400e';
-    ctx.lineWidth = 2;
-    ctx.stroke();
     ctx.restore();
 
     // 3. Charcoal Cannonball Sphere
     ctx.beginPath();
     ctx.arc(0, r * 0.08, r * 0.88, 0, Math.PI * 2);
-    const bombGrad = ctx.createRadialGradient(-r * 0.28, -r * 0.20, 6, 0, r * 0.08, r * 0.88);
-    bombGrad.addColorStop(0, '#475569');
-    bombGrad.addColorStop(0.4, '#1e293b');
-    bombGrad.addColorStop(1, '#020617');
-    ctx.fillStyle = bombGrad;
+    ctx.fillStyle = '#2c3437';
     ctx.fill();
 
-    // 4. White Curved Specular Highlight
+    // 4. White Capsule Gloss Highlight on Upper-Left
+    ctx.save();
+    ctx.translate(-r * 0.42, -r * 0.28);
+    ctx.rotate(-0.55);
     ctx.beginPath();
-    ctx.arc(0, r * 0.08, r * 0.68, -Math.PI * 0.85, -Math.PI * 0.55);
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.80)';
-    ctx.lineWidth = r * 0.09;
-    ctx.lineCap = 'round';
-    ctx.stroke();
+    ctx.roundRect(-r * 0.08, -r * 0.18, r * 0.16, r * 0.36, r * 0.08);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+    ctx.restore();
 
     // 5. Mischievous Kawaii Bomb Face
     this.drawKawaiiFace(ctx, 0, r * 0.15, r * 0.85, {
-      blushColor: '#fb923c',
+      blushColor: '#ff8a99',
       eyeColor: '#f8fafc',
       expression: 'bomb'
     });
   }
 
-  /* ---------------- 7. HEART BONUS (보너스 하트 카와이 캐릭터) ---------------- */
+  /* ---------------- 10. HEART BONUS (보너스 하트) ---------------- */
   static drawHeartBonus(ctx, config, animTimer) {
     const r = config.radius;
     const pulse = Math.sin(animTimer * 5) * 0.05;
@@ -788,27 +785,22 @@ export class FruitRenderer {
     ctx.bezierCurveTo(0, -r * 0.52, r * 0.15, -r * 0.85, r * 0.45, -r * 0.72);
     ctx.bezierCurveTo(r * 0.95, -r * 0.45, r * 0.85, r * 0.25, 0, r * 0.72);
     ctx.closePath();
-
-    const heartGrad = ctx.createRadialGradient(-r * 0.25, -r * 0.35, 6, 0, 0, r * 0.9);
-    heartGrad.addColorStop(0, '#fb7185');
-    heartGrad.addColorStop(0.4, '#f43f5e');
-    heartGrad.addColorStop(0.85, '#e11d48');
-    heartGrad.addColorStop(1, '#9f1239');
-    ctx.fillStyle = heartGrad;
+    ctx.fillStyle = '#f43f5e';
     ctx.fill();
 
-    // Curved Specular Highlight on Upper-Left Lobe
+    // White Capsule Gloss Highlight on Upper-Left Lobe
+    ctx.save();
+    ctx.translate(-r * 0.45, -r * 0.38);
+    ctx.rotate(-0.55);
     ctx.beginPath();
-    ctx.moveTo(-r * 0.52, -r * 0.60);
-    ctx.bezierCurveTo(-r * 0.75, -r * 0.40, -r * 0.70, -r * 0.10, -r * 0.52, 0.05);
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.75)';
-    ctx.lineWidth = r * 0.08;
-    ctx.lineCap = 'round';
-    ctx.stroke();
+    ctx.roundRect(-r * 0.07, -r * 0.16, r * 0.14, r * 0.32, r * 0.07);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+    ctx.restore();
 
     // Joyful Kawaii Heart Face
     this.drawKawaiiFace(ctx, 0, -r * 0.02, r * 0.85, {
-      blushColor: '#ff80ab',
+      blushColor: '#fda4af',
       eyeColor: '#ffffff',
       expression: 'happy'
     });
