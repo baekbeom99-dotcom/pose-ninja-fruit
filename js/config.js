@@ -52,48 +52,20 @@ export const CONFIG = {
     GESTURE_HOLD_TIME: 0.50      // 500ms deliberate martial pose hold
   },
 
-  // Visual Themes randomly chosen on game start
-  THEMES: [
-    {
-      id: 'CLAYMORPHISM',
-      name: '클레이모피즘 (Claymorphism)',
-      desc: '쫀득하고 부드러운 3D 점토 스타일',
-      badgeColor: '#ec4899'
-    },
-    {
-      id: 'PIXEL_ART',
-      name: '레트로 픽셀아트 (8-bit Pixel)',
-      desc: '고전 오락실 도트 픽셀 그래픽',
-      badgeColor: '#38bdf8'
-    },
-    {
-      id: 'PAPER_CUT',
-      name: '페이퍼크래프트 (Paper Cut)',
-      desc: '정교하게 겹쳐진 수제 종이공예 스타일',
-      badgeColor: '#f59e0b'
-    },
-    {
-      id: 'CLASSIC_VECTOR',
-      name: '사이버 네온 (Cyber Neon)',
-      desc: '선명한 벡터 아케이드 스타일',
-      badgeColor: '#22c55e'
-    }
-  ],
-
-  // Fruit Types - ALL RADII DOUBLED (2x Size)
+  // Fruit Types - ALL RADII DOUBLED (2x Size Scale, Banana 3x Thickness)
   FRUITS: {
     WATERMELON: {
       type: 'WATERMELON',
-      radius: 92, // was 46 (2x)
+      radius: 96,
       points: 1,
-      color: '#22c55e',
+      color: '#15803d',
       fleshColor: '#ef4444',
       juiceColor: '#dc2626',
-      rindColor: '#86efac'
+      rindColor: '#dcfce7'
     },
     ORANGE: {
       type: 'ORANGE',
-      radius: 76, // was 38 (2x)
+      radius: 80,
       points: 1,
       color: '#f97316',
       fleshColor: '#fb923c',
@@ -102,7 +74,7 @@ export const CONFIG = {
     },
     APPLE: {
       type: 'APPLE',
-      radius: 72, // was 36 (2x)
+      radius: 80,
       points: 1,
       color: '#dc2626',
       fleshColor: '#fef08a',
@@ -111,7 +83,7 @@ export const CONFIG = {
     },
     BANANA: {
       type: 'BANANA',
-      radius: 68, // was 34 (2x)
+      radius: 98, // 3x Thicker, plump bunch with generous hitbox
       points: 2,
       color: '#eab308',
       fleshColor: '#fef9c3',
@@ -120,7 +92,7 @@ export const CONFIG = {
     },
     PINEAPPLE: {
       type: 'PINEAPPLE',
-      radius: 96, // was 48 (2x)
+      radius: 98,
       points: 3,
       color: '#d97706',
       fleshColor: '#fde047',
@@ -129,7 +101,7 @@ export const CONFIG = {
     },
     HEART_BONUS: {
       type: 'HEART_BONUS',
-      radius: 88, // was 44 (2x)
+      radius: 88,
       points: 5,
       color: '#ec4899',
       fleshColor: '#f43f5e',
@@ -138,7 +110,7 @@ export const CONFIG = {
     },
     BOMB: {
       type: 'BOMB',
-      radius: 80, // was 40 (2x)
+      radius: 80,
       points: 0,
       color: '#1e293b',
       fleshColor: '#ff0044',

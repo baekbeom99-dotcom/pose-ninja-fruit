@@ -48,9 +48,6 @@ export class GameEngine {
     this.isUltimateReady = false;
     this.currentConsonantPose = CONSONANT_POSES[0];
 
-    // Visual Theme
-    this.currentTheme = CONFIG.THEMES[0];
-
     this.lastTime = performance.now();
     this.width = CONFIG.CANVAS.WIDTH;
     this.height = CONFIG.CANVAS.HEIGHT;
@@ -190,18 +187,6 @@ export class GameEngine {
     this.ui.updateHUDMode(this.isTwoPlayerMode, this.gameMode);
     this.ui.updateScores(0, 0, this.isTwoPlayerMode);
     this.ui.updateLives(this.lives, CONFIG.GAME.MAX_LIVES);
-
-    // Pick Theme
-    if (this.gameMode === CONFIG.MODES.UFO_FISH) {
-      this.ui.setThemeBadge({ name: 'UFO 우주 아쿠아리움 (Space Aquarium)', badgeColor: '#06b6d4', icon: '🛸' });
-    } else if (isDocStrange) {
-      this.ui.setThemeBadge({ name: '닥터 스트레인지 엘드리치 매직', badgeColor: '#f59e0b', icon: '🔮' });
-    } else {
-      const themeIdx = Math.floor(Math.random() * CONFIG.THEMES.length);
-      this.currentTheme = CONFIG.THEMES[themeIdx];
-      this.fruitManager.setTheme(this.currentTheme.id);
-      this.ui.setThemeBadge(this.currentTheme);
-    }
 
     // Reset Ultimate Move
     this.ultimateCount = 0;

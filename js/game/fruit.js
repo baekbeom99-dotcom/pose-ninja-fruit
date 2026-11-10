@@ -1,10 +1,13 @@
 /**
- * Fruit, HalfFruit, Bomb, and HeartBonus Entities with Multi-Theme Support (2x Size Scale)
+ * Pose Ninja Fruit - Fruit & HalfFruit Entities
+ * Vector Illustration Art Style matching reference design.
+ * Features 3x thicker banana bunch, crescent watermelon wedge, indented apple with leaf,
+ * star-calyx orange, diamond-grid pineapple, cannonball bomb, and glowing heart.
  */
 import { CONFIG } from '../config.js';
 
 export class HalfFruit {
-  constructor(fruitConfig, x, y, vx, vy, cutAngle, isLeftHalf, themeId = 'CLAYMORPHISM') {
+  constructor(fruitConfig, x, y, vx, vy, cutAngle, isLeftHalf) {
     this.config = fruitConfig;
     this.x = x;
     this.y = y;
@@ -16,7 +19,6 @@ export class HalfFruit {
     this.rotation = cutAngle;
     this.angularVelocity = isLeftHalf ? -CONFIG.PHYSICS.HALF_ANGULAR_VELOCITY : CONFIG.PHYSICS.HALF_ANGULAR_VELOCITY;
     this.isDead = false;
-    this.themeId = themeId;
   }
 
   update(dt) {
@@ -37,7 +39,7 @@ export class HalfFruit {
     ctx.rotate(this.rotation);
 
     // Clip to half space cleanly along the cut line (x <= 0 or x >= 0)
-    const clipR = this.radius * 2.2;
+    const clipR = this.radius * 2.5;
     ctx.beginPath();
     if (this.isLeftHalf) {
       ctx.rect(-clipR, -clipR, clipR, clipR * 2);
@@ -47,7 +49,7 @@ export class HalfFruit {
     ctx.clip();
 
     // Draw the full detailed fruit within the half clip
-    FruitRenderer.drawFruitBody(ctx, this.config, 0, this.themeId);
+    FruitRenderer.drawFruitBody(ctx, this.config, 0);
 
     ctx.restore();
 
@@ -55,13 +57,13 @@ export class HalfFruit {
     ctx.save();
     ctx.translate(this.x, this.y);
     ctx.rotate(this.rotation);
-    FruitRenderer.drawCutFaceDetails(ctx, this.config, this.radius, this.themeId);
+    FruitRenderer.drawCutFaceDetails(ctx, this.config, this.radius);
     ctx.restore();
   }
 }
 
 export class Fruit {
-  constructor(fruitConfig, startX, startY, vx, vy, themeId = 'CLAYMORPHISM') {
+  constructor(fruitConfig, startX, startY, vx, vy) {
     this.config = fruitConfig;
     this.type = fruitConfig.type;
     this.radius = fruitConfig.radius;
@@ -80,7 +82,6 @@ export class Fruit {
     this.isDead = false;
 
     this.animTimer = Math.random() * 10;
-    this.themeId = themeId;
   }
 
   update(dt) {
@@ -113,8 +114,7 @@ export class Fruit {
       this.vx + normal.x * pushSpeed,
       this.vy + normal.y * pushSpeed - 50,
       cutAngle,
-      true,
-      this.themeId
+      true
     );
 
     const h2 = new HalfFruit(
@@ -124,8 +124,7 @@ export class Fruit {
       this.vx - normal.x * pushSpeed,
       this.vy - normal.y * pushSpeed - 50,
       cutAngle,
-      false,
-      this.themeId
+      false
     );
 
     return [h1, h2];
@@ -138,659 +137,573 @@ export class Fruit {
     ctx.translate(this.x, this.y);
     ctx.rotate(this.rotation);
 
-    FruitRenderer.drawFruitBody(ctx, this.config, this.animTimer, this.themeId);
+    FruitRenderer.drawFruitBody(ctx, this.config, this.animTimer);
 
     ctx.restore();
   }
 }
 
 /**
- * Procedural Vector & Multi-Theme Graphics Renderer
- * Delivers rich, mouth-watering details for Watermelon, Orange, Apple, Banana, Pineapple, Bomb, and Heart.
+ * Procedural Vector Graphics Renderer matching Reference Vector Art Style
  */
-class FruitRenderer {
-  static drawFruitBody(ctx, config, animTimer = 0, theme = 'CLAYMORPHISM') {
+export class FruitRenderer {
+  static drawFruitBody(ctx, config, animTimer = 0) {
     switch (config.type) {
       case 'WATERMELON':
-        this.drawWatermelon(ctx, config, animTimer, theme);
+        this.drawWatermelon(ctx, config, animTimer);
         break;
       case 'ORANGE':
-        this.drawOrange(ctx, config, animTimer, theme);
+        this.drawOrange(ctx, config, animTimer);
         break;
       case 'APPLE':
-        this.drawApple(ctx, config, animTimer, theme);
+        this.drawApple(ctx, config, animTimer);
         break;
       case 'BANANA':
-        this.drawBanana(ctx, config, animTimer, theme);
+        this.drawBanana(ctx, config, animTimer);
         break;
       case 'PINEAPPLE':
-        this.drawPineapple(ctx, config, animTimer, theme);
+        this.drawPineapple(ctx, config, animTimer);
         break;
       case 'BOMB':
-        this.drawBomb(ctx, config, animTimer, theme);
+        this.drawBomb(ctx, config, animTimer);
         break;
       case 'HEART_BONUS':
-        this.drawHeartBonus(ctx, config, animTimer, theme);
+        this.drawHeartBonus(ctx, config, animTimer);
         break;
       default:
-        this.drawClassicBase(ctx, config, theme);
+        this.drawClassicBase(ctx, config);
         break;
     }
   }
 
-  /* ---------------- 1. WATERMELON (수박) ---------------- */
-  static drawWatermelon(ctx, config, animTimer, theme) {
+  /* ---------------- 1. WATERMELON (수박 조각 슬라이스 - Reference Row 3, Col 2) ---------------- */
+  static drawWatermelon(ctx, config, animTimer) {
     const r = config.radius;
 
-    // Outer Drop Shadow for Clay/Paper
-    if (theme === 'CLAYMORPHISM') {
-      ctx.save();
-      ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
-      ctx.shadowBlur = 22;
-      ctx.shadowOffsetY = 12;
-    }
+    // Outer Crescent Wedge Contour
+    // Bottom curved rind arc
+    const startX = -r * 0.90;
+    const startY = -r * 0.22;
+    const endX = r * 0.90;
+    const endY = -r * 0.22;
+    const bottomY = r * 0.72;
 
-    // Outer Green Sphere Rind
-    ctx.beginPath();
-    ctx.arc(0, 0, r, 0, Math.PI * 2);
-    const rindGrad = ctx.createRadialGradient(-r * 0.3, -r * 0.3, 4, 0, 0, r);
-    rindGrad.addColorStop(0, '#22c55e');
-    rindGrad.addColorStop(0.7, '#16a34a');
-    rindGrad.addColorStop(1, '#15803d');
-    ctx.fillStyle = rindGrad;
-    ctx.fill();
-
-    if (theme === 'CLAYMORPHISM') ctx.restore();
-
-    // Iconic Wavy Dark Green Stripes (수박 줄무늬)
+    // 1. Thick Green Outer Rind (진한 초록 껍질)
     ctx.save();
     ctx.beginPath();
-    ctx.arc(0, 0, r - 2, 0, Math.PI * 2);
-    ctx.clip();
-
-    ctx.strokeStyle = '#052e16';
-    ctx.lineWidth = r * 0.14;
-    ctx.lineCap = 'round';
-
-    for (let stripe = -3; stripe <= 3; stripe++) {
-      const baseX = stripe * (r * 0.28);
-      ctx.beginPath();
-      for (let y = -r; y <= r; y += 8) {
-        const wave = Math.sin(y * 0.08 + stripe * 1.5) * (r * 0.06);
-        const x = baseX * Math.sqrt(Math.max(0, 1 - (y * y) / (r * r))) + wave;
-        if (y === -r) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      }
-      ctx.stroke();
-    }
+    ctx.moveTo(startX - 4, startY - 2);
+    ctx.quadraticCurveTo(0, bottomY + 12, endX + 4, endY - 2);
+    ctx.lineTo(endX, endY);
+    ctx.quadraticCurveTo(0, bottomY - 6, startX, startY);
+    ctx.closePath();
+    const rindGrad = ctx.createLinearGradient(0, startY, 0, bottomY + 12);
+    rindGrad.addColorStop(0, '#16a34a');
+    rindGrad.addColorStop(0.6, '#15803d');
+    rindGrad.addColorStop(1, '#052e16');
+    ctx.fillStyle = rindGrad;
+    ctx.fill();
     ctx.restore();
 
-    // Pale Mint-Green Inner Rind (속 껍질)
+    // 2. Pale Mint/White Inner Rind Stripe (연두/흰색 속 껍질 줄기)
+    ctx.save();
     ctx.beginPath();
-    ctx.arc(0, 0, r * 0.84, 0, Math.PI * 2);
-    ctx.fillStyle = config.rindColor || '#bbf7d0';
+    ctx.moveTo(startX + 2, startY);
+    ctx.quadraticCurveTo(0, bottomY - 6, endX - 2, endY);
+    ctx.lineTo(endX - 5, endY + 2);
+    ctx.quadraticCurveTo(0, bottomY - 14, startX + 5, startY + 2);
+    ctx.closePath();
+    ctx.fillStyle = '#dcfce7';
     ctx.fill();
+    ctx.restore();
 
-    // Juicy Ruby Red Flesh (빨간 과육)
+    // 3. Juicy Ruby-Red Watermelon Flesh (달콤한 빨간 과육 슬라이스)
+    ctx.save();
     ctx.beginPath();
-    ctx.arc(0, 0, r * 0.74, 0, Math.PI * 2);
-    const fleshGrad = ctx.createRadialGradient(0, 0, 4, 0, 0, r * 0.74);
-    fleshGrad.addColorStop(0, '#ef4444');
-    fleshGrad.addColorStop(0.75, '#dc2626');
-    fleshGrad.addColorStop(1, '#b91c1c');
+    ctx.moveTo(startX + 4, startY + 2);
+    // Outer curved boundary
+    ctx.quadraticCurveTo(0, bottomY - 14, endX - 4, endY + 2);
+    // Slightly dipped top cut edge
+    ctx.quadraticCurveTo(0, -r * 0.12, startX + 4, startY + 2);
+    ctx.closePath();
+
+    const fleshGrad = ctx.createRadialGradient(0, 0, r * 0.1, 0, 0, r * 0.85);
+    fleshGrad.addColorStop(0, '#f87171');
+    fleshGrad.addColorStop(0.4, '#ef4444');
+    fleshGrad.addColorStop(1, '#dc2626');
     ctx.fillStyle = fleshGrad;
     ctx.fill();
 
-    // Concentric Teardrop Watermelon Seeds (수박씨)
-    const seedAngles = [0.2, 0.8, 1.45, 2.1, 2.75, 3.4, 4.05, 4.7, 5.35, 6.0];
-    seedAngles.forEach(angle => {
-      const dist = r * 0.50;
-      const sx = Math.cos(angle) * dist;
-      const sy = Math.sin(angle) * dist;
+    // 4. Teardrop Black Seeds (선명한 수박씨)
+    const seeds = [
+      { x: -r * 0.58, y: -r * 0.05, rot: -0.35 },
+      { x: -r * 0.38, y: r * 0.16, rot: -0.22 },
+      { x: -r * 0.15, y: r * 0.32, rot: -0.08 },
+      { x: r * 0.12, y: r * 0.35, rot: 0.10 },
+      { x: r * 0.38, y: r * 0.20, rot: 0.25 },
+      { x: r * 0.60, y: -r * 0.02, rot: 0.38 }
+    ];
 
+    seeds.forEach(s => {
       ctx.save();
-      ctx.translate(sx, sy);
-      ctx.rotate(angle + Math.PI / 2);
+      ctx.translate(s.x, s.y);
+      ctx.rotate(s.rot);
 
-      // Black teardrop seed
+      // Teardrop seed shape
       ctx.beginPath();
-      ctx.moveTo(0, -6);
-      ctx.quadraticCurveTo(4, 0, 0, 6);
-      ctx.quadraticCurveTo(-4, 0, 0, -6);
-      ctx.fillStyle = '#09090b';
+      ctx.moveTo(0, -5);
+      ctx.bezierCurveTo(3, -2, 3.5, 3, 0, 4.5);
+      ctx.bezierCurveTo(-3.5, 3, -3, -2, 0, -5);
+      ctx.fillStyle = '#1e293b';
       ctx.fill();
 
-      // Seed specular glint
+      // Seed specular gleam dot
       ctx.beginPath();
-      ctx.arc(-1, -1.5, 1.2, 0, Math.PI * 2);
-      ctx.fillStyle = '#ffffff';
+      ctx.arc(0.8, -0.5, 1.2, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
       ctx.fill();
-
       ctx.restore();
     });
 
-    // Clay/Classic Specular Highlight Arc
-    this._drawGlossyArc(ctx, r);
+    // 5. Crisp Curved Specular Highlight (상단 흰색 광택 라인)
+    ctx.beginPath();
+    ctx.moveTo(startX + 18, startY + 12);
+    ctx.quadraticCurveTo(0, -r * 0.04, endX - 18, endY + 12);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
+    ctx.lineWidth = r * 0.07;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+
+    ctx.restore();
   }
 
-  /* ---------------- 2. ORANGE (오렌지) ---------------- */
-  static drawOrange(ctx, config, animTimer, theme) {
+  /* ---------------- 2. APPLE (사과 - Reference Row 2, Col 3) ---------------- */
+  static drawApple(ctx, config, animTimer) {
     const r = config.radius;
 
-    // Drop Shadow
-    if (theme === 'CLAYMORPHISM') {
-      ctx.save();
-      ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
-      ctx.shadowBlur = 22;
-      ctx.shadowOffsetY = 12;
-    }
-
-    // Outer Orange Peel Body with Dimpled Texture
+    // 1. Brown Angled Stem (갈색 줄기)
     ctx.beginPath();
-    ctx.arc(0, 0, r, 0, Math.PI * 2);
-    const peelGrad = ctx.createRadialGradient(-r * 0.3, -r * 0.3, 4, 0, 0, r);
-    peelGrad.addColorStop(0, '#fb923c');
-    peelGrad.addColorStop(0.65, '#f97316');
-    peelGrad.addColorStop(1, '#ea580c');
-    ctx.fillStyle = peelGrad;
-    ctx.fill();
+    ctx.moveTo(0, -r * 0.50);
+    ctx.quadraticCurveTo(-r * 0.08, -r * 0.75, -r * 0.14, -r * 0.94);
+    ctx.strokeStyle = '#78350f';
+    ctx.lineWidth = r * 0.10;
+    ctx.lineCap = 'round';
+    ctx.stroke();
 
-    if (theme === 'CLAYMORPHISM') ctx.restore();
-
-    // Citrus Peel Pores (오렌지 껍질 모공 엠보싱)
+    // 2. Fresh Green Leaf pointing right (싱그러운 나뭇잎)
     ctx.save();
-    ctx.fillStyle = 'rgba(194, 65, 12, 0.28)';
-    for (let p = 0; p < 18; p++) {
-      const a = (p * 2.39);
-      const d = r * (0.86 + (p % 3) * 0.04);
-      ctx.beginPath();
-      ctx.arc(Math.cos(a) * d, Math.sin(a) * d, 1.8, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.restore();
-
-    // Creamy White Pith Layer (하얀 속껍질)
     ctx.beginPath();
-    ctx.arc(0, 0, r * 0.82, 0, Math.PI * 2);
-    ctx.fillStyle = '#ffedd5';
-    ctx.fill();
-
-    // 8 Juicy Citrus Segments / Wedges (과육 8조각)
-    const segCount = 8;
-    const segRadius = r * 0.74;
-    const wedgeAngle = (Math.PI * 2) / segCount;
-
-    for (let s = 0; s < segCount; s++) {
-      const startA = s * wedgeAngle + 0.08;
-      const endA = (s + 1) * wedgeAngle - 0.08;
-
-      ctx.beginPath();
-      ctx.moveTo(0, 0);
-      ctx.arc(0, 0, segRadius, startA, endA);
-      ctx.closePath();
-
-      const segGrad = ctx.createRadialGradient(0, 0, 2, 0, 0, segRadius);
-      segGrad.addColorStop(0, '#fdba74');
-      segGrad.addColorStop(0.6, '#fb923c');
-      segGrad.addColorStop(1, '#ea580c');
-      ctx.fillStyle = segGrad;
-      ctx.fill();
-
-      // Translucent pulp vesicle highlights (과육 알갱이)
-      const midA = (startA + endA) / 2;
-      const vx = Math.cos(midA) * (segRadius * 0.65);
-      const vy = Math.sin(midA) * (segRadius * 0.65);
-      ctx.beginPath();
-      ctx.arc(vx, vy, 2.5, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
-      ctx.fill();
-    }
-
-    // Central White Core Star (중심 기둥)
-    ctx.beginPath();
-    ctx.arc(0, 0, r * 0.12, 0, Math.PI * 2);
-    ctx.fillStyle = '#fff7ed';
-    ctx.fill();
-
-    // Top Calyx / Emerald Star Leaf (꼭지 별모양)
-    ctx.save();
-    ctx.translate(0, -r * 0.82);
-    ctx.fillStyle = '#16a34a';
-    ctx.beginPath();
-    for (let i = 0; i < 5; i++) {
-      const a = (i * Math.PI * 2) / 5 - Math.PI / 2;
-      const tipX = Math.cos(a) * (r * 0.15);
-      const tipY = Math.sin(a) * (r * 0.15);
-      if (i === 0) ctx.moveTo(tipX, tipY);
-      else ctx.lineTo(tipX, tipY);
-      const inA = a + Math.PI / 5;
-      ctx.lineTo(Math.cos(inA) * (r * 0.06), Math.sin(inA) * (r * 0.06));
-    }
+    ctx.moveTo(0, -r * 0.54);
+    ctx.quadraticCurveTo(r * 0.18, -r * 0.82, r * 0.44, -r * 0.74);
+    ctx.quadraticCurveTo(r * 0.32, -r * 0.50, 0, -r * 0.54);
     ctx.closePath();
+    ctx.fillStyle = '#22c55e';
     ctx.fill();
+
+    // Leaf spine vein
+    ctx.beginPath();
+    ctx.moveTo(0, -r * 0.54);
+    ctx.quadraticCurveTo(r * 0.20, -r * 0.66, r * 0.40, -r * 0.72);
+    ctx.strokeStyle = '#15803d';
+    ctx.lineWidth = 2;
+    ctx.stroke();
     ctx.restore();
 
-    this._drawGlossyArc(ctx, r);
-  }
+    // 3. Apple Body with Top/Bottom Indentations (사과 몸체)
+    ctx.beginPath();
+    ctx.moveTo(0, -r * 0.50);
+    // Right upper shoulder
+    ctx.bezierCurveTo(r * 0.38, -r * 0.92, r * 0.94, -r * 0.58, r * 0.88, r * 0.08);
+    // Right bottom lobe
+    ctx.bezierCurveTo(r * 0.82, r * 0.68, r * 0.38, r * 0.92, r * 0.14, r * 0.86);
+    // Bottom indentation
+    ctx.bezierCurveTo(r * 0.05, r * 0.84, -r * 0.05, r * 0.84, -r * 0.14, r * 0.86);
+    // Left bottom lobe
+    ctx.bezierCurveTo(-r * 0.38, r * 0.92, -r * 0.82, r * 0.68, -r * 0.88, r * 0.08);
+    // Left upper shoulder
+    ctx.bezierCurveTo(-r * 0.94, -r * 0.58, -r * 0.38, -r * 0.92, 0, -r * 0.50);
+    ctx.closePath();
 
-  /* ---------------- 3. APPLE (사과) ---------------- */
-  static drawApple(ctx, config, animTimer, theme) {
-    const r = config.radius;
-
-    // Sculpted Parametric Apple Silhouette Path
-    const drawApplePath = () => {
-      ctx.beginPath();
-      // Start at top stem indent cleft
-      ctx.moveTo(0, -r * 0.68);
-      // Top right lobe curve
-      ctx.bezierCurveTo(r * 0.55, -r * 0.95, r * 1.05, -r * 0.45, r * 0.95, r * 0.15);
-      // Bottom right curve
-      ctx.bezierCurveTo(r * 0.88, r * 0.65, r * 0.48, r * 0.98, r * 0.15, r * 0.95);
-      // Bottom center cleft
-      ctx.lineTo(0, r * 0.86);
-      // Bottom left curve
-      ctx.lineTo(-r * 0.15, r * 0.95);
-      ctx.bezierCurveTo(-r * 0.48, r * 0.98, -r * 0.88, r * 0.65, -r * 0.95, r * 0.15);
-      // Top left lobe curve
-      ctx.bezierCurveTo(-r * 1.05, -r * 0.45, -r * 0.55, -r * 0.95, 0, -r * 0.68);
-      ctx.closePath();
-    };
-
-    // Shadow
-    if (theme === 'CLAYMORPHISM') {
-      ctx.save();
-      ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
-      ctx.shadowBlur = 24;
-      ctx.shadowOffsetY = 14;
-      drawApplePath();
-      ctx.fillStyle = '#dc2626';
-      ctx.fill();
-      ctx.restore();
-    }
-
-    // Apple Body with Rich Crimson Gradient & Golden Blush
-    drawApplePath();
-    const appleGrad = ctx.createRadialGradient(-r * 0.25, -r * 0.25, 6, 0, 0, r * 1.05);
-    appleGrad.addColorStop(0, '#fde047'); // Sunny golden highlight
-    appleGrad.addColorStop(0.2, '#f87171');
-    appleGrad.addColorStop(0.65, '#dc2626');
-    appleGrad.addColorStop(1, '#991b1b'); // Deep crimson shadow
+    const appleGrad = ctx.createRadialGradient(-r * 0.25, -r * 0.20, 8, 0, 0, r * 0.95);
+    appleGrad.addColorStop(0, '#f87171');
+    appleGrad.addColorStop(0.35, '#ef4444');
+    appleGrad.addColorStop(0.85, '#dc2626');
+    appleGrad.addColorStop(1, '#991b1b');
     ctx.fillStyle = appleGrad;
     ctx.fill();
 
-    // Fine Speckles / Lenticels (사과 표면 점박이 텍스처)
-    ctx.save();
-    ctx.fillStyle = 'rgba(254, 240, 138, 0.35)';
-    for (let i = 0; i < 22; i++) {
-      const a = i * 1.7;
-      const d = r * (0.3 + (i % 5) * 0.12);
-      ctx.beginPath();
-      ctx.arc(Math.cos(a) * d, Math.sin(a) * d, 1.2, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.restore();
-
-    // Realistic Curved Brown Stem (사과 꼭지)
+    // 4. Iconic Curved White Specular Highlight on Right Shoulder (우측 상단 곡선 광택)
     ctx.beginPath();
-    ctx.moveTo(0, -r * 0.66);
-    ctx.bezierCurveTo(-r * 0.08, -r * 0.95, r * 0.15, -r * 1.15, r * 0.18, -r * 1.22);
-    ctx.strokeStyle = '#78350f';
-    ctx.lineWidth = 7;
+    ctx.moveTo(r * 0.56, -r * 0.48);
+    ctx.bezierCurveTo(r * 0.78, -r * 0.30, r * 0.78, 0.05, r * 0.66, r * 0.32);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.70)';
+    ctx.lineWidth = r * 0.09;
     ctx.lineCap = 'round';
     ctx.stroke();
 
-    // Emerald Green Leaf with Vein (신선한 초록 잎사귀)
-    ctx.save();
-    ctx.translate(r * 0.08, -r * 0.88);
-    ctx.rotate(-0.4);
-
+    // Subtle small top-left reflection
     ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.quadraticCurveTo(r * 0.35, -r * 0.28, r * 0.52, 0);
-    ctx.quadraticCurveTo(r * 0.35, r * 0.28, 0, 0);
-    const leafGrad = ctx.createLinearGradient(0, -r * 0.2, r * 0.5, r * 0.2);
-    leafGrad.addColorStop(0, '#22c55e');
-    leafGrad.addColorStop(1, '#15803d');
-    ctx.fillStyle = leafGrad;
+    ctx.arc(-r * 0.45, -r * 0.45, r * 0.10, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.40)';
+    ctx.fill();
+  }
+
+  /* ---------------- 3. ORANGE (오렌지 - Reference Row 3, Col 1) ---------------- */
+  static drawOrange(ctx, config, animTimer) {
+    const r = config.radius;
+
+    // 1. Plump Round Orange Body (오렌지 둥근 몸체)
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    const orangeGrad = ctx.createRadialGradient(-r * 0.28, -r * 0.28, 6, 0, 0, r);
+    orangeGrad.addColorStop(0, '#fb923c');
+    orangeGrad.addColorStop(0.6, '#f97316');
+    orangeGrad.addColorStop(0.9, '#ea580c');
+    orangeGrad.addColorStop(1, '#c2410c');
+    ctx.fillStyle = orangeGrad;
     ctx.fill();
 
-    // Leaf center vein
+    // 2. Top Star Stem Calyx (상단 초록색 5각 꼭지 잎 - Reference 1:1)
+    ctx.save();
+    ctx.translate(0, -r * 0.86);
     ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.quadraticCurveTo(r * 0.25, -r * 0.04, r * 0.50, 0);
-    ctx.strokeStyle = '#86efac';
+    const starPoints = 5;
+    const outerR = r * 0.22;
+    const innerR = r * 0.10;
+    for (let i = 0; i < starPoints * 2; i++) {
+      const radius = i % 2 === 0 ? outerR : innerR;
+      const angle = (i * Math.PI) / starPoints - Math.PI / 2;
+      const x = Math.cos(angle) * radius;
+      const y = Math.sin(angle) * radius;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.fillStyle = '#16a34a';
+    ctx.fill();
+
+    // Center brown stem pip
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 0.05, 0, Math.PI * 2);
+    ctx.fillStyle = '#78350f';
+    ctx.fill();
+    ctx.restore();
+
+    // 3. Smooth Curved White Specular Highlight on Upper-Right (우측 상단 부드러운 광택)
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 0.74, -Math.PI * 0.28, -Math.PI * 0.04);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.68)';
+    ctx.lineWidth = r * 0.09;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+
+    // Inner subtle glow
+    ctx.beginPath();
+    ctx.arc(r * 0.35, -r * 0.35, r * 0.12, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+    ctx.fill();
+  }
+
+  /* ---------------- 4. BANANA (바나나송이 3배 굵기 - Reference Row 3, Col 4) ---------------- */
+  static drawBanana(ctx, config, animTimer) {
+    const r = config.radius;
+
+    // 1. Brown Top Stem Cap (상단 꼭지 결합부 - 바나나 묶음 캡)
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(r * 0.48, -r * 0.75);
+    ctx.lineTo(r * 0.82, -r * 0.52);
+    ctx.lineTo(r * 0.76, -r * 0.40);
+    ctx.lineTo(r * 0.42, -r * 0.62);
+    ctx.closePath();
+    ctx.fillStyle = '#78350f';
+    ctx.fill();
+    ctx.strokeStyle = '#451a03';
     ctx.lineWidth = 2.5;
     ctx.stroke();
-
     ctx.restore();
 
-    // Glossy Specular Shine on Left Lobe
-    ctx.beginPath();
-    ctx.ellipse(-r * 0.42, -r * 0.28, r * 0.18, r * 0.34, -0.4, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
-    ctx.fill();
-  }
-
-  /* ---------------- 4. BANANA (바나나) ---------------- */
-  static drawBanana(ctx, config, animTimer, theme) {
-    const r = config.radius;
-
-    // Iconic Curved Crescent Banana Body
-    const drawBananaCrescent = () => {
-      ctx.beginPath();
-      // Start at stalk tip
-      ctx.moveTo(-r * 0.82, -r * 0.55);
-      // Outer sweeping curve
-      ctx.bezierCurveTo(-r * 0.45, r * 0.72, r * 0.45, r * 0.72, r * 0.82, -r * 0.25);
-      // Blossom bottom tip
-      ctx.lineTo(r * 0.88, -r * 0.20);
-      // Inner sweeping curve
-      ctx.bezierCurveTo(r * 0.40, r * 0.25, -r * 0.40, r * 0.25, -r * 0.78, -r * 0.60);
-      ctx.closePath();
-    };
-
-    // Shadow
-    if (theme === 'CLAYMORPHISM') {
-      ctx.save();
-      ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
-      ctx.shadowBlur = 22;
-      ctx.shadowOffsetY = 12;
-      drawBananaCrescent();
-      ctx.fillStyle = '#facc15';
-      ctx.fill();
-      ctx.restore();
-    }
-
-    // Outer Sunny Golden Yellow Peel
-    drawBananaCrescent();
-    const peelGrad = ctx.createLinearGradient(-r * 0.7, -r * 0.5, r * 0.7, r * 0.5);
-    peelGrad.addColorStop(0, '#fef08a');
-    peelGrad.addColorStop(0.5, '#facc15');
-    peelGrad.addColorStop(1, '#eab308');
-    ctx.fillStyle = peelGrad;
-    ctx.fill();
-
-    // Faceted Ridge Spine (바나나 능선 선)
-    ctx.beginPath();
-    ctx.moveTo(-r * 0.80, -r * 0.58);
-    ctx.bezierCurveTo(-r * 0.42, r * 0.52, r * 0.42, r * 0.52, r * 0.85, -r * 0.22);
-    ctx.strokeStyle = 'rgba(202, 138, 4, 0.65)';
-    ctx.lineWidth = 4;
-    ctx.stroke();
-
-    // Green-brown Stem Stalk at Top End (꼭지 줄기)
-    ctx.beginPath();
-    ctx.moveTo(-r * 0.78, -r * 0.60);
-    ctx.lineTo(-r * 0.95, -r * 0.72);
-    ctx.strokeStyle = '#65a30d';
-    ctx.lineWidth = 9;
-    ctx.lineCap = 'round';
-    ctx.stroke();
-
-    // Dark Blossom Crown at Bottom End (바나나 끝부분)
-    ctx.beginPath();
-    ctx.arc(r * 0.87, -r * 0.21, 5, 0, Math.PI * 2);
-    ctx.fillStyle = '#451a03';
-    ctx.fill();
-
-    // Scattered Sugar Freckles (달콤하게 익은 슈가스팟 점박이)
-    ctx.fillStyle = 'rgba(120, 53, 15, 0.55)';
-    const sugarSpots = [
-      [-r * 0.35, r * 0.42],
-      [-r * 0.15, r * 0.48],
-      [r * 0.15, r * 0.46],
-      [r * 0.42, r * 0.28],
-      [r * 0.62, r * 0.05]
-    ];
-    sugarSpots.forEach(([sx, sy]) => {
-      ctx.beginPath();
-      ctx.arc(sx, sy, 2.2, 0, Math.PI * 2);
-      ctx.fill();
-    });
-
-    // Specular Highlight Glaze along Outer Curve
-    ctx.beginPath();
-    ctx.moveTo(-r * 0.65, -r * 0.35);
-    ctx.bezierCurveTo(-r * 0.35, r * 0.55, r * 0.35, r * 0.55, r * 0.70, -r * 0.15);
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.62)';
-    ctx.lineWidth = 5;
-    ctx.lineCap = 'round';
-    ctx.stroke();
-  }
-
-  /* ---------------- 5. PINEAPPLE (파인애플) ---------------- */
-  static drawPineapple(ctx, config, animTimer, theme) {
-    const r = config.radius;
-
-    // Drop Shadow
-    if (theme === 'CLAYMORPHISM') {
-      ctx.save();
-      ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
-      ctx.shadowBlur = 24;
-      ctx.shadowOffsetY = 14;
-    }
-
-    // Oval Body Silhouette (둥근 몸통)
-    const bodyW = r * 0.82;
-    const bodyH = r * 1.05;
-    const bodyY = r * 0.12;
-
-    ctx.beginPath();
-    ctx.ellipse(0, bodyY, bodyW, bodyH, 0, 0, Math.PI * 2);
-    const pineGrad = ctx.createRadialGradient(-bodyW * 0.3, bodyY - bodyH * 0.3, 8, 0, bodyY, bodyH);
-    pineGrad.addColorStop(0, '#fde047');
-    pineGrad.addColorStop(0.4, '#f59e0b');
-    pineGrad.addColorStop(1, '#b45309');
-    ctx.fillStyle = pineGrad;
-    ctx.fill();
-
-    if (theme === 'CLAYMORPHISM') ctx.restore();
-
-    // Diamond Scales Mesh / Cross-Hatch Grid (파인애플 껍질 그물 패턴)
+    // 2. Lower / Rear Banana (뒤쪽 바나나 - 굵고 풍성한 2송이 묶음 볼륨)
     ctx.save();
     ctx.beginPath();
-    ctx.ellipse(0, bodyY, bodyW - 2, bodyH - 2, 0, 0, Math.PI * 2);
+    ctx.moveTo(r * 0.62, -r * 0.45);
+    // Outer sweep (very thick belly)
+    ctx.bezierCurveTo(r * 0.50, r * 0.35, -r * 0.15, r * 0.72, -r * 0.62, r * 0.40);
+    // Tip
+    ctx.lineTo(-r * 0.68, r * 0.36);
+    // Inner sweep
+    ctx.bezierCurveTo(-r * 0.20, r * 0.42, r * 0.32, r * 0.15, r * 0.45, -r * 0.48);
+    ctx.closePath();
+
+    const rearGrad = ctx.createLinearGradient(r * 0.5, -r * 0.4, -r * 0.5, r * 0.5);
+    rearGrad.addColorStop(0, '#facc15');
+    rearGrad.addColorStop(0.7, '#eab308');
+    rearGrad.addColorStop(1, '#ca8a04');
+    ctx.fillStyle = rearGrad;
+    ctx.fill();
+
+    // Rear blossom tip
+    ctx.beginPath();
+    ctx.arc(-r * 0.66, r * 0.37, 4.5, 0, Math.PI * 2);
+    ctx.fillStyle = '#451a03';
+    ctx.fill();
+    ctx.restore();
+
+    // 3. Main Front Banana (앞쪽 바나나 - 기존보다 3배 이상 굵고 통통한 형태!)
+    ctx.save();
+    ctx.beginPath();
+    // Start at top stem junction
+    ctx.moveTo(r * 0.52, -r * 0.60);
+    // Sweeping outer curve (plump 3x belly width)
+    ctx.bezierCurveTo(r * 0.35, r * 0.05, -r * 0.25, r * 0.58, -r * 0.85, 0.05);
+    // Blossom bottom tip
+    ctx.lineTo(-r * 0.88, -r * 0.04);
+    // Sweeping inner belly curve (thick, juicy curvature)
+    ctx.bezierCurveTo(-r * 0.35, -r * 0.08, r * 0.12, -r * 0.22, r * 0.42, -r * 0.66);
+    ctx.closePath();
+
+    const frontGrad = ctx.createLinearGradient(r * 0.4, -r * 0.5, -r * 0.6, 0.2);
+    frontGrad.addColorStop(0, '#fef08a');
+    frontGrad.addColorStop(0.35, '#fde047');
+    frontGrad.addColorStop(0.85, '#facc15');
+    frontGrad.addColorStop(1, '#eab308');
+    ctx.fillStyle = frontGrad;
+    ctx.fill();
+
+    // 4. Creamy Top Ridge Highlight Ribbon (바나나 능선 밝은 면)
+    ctx.beginPath();
+    ctx.moveTo(r * 0.45, -r * 0.62);
+    ctx.bezierCurveTo(r * 0.20, -r * 0.20, -r * 0.25, -r * 0.05, -r * 0.84, -r * 0.02);
+    ctx.strokeStyle = '#fef9c3';
+    ctx.lineWidth = r * 0.12;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+
+    // 5. Dark Blossom Tip (바나나 끝부분 흑갈색 점)
+    ctx.beginPath();
+    ctx.arc(-r * 0.86, 0, 5, 0, Math.PI * 2);
+    ctx.fillStyle = '#451a03';
+    ctx.fill();
+
+    // 6. Crisp Curved White Specular Highlight (바나나 외곽선 매끄러운 흰색 광택)
+    ctx.beginPath();
+    ctx.moveTo(r * 0.35, -r * 0.45);
+    ctx.bezierCurveTo(r * 0.15, -r * 0.02, -r * 0.22, r * 0.32, -r * 0.68, 0.14);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.72)';
+    ctx.lineWidth = r * 0.07;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  /* ---------------- 5. PINEAPPLE (파인애플 - Reference Row 1, Col 3) ---------------- */
+  static drawPineapple(ctx, config, animTimer) {
+    const r = config.radius;
+
+    // 1. Spiky Tropical 5-Point Crown Leaves (상단 5개의 야자형 왕관 잎 - Reference 1:1)
+    ctx.save();
+    const leaves = [
+      // Outer left leaf
+      { startX: -r * 0.10, startY: -r * 0.35, tipX: -r * 0.58, tipY: -r * 0.72, ctrlX: -r * 0.45, ctrlY: -r * 0.45 },
+      // Inner left leaf
+      { startX: -r * 0.05, startY: -r * 0.38, tipX: -r * 0.35, tipY: -r * 0.98, ctrlX: -r * 0.25, ctrlY: -r * 0.65 },
+      // Center tall leaf
+      { startX: 0, startY: -r * 0.40, tipX: 0, tipY: -r * 1.08, ctrlX: 0, ctrlY: -r * 0.75 },
+      // Inner right leaf
+      { startX: r * 0.05, startY: -r * 0.38, tipX: r * 0.35, tipY: -r * 0.98, ctrlX: r * 0.25, ctrlY: -r * 0.65 },
+      // Outer right leaf
+      { startX: r * 0.10, startY: -r * 0.35, tipX: r * 0.58, tipY: -r * 0.72, ctrlX: r * 0.45, ctrlY: -r * 0.45 }
+    ];
+
+    leaves.forEach((l, idx) => {
+      ctx.beginPath();
+      ctx.moveTo(l.startX, l.startY);
+      ctx.quadraticCurveTo(l.ctrlX, l.ctrlY, l.tipX, l.tipY);
+      ctx.quadraticCurveTo(l.ctrlX * 0.7, l.ctrlY * 1.1, l.startX, l.startY);
+      ctx.closePath();
+
+      const leafGrad = ctx.createLinearGradient(l.startX, l.startY, l.tipX, l.tipY);
+      leafGrad.addColorStop(0, '#65a30d');
+      leafGrad.addColorStop(0.6, '#4d7c0f');
+      leafGrad.addColorStop(1, '#15803d');
+      ctx.fillStyle = leafGrad;
+      ctx.fill();
+    });
+    ctx.restore();
+
+    // 2. Plump Golden Oval Body (둥글고 풍성한 황금빛 파인애플 몸체)
+    ctx.save();
+    const bodyCenterY = r * 0.20;
+    const bodyR = r * 0.68;
+    const bodyH = r * 0.78;
+
+    ctx.beginPath();
+    ctx.ellipse(0, bodyCenterY, bodyR, bodyH, 0, 0, Math.PI * 2);
+    const bodyGrad = ctx.createRadialGradient(-r * 0.22, bodyCenterY - r * 0.25, 8, 0, bodyCenterY, bodyR);
+    bodyGrad.addColorStop(0, '#fde047');
+    bodyGrad.addColorStop(0.5, '#facc15');
+    bodyGrad.addColorStop(0.9, '#eab308');
+    bodyGrad.addColorStop(1, '#ca8a04');
+    ctx.fillStyle = bodyGrad;
+    ctx.fill();
+
+    // 3. Diamond Lattice Grid Pattern (마름모 격자 무늬 - Reference 1:1)
+    ctx.save();
+    ctx.beginPath();
+    ctx.ellipse(0, bodyCenterY, bodyR - 2, bodyH - 2, 0, 0, Math.PI * 2);
     ctx.clip();
 
-    ctx.strokeStyle = '#78350f';
-    ctx.lineWidth = 3.5;
+    ctx.strokeStyle = '#b45309';
+    ctx.lineWidth = 2.8;
 
-    // Diagonal lines /
-    for (let x = -bodyW * 2; x <= bodyW * 2; x += 22) {
+    const spacing = r * 0.28;
+    // 45-degree diagonal lines
+    for (let offset = -r * 2; offset <= r * 2; offset += spacing) {
       ctx.beginPath();
-      ctx.moveTo(x - bodyH, bodyY - bodyH);
-      ctx.lineTo(x + bodyH, bodyY + bodyH);
+      ctx.moveTo(offset - r, bodyCenterY - r);
+      ctx.lineTo(offset + r, bodyCenterY + r);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(offset + r, bodyCenterY - r);
+      ctx.lineTo(offset - r, bodyCenterY + r);
       ctx.stroke();
     }
 
-    // Diagonal lines \
-    for (let x = -bodyW * 2; x <= bodyW * 2; x += 22) {
-      ctx.beginPath();
-      ctx.moveTo(x + bodyH, bodyY - bodyH);
-      ctx.lineTo(x - bodyH, bodyY + bodyH);
-      ctx.stroke();
-    }
-
-    // Diamond Center Eye Bracts (껍질 눈 점들)
-    ctx.fillStyle = '#451a03';
-    for (let row = -3; row <= 3; row++) {
-      for (let col = -3; col <= 3; col++) {
-        const eyeX = col * 22 + (row % 2) * 11;
-        const eyeY = bodyY + row * 18;
-        if ((eyeX * eyeX) / (bodyW * bodyW) + ((eyeY - bodyY) * (eyeY - bodyY)) / (bodyH * bodyH) < 0.82) {
+    // Small warm amber dots in each diamond center
+    ctx.fillStyle = '#b45309';
+    for (let x = -bodyR; x <= bodyR; x += spacing) {
+      for (let y = bodyCenterY - bodyH; y <= bodyCenterY + bodyH; y += spacing) {
+        if ((x * x) / (bodyR * bodyR) + ((y - bodyCenterY) * (y - bodyCenterY)) / (bodyH * bodyH) < 0.70) {
           ctx.beginPath();
-          ctx.arc(eyeX, eyeY, 2.8, 0, Math.PI * 2);
+          ctx.arc(x + spacing * 0.5, y + spacing * 0.5, 2.8, 0, Math.PI * 2);
           ctx.fill();
         }
       }
     }
     ctx.restore();
 
-    // Crown of Spiky Tropical Green Leaves (풍성한 열대 잎사귀 왕관)
-    ctx.save();
-    ctx.translate(0, -r * 0.82);
-
-    const leafSpecs = [
-      { angle: -0.65, length: r * 0.70, width: 14, color: '#15803d' },
-      { angle: 0.65, length: r * 0.70, width: 14, color: '#15803d' },
-      { angle: -0.42, length: r * 0.85, width: 16, color: '#16a34a' },
-      { angle: 0.42, length: r * 0.85, width: 16, color: '#16a34a' },
-      { angle: -0.20, length: r * 0.98, width: 18, color: '#22c55e' },
-      { angle: 0.20, length: r * 0.98, width: 18, color: '#22c55e' },
-      { angle: 0, length: r * 1.05, width: 20, color: '#4ade80' }
-    ];
-
-    leafSpecs.forEach(leaf => {
-      ctx.save();
-      ctx.rotate(leaf.angle);
-
-      ctx.beginPath();
-      ctx.moveTo(0, 0);
-      ctx.quadraticCurveTo(-leaf.width, -leaf.length * 0.5, 0, -leaf.length);
-      ctx.quadraticCurveTo(leaf.width, -leaf.length * 0.5, 0, 0);
-      ctx.fillStyle = leaf.color;
-      ctx.fill();
-
-      // Leaf center vein
-      ctx.beginPath();
-      ctx.moveTo(0, 0);
-      ctx.lineTo(0, -leaf.length * 0.88);
-      ctx.strokeStyle = '#86efac';
-      ctx.lineWidth = 2.5;
-      ctx.stroke();
-
-      ctx.restore();
-    });
-    ctx.restore();
-
-    this._drawGlossyArc(ctx, r);
-  }
-
-  /* ---------------- 6. BOMB (폭탄) ---------------- */
-  static drawBomb(ctx, config, animTimer, theme) {
-    const r = config.radius;
-
-    // Drop Shadow
-    if (theme === 'CLAYMORPHISM') {
-      ctx.save();
-      ctx.shadowColor = 'rgba(0, 0, 0, 0.55)';
-      ctx.shadowBlur = 26;
-      ctx.shadowOffsetY = 14;
-    }
-
-    // Cast Iron Metallic Sphere
+    // 4. Curved White Specular Highlight on Right Shoulder
     ctx.beginPath();
-    ctx.arc(0, 0, r, 0, Math.PI * 2);
-    const ironGrad = ctx.createRadialGradient(-r * 0.35, -r * 0.35, 6, 0, 0, r);
-    ironGrad.addColorStop(0, '#94a3b8');
-    ironGrad.addColorStop(0.3, '#475569');
-    ironGrad.addColorStop(0.75, '#1e293b');
-    ironGrad.addColorStop(1, '#020617');
-    ctx.fillStyle = ironGrad;
-    ctx.fill();
-
-    if (theme === 'CLAYMORPHISM') ctx.restore();
-
-    // Hazard Yellow/Black Caution Stripes Band (위험 경고 줄무늬)
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(-r * 0.85, -r * 0.22, r * 1.7, r * 0.44);
-    ctx.clip();
-
-    ctx.fillStyle = '#facc15';
-    ctx.fillRect(-r, -r * 0.25, r * 2, r * 0.5);
-
-    ctx.fillStyle = '#0f172a';
-    ctx.lineWidth = 14;
-    for (let x = -r * 2; x <= r * 2; x += 26) {
-      ctx.beginPath();
-      ctx.moveTo(x, -r * 0.25);
-      ctx.lineTo(x + 18, r * 0.25);
-      ctx.lineTo(x + 8, r * 0.25);
-      ctx.lineTo(x - 10, -r * 0.25);
-      ctx.fill();
-    }
-    ctx.restore();
-
-    // Brass Neck Fuse Collar (황동 결합부)
-    ctx.fillStyle = '#d97706';
-    ctx.fillRect(-r * 0.25, -r - 12, r * 0.5, 14);
-
-    // Braided Rope Fuse (도화선)
-    ctx.beginPath();
-    ctx.moveTo(0, -r - 10);
-    ctx.quadraticCurveTo(r * 0.3, -r - 30, r * 0.45, -r - 42);
-    ctx.strokeStyle = '#b45309';
-    ctx.lineWidth = 6;
+    ctx.arc(0, bodyCenterY, bodyR * 0.82, -Math.PI * 0.25, 0);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
+    ctx.lineWidth = r * 0.08;
     ctx.lineCap = 'round';
     ctx.stroke();
 
-    // Flickering Animated Spark & Smoke (타오르는 도화선 불꽃)
-    const sparkX = r * 0.45 + (Math.random() - 0.5) * 6;
-    const sparkY = -r - 42 + (Math.random() - 0.5) * 6;
+    ctx.restore();
+  }
 
+  /* ---------------- 6. BOMB (폭탄 - 캐논볼 벡터 스타일) ---------------- */
+  static drawBomb(ctx, config, animTimer) {
+    const r = config.radius;
+
+    // 1. Sinuous Fuse with Spark (도화선 및 불꽃 애니메이션)
+    ctx.save();
     ctx.beginPath();
-    ctx.arc(sparkX, sparkY, 12, 0, Math.PI * 2);
+    ctx.moveTo(0, -r * 0.80);
+    ctx.bezierCurveTo(r * 0.15, -r * 1.10, r * 0.35, -r * 0.85, r * 0.48, -r * 1.05);
+    ctx.strokeStyle = '#b45309';
+    ctx.lineWidth = 5;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+
+    // Animated Fiery Sparks at Fuse Tip
+    const sparkX = r * 0.48;
+    const sparkY = -r * 1.05;
+    const flicker = Math.sin(animTimer * 20) * 3;
+
+    // Golden glow halo
+    ctx.beginPath();
+    ctx.arc(sparkX, sparkY, 14 + flicker, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(250, 204, 21, 0.45)';
+    ctx.fill();
+
+    // Fire core star
+    ctx.beginPath();
+    ctx.arc(sparkX, sparkY, 7 + flicker * 0.5, 0, Math.PI * 2);
     ctx.fillStyle = '#ef4444';
-    ctx.shadowColor = '#f97316';
-    ctx.shadowBlur = 24;
     ctx.fill();
 
     ctx.beginPath();
-    ctx.arc(sparkX, sparkY, 6, 0, Math.PI * 2);
+    ctx.arc(sparkX, sparkY, 4, 0, Math.PI * 2);
     ctx.fillStyle = '#fef08a';
     ctx.fill();
-    ctx.shadowBlur = 0;
+    ctx.restore();
+
+    // 2. Brass Neck Collar (황동 결합부)
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect(-r * 0.22, -r * 0.90, r * 0.44, r * 0.22, 4);
+    ctx.fillStyle = '#d97706';
+    ctx.fill();
+    ctx.strokeStyle = '#92400e';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.restore();
+
+    // 3. Charcoal Cannonball Sphere (매끄러운 검은색 구체)
+    ctx.beginPath();
+    ctx.arc(0, r * 0.08, r * 0.88, 0, Math.PI * 2);
+    const bombGrad = ctx.createRadialGradient(-r * 0.28, -r * 0.20, 6, 0, r * 0.08, r * 0.88);
+    bombGrad.addColorStop(0, '#475569');
+    bombGrad.addColorStop(0.4, '#1e293b');
+    bombGrad.addColorStop(1, '#020617');
+    ctx.fillStyle = bombGrad;
+    ctx.fill();
+
+    // 4. White Curved Specular Highlight (좌측 상단 하이라이트)
+    ctx.beginPath();
+    ctx.arc(0, r * 0.08, r * 0.68, -Math.PI * 0.85, -Math.PI * 0.55);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.80)';
+    ctx.lineWidth = r * 0.09;
+    ctx.lineCap = 'round';
+    ctx.stroke();
   }
 
   /* ---------------- 7. HEART BONUS (보너스 하트) ---------------- */
-  static drawHeartBonus(ctx, config, animTimer, theme) {
+  static drawHeartBonus(ctx, config, animTimer) {
     const r = config.radius;
-    const pulse = 1 + Math.sin(animTimer * 6.5) * 0.08;
+    const pulse = Math.sin(animTimer * 5) * 0.05;
 
     ctx.save();
-    ctx.scale(pulse, pulse);
+    ctx.scale(1 + pulse, 1 + pulse);
 
-    // Glowing Golden Aura
-    ctx.shadowColor = '#ec4899';
-    ctx.shadowBlur = 32;
-
+    // Heart Shape Path
     ctx.beginPath();
-    const topH = r * 0.6;
-    ctx.moveTo(0, r * 0.25);
-    ctx.bezierCurveTo(-r * 0.9, -r * 0.45, -r * 0.95, topH, 0, r * 0.95);
-    ctx.bezierCurveTo(r * 0.95, topH, r * 0.9, -r * 0.45, 0, r * 0.25);
+    ctx.moveTo(0, r * 0.72);
+    // Left bottom curve to upper lobe
+    ctx.bezierCurveTo(-r * 0.85, r * 0.25, -r * 0.95, -r * 0.45, -r * 0.45, -r * 0.72);
+    ctx.bezierCurveTo(-r * 0.15, -r * 0.85, 0, -r * 0.52, 0, -r * 0.35);
+    // Right upper lobe to bottom point
+    ctx.bezierCurveTo(0, -r * 0.52, r * 0.15, -r * 0.85, r * 0.45, -r * 0.72);
+    ctx.bezierCurveTo(r * 0.95, -r * 0.45, r * 0.85, r * 0.25, 0, r * 0.72);
     ctx.closePath();
 
-    const rubyGrad = ctx.createRadialGradient(-r * 0.2, -r * 0.2, 6, 0, 0, r);
-    rubyGrad.addColorStop(0, '#fef08a');
-    rubyGrad.addColorStop(0.35, '#f43f5e');
-    rubyGrad.addColorStop(1, '#9f1239');
-    ctx.fillStyle = rubyGrad;
+    const heartGrad = ctx.createRadialGradient(-r * 0.25, -r * 0.35, 6, 0, 0, r * 0.9);
+    heartGrad.addColorStop(0, '#fb7185');
+    heartGrad.addColorStop(0.4, '#f43f5e');
+    heartGrad.addColorStop(0.85, '#e11d48');
+    heartGrad.addColorStop(1, '#9f1239');
+    ctx.fillStyle = heartGrad;
     ctx.fill();
 
-    // Golden Edge Rim
-    ctx.strokeStyle = '#fef08a';
-    ctx.lineWidth = 6;
-    ctx.stroke();
-
-    // Facet Highlight Cuts
+    // Curved Specular Highlight on Left Lobe
     ctx.beginPath();
-    ctx.moveTo(-r * 0.4, 0);
-    ctx.lineTo(0, r * 0.65);
-    ctx.lineTo(r * 0.4, 0);
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
-    ctx.lineWidth = 3.5;
+    ctx.arc(-r * 0.45, -r * 0.48, r * 0.28, -Math.PI * 0.75, -Math.PI * 0.15);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.75)';
+    ctx.lineWidth = r * 0.08;
+    ctx.lineCap = 'round';
     ctx.stroke();
 
     ctx.restore();
   }
 
-  /* ---------------- SLICED CUT FACE DETAILS (단면 디테일) ---------------- */
-  static drawCutFaceDetails(ctx, config, radius, theme) {
+  /* ---------------- Sliced Cross-Section Details ---------------- */
+  static drawCutFaceDetails(ctx, config, radius) {
     const r = radius;
 
-    // Outer Sliced Rim Highlight Line
+    // Sliced cut rim line
     ctx.beginPath();
     ctx.moveTo(0, -r);
     ctx.lineTo(0, r);
@@ -798,45 +711,37 @@ class FruitRenderer {
     ctx.lineWidth = 6;
     ctx.stroke();
 
-    // Specific inner cross-section details
     if (config.type === 'WATERMELON') {
       // 2 black seeds visible along the cut face
-      ctx.fillStyle = '#09090b';
+      ctx.fillStyle = '#1e293b';
       ctx.beginPath();
-      ctx.arc(0, -r * 0.35, 4, 0, Math.PI * 2);
-      ctx.arc(0, r * 0.35, 4, 0, Math.PI * 2);
+      ctx.arc(0, -r * 0.35, 4.5, 0, Math.PI * 2);
+      ctx.arc(0, r * 0.35, 4.5, 0, Math.PI * 2);
       ctx.fill();
     } else if (config.type === 'ORANGE') {
-      // Center core dot
+      // Radial citrus segments and center core
       ctx.fillStyle = '#fff7ed';
       ctx.beginPath();
-      ctx.arc(0, 0, 5, 0, Math.PI * 2);
+      ctx.arc(0, 0, 6, 0, Math.PI * 2);
       ctx.fill();
     } else if (config.type === 'APPLE') {
-      // Dark brown seed pip in the cut center
+      // Core and seed pip
       ctx.fillStyle = '#78350f';
       ctx.beginPath();
-      ctx.ellipse(0, 0, 4, 6, 0, 0, Math.PI * 2);
+      ctx.ellipse(0, 0, 4, 7, 0, 0, Math.PI * 2);
       ctx.fill();
     } else if (config.type === 'BANANA') {
-      // Tiny black center dots
+      // 3 tiny black center seed specks
       ctx.fillStyle = '#451a03';
       ctx.beginPath();
-      ctx.arc(0, -6, 2, 0, Math.PI * 2);
-      ctx.arc(0, 6, 2, 0, Math.PI * 2);
+      ctx.arc(0, -8, 2.5, 0, Math.PI * 2);
+      ctx.arc(0, 0, 2.5, 0, Math.PI * 2);
+      ctx.arc(0, 8, 2.5, 0, Math.PI * 2);
       ctx.fill();
     }
   }
 
-  /* ---------------- HELPER: Specular Shine ---------------- */
-  static _drawGlossyArc(ctx, r) {
-    ctx.beginPath();
-    ctx.arc(-r * 0.32, -r * 0.32, r * 0.20, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
-    ctx.fill();
-  }
-
-  static drawClassicBase(ctx, config, theme) {
+  static drawClassicBase(ctx, config) {
     const r = config.radius;
     ctx.beginPath();
     ctx.arc(0, 0, r, 0, Math.PI * 2);

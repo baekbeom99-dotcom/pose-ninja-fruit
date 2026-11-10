@@ -19,7 +19,6 @@ export class FruitManager {
     this.halfFruits = [];
     this.spawnTimer = 0;
     this.nextSpawnInterval = 1.0;
-    this.currentTheme = 'CLAYMORPHISM';
     this.totalSlicedCount = 0;
     this.gameMode = 'CLASSIC'; // 'CLASSIC', 'DOCTOR_STRANGE', 'UFO_FISH'
 
@@ -34,7 +33,7 @@ export class FruitManager {
   }
 
   setTheme(themeId) {
-    this.currentTheme = themeId;
+    // Theme switching disabled
   }
 
   setGameMode(mode = 'CLASSIC') {
@@ -429,7 +428,6 @@ export class FruitManager {
 
   sliceAllFruits(owner = 'P1') {
     let slicedCount = 0;
-    const isPixel = this.currentTheme === 'PIXEL_ART';
 
     // Doctor Strange Dimensional Portal Ultimate
     if (this.gameMode === 'DOCTOR_STRANGE') {
@@ -457,7 +455,7 @@ export class FruitManager {
         if (this.gameMode === 'UFO_FISH') {
           this.particles.createStarlightBubbles(fruit.x, fruit.y, fruit.config.juiceColor || '#38bdf8');
         } else {
-          this.particles.createFruitSplash(fruit.x, fruit.y, fruit.config.juiceColor, normal, isPixel);
+          this.particles.createFruitSplash(fruit.x, fruit.y, fruit.config.juiceColor, normal, false);
         }
 
         const halves = fruit.slice(cutAngle, normal);
@@ -493,8 +491,7 @@ export class FruitManager {
       this.particles.createStarlightBubbles(hitPoint.x, hitPoint.y, fruit.config.juiceColor || '#38bdf8');
     } else {
       soundManager.playSlice();
-      const isPixel = this.currentTheme === 'PIXEL_ART';
-      this.particles.createFruitSplash(hitPoint.x, hitPoint.y, fruit.config.juiceColor, normal, isPixel);
+      this.particles.createFruitSplash(hitPoint.x, hitPoint.y, fruit.config.juiceColor, normal, false);
     }
 
     const halves = fruit.slice(cutAngle, normal);

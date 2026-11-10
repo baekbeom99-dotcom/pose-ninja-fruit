@@ -46,8 +46,6 @@ export class UIManager {
     this.ultimateMoveDesc = document.getElementById('ultimate-move-desc');
     this.ultimateBanner = document.getElementById('ultimate-banner');
     this.ultimateBannerTitle = document.getElementById('ultimate-banner-title');
-    this.themeBadge = document.getElementById('theme-badge');
-    this.themeNameText = document.getElementById('theme-name-text');
 
     // Mode Buttons
     this.btnModeSolo = document.getElementById('btn-mode-solo');
@@ -247,9 +245,7 @@ export class UIManager {
   }
 
   setThemeBadge(theme) {
-    if (this.themeNameText && theme) {
-      this.themeNameText.textContent = `테마: ${theme.name}`;
-    }
+    // Theme switching disabled
   }
 
   updateUltimateGauge(slicedCount, threshold, isReady, currentPose) {
