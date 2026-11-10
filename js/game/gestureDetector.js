@@ -1,5 +1,5 @@
 /**
- * Korean Consonant Pose Detector ('ㅅ', 'ㅈ', 'ㄱ', 'ㄴ')
+ * Korean Consonant Pose Detector ('ㅅ', 'ㅇ', 'ㄱ', 'ㄴ')
  * Optimized for natural webcam framing with relaxed thresholds and visual silhouette SVGs.
  */
 
@@ -23,21 +23,20 @@ export const CONSONANT_POSES = [
     `
   },
   {
-    id: 'JIEUT',
-    symbol: 'ㅈ',
-    name: '지읒(ㅈ) 천벌',
-    desc: '양팔을 머리 위 대각선 양옆으로 만세(V) 벌리기!',
-    color: '#f43f5e',
+    id: 'IEUNG',
+    symbol: 'ㅇ',
+    name: '이응(ㅇ) 광륜',
+    desc: '양팔을 둥글게 모아 커다란 원(○) 만들기!',
+    color: '#06b6d4',
     illustrationSvg: `
       <svg viewBox="0 0 100 100" class="pose-stickman">
-        <circle cx="50" cy="24" r="8" fill="#f43f5e"/>
-        <line x1="50" y1="32" x2="50" y2="65" stroke="#f43f5e" stroke-width="4" stroke-linecap="round"/>
-        <line x1="50" y1="65" x2="35" y2="90" stroke="#f43f5e" stroke-width="4" stroke-linecap="round"/>
-        <line x1="50" y1="65" x2="65" y2="90" stroke="#f43f5e" stroke-width="4" stroke-linecap="round"/>
-        <line x1="50" y1="38" x2="20" y2="10" stroke="#facc15" stroke-width="5" stroke-linecap="round"/>
-        <line x1="50" y1="38" x2="80" y2="10" stroke="#facc15" stroke-width="5" stroke-linecap="round"/>
-        <circle cx="20" cy="10" r="4.5" fill="#ffffff"/>
-        <circle cx="80" cy="10" r="4.5" fill="#ffffff"/>
+        <circle cx="50" cy="28" r="7" fill="#06b6d4"/>
+        <line x1="50" y1="35" x2="50" y2="65" stroke="#06b6d4" stroke-width="4" stroke-linecap="round"/>
+        <line x1="50" y1="65" x2="35" y2="90" stroke="#06b6d4" stroke-width="4" stroke-linecap="round"/>
+        <line x1="50" y1="65" x2="65" y2="90" stroke="#06b6d4" stroke-width="4" stroke-linecap="round"/>
+        <path d="M 50,36 C 26,34 22,14 42,8 C 50,5 58,5 66,10 C 82,18 76,34 50,36" fill="none" stroke="#facc15" stroke-width="5" stroke-linecap="round"/>
+        <circle cx="50" cy="8" r="4.5" fill="#ffffff"/>
+        <circle cx="50" cy="36" r="4.5" fill="#ffffff"/>
       </svg>
     `
   },
@@ -176,11 +175,17 @@ export class GestureDetector {
         return bothHandsHighAboveHead && handsCloseTogether;
       }
 
-      case 'JIEUT': {
-        // 'ㅈ' / V Victory: Both hands HIGH above head AND spread wide in a clear V shape
-        const bothHandsHighAboveHead = lw.y < avgShoulderY - 0.12 && rw.y < avgShoulderY - 0.12;
-        const handsWideV = Math.abs(lw.x - rw.x) > Math.max(0.35, shoulderDist * 1.45);
-        return bothHandsHighAboveHead && handsWideV;
+      case 'IEUNG': {
+        // 'ㅇ' (Circle): Both arms rounded to form an O shape (overhead or chest-level circle)
+        // 1. Overhead circle: both hands raised above shoulders and meeting near center
+        const overheadHands = lw.y < avgShoulderY - 0.08 && rw.y < avgShoulderY - 0.08;
+        const overheadClose = Math.abs(lw.x - rw.x) < Math.max(0.28, shoulderDist * 1.15);
+
+        // 2. Chest circle: both hands rounded in front of chest/neck and meeting near center
+        const chestHands = Math.abs(lw.y - avgShoulderY - 0.08) < 0.20 && Math.abs(rw.y - avgShoulderY - 0.08) < 0.20;
+        const chestClose = Math.abs(lw.x - rw.x) < Math.max(0.24, shoulderDist * 0.95);
+
+        return (overheadHands && overheadClose) || (chestHands && chestClose);
       }
 
       case 'GIYEOK': {

@@ -33,20 +33,20 @@ function runTests() {
     assert(result.matched === true, 'SIOT matches hands above head and close');
   }
 
-  // Test 2: 'ㅈ' (JIEUT) - Both hands high and wide (V-pose)
+  // Test 2: 'ㅇ' (IEUNG) - Overhead or chest-level rounded circle
   {
-    const lm = createMockLandmarks({ lwY: 0.1, rwY: 0.1, lwX: 0.15, rwX: 0.85, headY: 0.25 });
-    const result = detector.evaluate('JIEUT', lm, 0.1, true);
-    assert(result.matched === true, 'JIEUT matches hands high and wide V');
+    const lm = createMockLandmarks({ lwY: 0.15, rwY: 0.15, lwX: 0.44, rwX: 0.56, headY: 0.25 });
+    const result = detector.evaluate('IEUNG', lm, 0.1, true);
+    assert(result.matched === true, 'IEUNG matches arms forming rounded circle');
   }
 
   // Test 3: Hold progress accumulation
   {
     detector.reset();
-    const lm = createMockLandmarks({ lwY: 0.1, rwY: 0.1, lwX: 0.15, rwX: 0.85, headY: 0.25 });
-    const r1 = detector.evaluate('JIEUT', lm, 0.25, true);
+    const lm = createMockLandmarks({ lwY: 0.15, rwY: 0.15, lwX: 0.44, rwX: 0.56, headY: 0.25 });
+    const r1 = detector.evaluate('IEUNG', lm, 0.25, true);
     assert(r1.matched === true && !r1.triggered, 'Progress accumulating at 0.25s');
-    const r2 = detector.evaluate('JIEUT', lm, 0.30, true);
+    const r2 = detector.evaluate('IEUNG', lm, 0.30, true);
     assert(r2.triggered === true, 'Triggered after reaching required hold time (0.50s)');
   }
 

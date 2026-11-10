@@ -318,34 +318,38 @@ export class SoundManager {
 
   playHeadingDefuse() {
     if (!this.ctx || this.isMuted) return;
-    this.resume();
+    try {
+      this.resume();
 
-    const now = this.ctx.currentTime;
-    // Punchy athletic header thud + triumphant energy ping
-    const oscThud = this.ctx.createOscillator();
-    const gainThud = this.ctx.createGain();
-    oscThud.type = 'triangle';
-    oscThud.frequency.setValueAtTime(220, now);
-    oscThud.frequency.exponentialRampToValueAtTime(50, now + 0.16);
-    gainThud.gain.setValueAtTime(0.55, now);
-    gainThud.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
-    oscThud.connect(gainThud);
-    gainThud.connect(this.ctx.destination);
-    oscThud.start(now);
-    oscThud.stop(now + 0.16);
+      const now = this.ctx.currentTime;
+      // Punchy athletic header thud + triumphant energy ping
+      const oscThud = this.ctx.createOscillator();
+      const gainThud = this.ctx.createGain();
+      oscThud.type = 'triangle';
+      oscThud.frequency.setValueAtTime(220, now);
+      oscThud.frequency.exponentialRampToValueAtTime(50, now + 0.16);
+      gainThud.gain.setValueAtTime(0.55, now);
+      gainThud.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+      oscThud.connect(gainThud);
+      gainThud.connect(this.ctx.destination);
+      oscThud.start(now);
+      oscThud.stop(now + 0.16);
 
-    const oscChime = this.ctx.createOscillator();
-    const gainChime = this.ctx.createGain();
-    oscChime.type = 'sine';
-    oscChime.frequency.setValueAtTime(880, now + 0.02);
-    oscChime.frequency.exponentialRampToValueAtTime(1760, now + 0.25);
-    gainChime.gain.setValueAtTime(0.001, now);
-    gainChime.gain.linearRampToValueAtTime(0.35, now + 0.04);
-    gainChime.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
-    oscChime.connect(gainChime);
-    gainChime.connect(this.ctx.destination);
-    oscChime.start(now + 0.02);
-    oscChime.stop(now + 0.32);
+      const oscChime = this.ctx.createOscillator();
+      const gainChime = this.ctx.createGain();
+      oscChime.type = 'sine';
+      oscChime.frequency.setValueAtTime(880, now);
+      oscChime.frequency.exponentialRampToValueAtTime(1760, now + 0.25);
+      gainChime.gain.setValueAtTime(0.001, now);
+      gainChime.gain.linearRampToValueAtTime(0.35, now + 0.04);
+      gainChime.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
+      oscChime.connect(gainChime);
+      gainChime.connect(this.ctx.destination);
+      oscChime.start(now);
+      oscChime.stop(now + 0.32);
+    } catch (e) {
+      console.warn('Heading sound playback error:', e);
+    }
   }
 }
 

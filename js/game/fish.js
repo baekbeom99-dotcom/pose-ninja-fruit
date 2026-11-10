@@ -7,20 +7,20 @@ import { CONFIG } from '../config.js';
 import { FruitRenderer } from './fruit.js';
 
 export class HalfFish {
-  constructor(fishConfig, x, y, vx, vy, cutAngle, isLeftHalf, themeId = 'CLASSIC_VECTOR') {
+  constructor(fishConfig, x, y, vx, vy, cutAngle, isLeftHalf, scale = 1.0) {
     this.config = fishConfig;
     this.type = fishConfig.type;
+    this.scale = scale;
     this.x = x;
     this.y = y;
     this.vx = vx;
     this.vy = vy;
-    this.radius = fishConfig.radius;
+    this.radius = (fishConfig.radius || 80) * scale;
     this.cutAngle = cutAngle;
     this.isLeftHalf = isLeftHalf;
     this.rotation = cutAngle;
     this.angularVelocity = isLeftHalf ? -3.5 : 3.5;
     this.isDead = false;
-    this.themeId = themeId;
 
     // 3-second smooth fadeout
     this.maxLife = 3.0;
@@ -59,8 +59,10 @@ export class HalfFish {
     ctx.globalAlpha = alpha;
     ctx.translate(this.x, this.y);
     ctx.rotate(this.rotation);
+    ctx.scale(this.scale, this.scale);
 
-    const clipR = this.radius * 2.5;
+    const baseR = this.radius / this.scale;
+    const clipR = baseR * 2.5;
     ctx.beginPath();
     if (this.isLeftHalf) {
       ctx.rect(-clipR, -clipR, clipR, clipR * 2);
@@ -76,10 +78,11 @@ export class HalfFish {
 }
 
 export class Fish {
-  constructor(fishConfig, startX, startY, pathType = 'SINE_WAVE', params = {}) {
+  constructor(fishConfig, startX, startY, pathType = 'SINE_WAVE', params = {}, scale = 1.0) {
     this.config = fishConfig;
     this.type = fishConfig.type;
-    this.radius = fishConfig.radius;
+    this.scale = scale;
+    this.radius = (fishConfig.radius || 80) * scale;
     this.points = fishConfig.points;
 
     this.x = startX;
@@ -190,7 +193,8 @@ export class Fish {
       this.vx + normal.x * pushSpeed,
       this.vy + normal.y * pushSpeed,
       cutAngle,
-      true
+      true,
+      this.scale
     );
 
     const h2 = new HalfFish(
@@ -200,7 +204,8 @@ export class Fish {
       this.vx - normal.x * pushSpeed,
       this.vy - normal.y * pushSpeed,
       cutAngle,
-      false
+      false,
+      this.scale
     );
 
     return [h1, h2];
@@ -212,10 +217,12 @@ export class Fish {
     ctx.save();
     ctx.translate(this.x, this.y);
     ctx.rotate(this.rotation);
+    ctx.scale(this.scale, this.scale);
 
     // Subtle Zero-G UFO Antigravity Aura Ring around flying fruit
+    const baseR = this.radius / this.scale;
     ctx.beginPath();
-    ctx.arc(0, 0, this.radius + 6, 0, Math.PI * 2);
+    ctx.arc(0, 0, baseR + 6, 0, Math.PI * 2);
     ctx.strokeStyle = 'rgba(56, 189, 248, 0.40)';
     ctx.lineWidth = 3;
     ctx.stroke();

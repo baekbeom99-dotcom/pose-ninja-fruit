@@ -86,6 +86,7 @@ export class FruitManager {
 
   /* ---------------- 1. UFO FRUIT MODE (Zero-G Trajectories with Existing Fruits) ---------------- */
   _spawnFishWave(canvasWidth, canvasHeight, availableSlots, currentLives) {
+    const screenScale = Math.max(0.55, Math.min(2.0, Math.min(canvasWidth / 1280, canvasHeight / 720)));
     const fruitKeys = Object.keys(CONFIG.FRUITS).filter(
       k => k !== 'BOMB' && k !== 'HEART_BONUS'
     );
@@ -105,12 +106,13 @@ export class FruitManager {
     let remainingSlots = availableSlots;
     while (remainingSlots > 0) {
       const cfg = getRandomFruitConfig();
+      const r = cfg.radius * screenScale;
       const pathTypeRand = Math.random();
 
       if (pathTypeRand < 0.45) {
         // Path 1: Sinuous Sine Wave (좌우 파동 유영)
         const fromLeft = Math.random() < 0.5;
-        const startX = fromLeft ? -cfg.radius - 20 : canvasWidth + cfg.radius + 20;
+        const startX = fromLeft ? -r - 20 : canvasWidth + r + 20;
         const startY = canvasHeight * (0.22 + Math.random() * 0.55);
         const speedX = fromLeft ? (170 + Math.random() * 110) : -(170 + Math.random() * 110);
 
@@ -120,7 +122,7 @@ export class FruitManager {
             amplitude: 65 + Math.random() * 75,
             frequency: 1.8 + Math.random() * 1.2,
             phase: Math.random() * Math.PI * 2
-          })
+          }, screenScale)
         );
       } else if (pathTypeRand < 0.70) {
         // Path 2: Lissajous Figure-8 Patrol (8자 순찰 비행)
@@ -136,12 +138,12 @@ export class FruitManager {
             amplitude: amp,
             frequency: 1.4 + Math.random() * 0.6,
             phase: startAngle
-          })
+          }, screenScale)
         );
       } else if (pathTypeRand < 0.88) {
         // Path 3: Pulsing Dash & Glide (제트 분사 유영)
         const fromLeft = Math.random() < 0.5;
-        const startX = fromLeft ? -cfg.radius - 20 : canvasWidth + cfg.radius + 20;
+        const startX = fromLeft ? -r - 20 : canvasWidth + r + 20;
         const startY = canvasHeight * (0.25 + Math.random() * 0.50);
         const vx = fromLeft ? (200 + Math.random() * 100) : -(200 + Math.random() * 100);
         const vy = (Math.random() - 0.5) * 80;
@@ -151,7 +153,7 @@ export class FruitManager {
             vx,
             vy,
             frequency: 2.2 + Math.random() * 1.0
-          })
+          }, screenScale)
         );
       } else {
         // Path 4: Screen Ricochet (무중력 반사 유영)
@@ -164,7 +166,7 @@ export class FruitManager {
           new Fish(cfg, startX, startY, 'RICOCHET', {
             vx: Math.cos(angle) * speed,
             vy: Math.sin(angle) * speed
-          })
+          }, screenScale)
         );
       }
 
@@ -174,6 +176,7 @@ export class FruitManager {
 
   /* ---------------- 2. DOCTOR STRANGE MODE (High-Intensity Workout Trajectories) ---------------- */
   _spawnDoctorStrangeWave(canvasWidth, canvasHeight, availableSlots, currentLives) {
+    const screenScale = Math.max(0.55, Math.min(2.0, Math.min(canvasWidth / 1280, canvasHeight / 720)));
     const fruitKeys = Object.keys(CONFIG.FRUITS).filter(
       k => k !== 'BOMB' && k !== 'HEART_BONUS'
     );
@@ -202,14 +205,14 @@ export class FruitManager {
         // Doctor Strange Workout Formation 1: High Lateral Scissor Cross (양팔 대각선 회전 베기)
         const cfg1 = getRandomConfig();
         const cfg2 = getRandomConfig();
-        const startY1 = canvasHeight + cfg1.radius + 15;
-        const startY2 = canvasHeight + cfg2.radius + 15;
+        const startY1 = canvasHeight + cfg1.radius * screenScale + 15;
+        const startY2 = canvasHeight + cfg2.radius * screenScale + 15;
         const targetApex1 = canvasHeight * (0.06 + Math.random() * 0.08); // High top
         const targetApex2 = canvasHeight * (0.12 + Math.random() * 0.10);
 
         // Sweeping widely across opposite sides to force tilted/vertical beam angles
-        this.fruits.push(new Fruit(cfg1, canvasWidth * 0.08, startY1, 280 + Math.random() * 90, calcLaunchVy(startY1, targetApex1), this.currentTheme));
-        this.fruits.push(new Fruit(cfg2, canvasWidth * 0.92, startY2, -(280 + Math.random() * 90), calcLaunchVy(startY2, targetApex2), this.currentTheme));
+        this.fruits.push(new Fruit(cfg1, canvasWidth * 0.08, startY1, 280 + Math.random() * 90, calcLaunchVy(startY1, targetApex1), screenScale));
+        this.fruits.push(new Fruit(cfg2, canvasWidth * 0.92, startY2, -(280 + Math.random() * 90), calcLaunchVy(startY2, targetApex2), screenScale));
         remainingSlots -= 2;
         continue;
       }
@@ -222,39 +225,39 @@ export class FruitManager {
         // Overhead Rainbow Beam Sweep (머리 위 수평 빔 유도 아치)
         const fromLeft = Math.random() < 0.5;
         const startX = fromLeft ? canvasWidth * 0.05 : canvasWidth * 0.95;
-        const startY = canvasHeight + cfg.radius + 15;
+        const startY = canvasHeight + cfg.radius * screenScale + 15;
         const targetApex = canvasHeight * (0.05 + Math.random() * 0.08);
         const vy = calcLaunchVy(startY, targetApex);
         const tApex = -vy / g;
         const targetDist = canvasWidth * 0.78;
         const vx = fromLeft ? (targetDist / (2 * tApex)) : -(targetDist / (2 * tApex));
-        this.fruits.push(new Fruit(cfg, startX, startY, vx, vy, this.currentTheme));
+        this.fruits.push(new Fruit(cfg, startX, startY, vx, vy, screenScale));
       } else if (style === 1) {
         // Side Wall Diagonal Slingshot (벽면 고각 사격)
         const fromLeft = Math.random() < 0.5;
-        const startX = fromLeft ? (-cfg.radius - 10) : (canvasWidth + cfg.radius + 10);
+        const startX = fromLeft ? (-cfg.radius * screenScale - 10) : (canvasWidth + cfg.radius * screenScale + 10);
         const startY = canvasHeight * (0.42 + Math.random() * 0.25);
         const targetApex = canvasHeight * (0.08 + Math.random() * 0.10);
         const vy = calcLaunchVy(startY, targetApex);
         const vx = fromLeft ? (360 + Math.random() * 120) : -(360 + Math.random() * 120);
-        this.fruits.push(new Fruit(cfg, startX, startY, vx, vy, this.currentTheme));
+        this.fruits.push(new Fruit(cfg, startX, startY, vx, vy, screenScale));
       } else if (style === 2) {
         // High Scissor Pop (중앙 고각 솟구침)
         const startX = canvasWidth * (0.25 + Math.random() * 0.50);
-        const startY = canvasHeight + cfg.radius + 15;
+        const startY = canvasHeight + cfg.radius * screenScale + 15;
         const targetApex = canvasHeight * (0.05 + Math.random() * 0.06); // Top 5%~11%
         const vy = calcLaunchVy(startY, targetApex);
         const vx = (Math.random() - 0.5) * 110;
-        this.fruits.push(new Fruit(cfg, startX, startY, vx, vy, this.currentTheme));
+        this.fruits.push(new Fruit(cfg, startX, startY, vx, vy, screenScale));
       } else {
         // Double Inward Sweeper (저공 런지 유도)
         const fromLeft = Math.random() < 0.5;
         const startX = fromLeft ? canvasWidth * 0.15 : canvasWidth * 0.85;
-        const startY = canvasHeight + cfg.radius + 15;
+        const startY = canvasHeight + cfg.radius * screenScale + 15;
         const targetApex = canvasHeight * (0.12 + Math.random() * 0.12);
         const vy = calcLaunchVy(startY, targetApex);
         const vx = fromLeft ? (260 + Math.random() * 120) : -(260 + Math.random() * 120);
-        this.fruits.push(new Fruit(cfg, startX, startY, vx, vy, this.currentTheme));
+        this.fruits.push(new Fruit(cfg, startX, startY, vx, vy, screenScale));
       }
 
       remainingSlots--;
@@ -263,6 +266,7 @@ export class FruitManager {
 
   /* ---------------- 3. CLASSIC NINJA MODE (High Ballistic Arcs) ---------------- */
   _spawnClassicWave(canvasWidth, canvasHeight, availableSlots, currentLives) {
+    const screenScale = Math.max(0.55, Math.min(2.0, Math.min(canvasWidth / 1280, canvasHeight / 720)));
     const fruitKeys = Object.keys(CONFIG.FRUITS).filter(
       k => k !== 'BOMB' && k !== 'HEART_BONUS'
     );
@@ -294,36 +298,36 @@ export class FruitManager {
           const cfg1 = getRandomConfig();
           const cfg2 = getRandomConfig();
           const startX = canvasWidth * 0.5 + (Math.random() - 0.5) * 50;
-          const startY = canvasHeight + Math.max(cfg1.radius, cfg2.radius) + 15;
+          const startY = canvasHeight + Math.max(cfg1.radius, cfg2.radius) * screenScale + 15;
           const targetApex = canvasHeight * (0.07 + Math.random() * 0.10);
           const vy = calcLaunchVy(startY, targetApex);
           const spreadVx = 180 + Math.random() * 90;
 
-          this.fruits.push(new Fruit(cfg1, startX - 25, startY, -spreadVx, vy * (0.97 + Math.random() * 0.06), this.currentTheme));
-          this.fruits.push(new Fruit(cfg2, startX + 25, startY, spreadVx, vy * (0.97 + Math.random() * 0.06), this.currentTheme));
+          this.fruits.push(new Fruit(cfg1, startX - 25, startY, -spreadVx, vy * (0.97 + Math.random() * 0.06), screenScale));
+          this.fruits.push(new Fruit(cfg2, startX + 25, startY, spreadVx, vy * (0.97 + Math.random() * 0.06), screenScale));
           remainingSlots -= 2;
           continue;
         } else if (formation === 1) {
           const cfg1 = getRandomConfig();
           const cfg2 = getRandomConfig();
-          const startY1 = canvasHeight + cfg1.radius + 15;
-          const startY2 = canvasHeight + cfg2.radius + 15;
+          const startY1 = canvasHeight + cfg1.radius * screenScale + 15;
+          const startY2 = canvasHeight + cfg2.radius * screenScale + 15;
           const targetApex = canvasHeight * (0.08 + Math.random() * 0.12);
           const vy1 = calcLaunchVy(startY1, targetApex);
           const vy2 = calcLaunchVy(startY2, targetApex);
 
-          this.fruits.push(new Fruit(cfg1, canvasWidth * 0.12, startY1, 220 + Math.random() * 100, vy1, this.currentTheme));
-          this.fruits.push(new Fruit(cfg2, canvasWidth * 0.88, startY2, -(220 + Math.random() * 100), vy2, this.currentTheme));
+          this.fruits.push(new Fruit(cfg1, canvasWidth * 0.12, startY1, 220 + Math.random() * 100, vy1, screenScale));
+          this.fruits.push(new Fruit(cfg2, canvasWidth * 0.88, startY2, -(220 + Math.random() * 100), vy2, screenScale));
           remainingSlots -= 2;
           continue;
         } else {
           const cfg1 = getRandomConfig();
           const cfg2 = getRandomConfig();
-          const startY = canvasHeight + 85;
+          const startY = canvasHeight + 85 * screenScale;
           const targetApex1 = canvasHeight * (0.06 + Math.random() * 0.10);
           const targetApex2 = canvasHeight * (0.10 + Math.random() * 0.12);
-          this.fruits.push(new Fruit(cfg1, canvasWidth * 0.22, startY, 200 + Math.random() * 90, calcLaunchVy(startY, targetApex1), this.currentTheme));
-          this.fruits.push(new Fruit(cfg2, canvasWidth * 0.78, startY, -(200 + Math.random() * 90), calcLaunchVy(startY, targetApex2), this.currentTheme));
+          this.fruits.push(new Fruit(cfg1, canvasWidth * 0.22, startY, 200 + Math.random() * 90, calcLaunchVy(startY, targetApex1), screenScale));
+          this.fruits.push(new Fruit(cfg2, canvasWidth * 0.78, startY, -(200 + Math.random() * 90), calcLaunchVy(startY, targetApex2), screenScale));
           remainingSlots -= 2;
           continue;
         }
@@ -334,45 +338,45 @@ export class FruitManager {
 
       if (style === 0) {
         const startX = canvasWidth * (0.30 + Math.random() * 0.40);
-        const startY = canvasHeight + cfg.radius + 15;
+        const startY = canvasHeight + cfg.radius * screenScale + 15;
         const targetApex = canvasHeight * (0.05 + Math.random() * 0.08);
         const vy = calcLaunchVy(startY, targetApex);
         const vx = (Math.random() - 0.5) * 70;
-        this.fruits.push(new Fruit(cfg, startX, startY, vx, vy, this.currentTheme));
+        this.fruits.push(new Fruit(cfg, startX, startY, vx, vy, screenScale));
       } else if (style === 1) {
         const fromLeft = Math.random() < 0.5;
         const startX = fromLeft ? canvasWidth * (0.08 + Math.random() * 0.15) : canvasWidth * (0.77 + Math.random() * 0.15);
-        const startY = canvasHeight + cfg.radius + 15;
+        const startY = canvasHeight + cfg.radius * screenScale + 15;
         const targetApex = canvasHeight * (0.08 + Math.random() * 0.12);
         const vy = calcLaunchVy(startY, targetApex);
         const speedX = 220 + Math.random() * 160;
         const vx = fromLeft ? speedX : -speedX;
-        this.fruits.push(new Fruit(cfg, startX, startY, vx, vy, this.currentTheme));
+        this.fruits.push(new Fruit(cfg, startX, startY, vx, vy, screenScale));
       } else if (style === 2) {
         const fromLeft = Math.random() < 0.5;
         const startX = fromLeft ? canvasWidth * 0.04 : canvasWidth * 0.96;
-        const startY = canvasHeight + cfg.radius + 15;
+        const startY = canvasHeight + cfg.radius * screenScale + 15;
         const targetApex = canvasHeight * (0.10 + Math.random() * 0.12);
         const vy = calcLaunchVy(startY, targetApex);
         const tApex = -vy / g;
         const targetDistance = canvasWidth * 0.72;
         const vx = fromLeft ? (targetDistance / (2 * tApex)) : -(targetDistance / (2 * tApex));
-        this.fruits.push(new Fruit(cfg, startX, startY, vx, vy, this.currentTheme));
+        this.fruits.push(new Fruit(cfg, startX, startY, vx, vy, screenScale));
       } else if (style === 3) {
         const fromLeft = Math.random() < 0.5;
-        const startX = fromLeft ? (-cfg.radius - 10) : (canvasWidth + cfg.radius + 10);
+        const startX = fromLeft ? (-cfg.radius * screenScale - 10) : (canvasWidth + cfg.radius * screenScale + 10);
         const startY = canvasHeight * (0.50 + Math.random() * 0.25);
         const targetApex = canvasHeight * (0.10 + Math.random() * 0.14);
         const vy = calcLaunchVy(startY, targetApex);
         const vx = fromLeft ? (320 + Math.random() * 140) : -(320 + Math.random() * 140);
-        this.fruits.push(new Fruit(cfg, startX, startY, vx, vy, this.currentTheme));
+        this.fruits.push(new Fruit(cfg, startX, startY, vx, vy, screenScale));
       } else {
         const startX = canvasWidth * (0.20 + Math.random() * 0.60);
-        const startY = canvasHeight + cfg.radius + 15;
+        const startY = canvasHeight + cfg.radius * screenScale + 15;
         const targetApex = canvasHeight * (0.06 + Math.random() * 0.08);
         const vy = calcLaunchVy(startY, targetApex);
         const vx = (canvasWidth * 0.5 - startX) * 0.45 + (Math.random() - 0.5) * 80;
-        const fruit = new Fruit(cfg, startX, startY, vx, vy, this.currentTheme);
+        const fruit = new Fruit(cfg, startX, startY, vx, vy, screenScale);
         fruit.angularVelocity = (Math.random() - 0.5) * 1.8;
         this.fruits.push(fruit);
       }

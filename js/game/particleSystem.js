@@ -280,6 +280,10 @@ export class ParticleSystem {
     this.portals = [];
   }
 
+  createShockwave(x, y, color = '#38bdf8', maxRadius = 140, life = 0.35) {
+    this.shockwaves.push(new Shockwave(x, y, color, maxRadius, life));
+  }
+
   createDoctorStrangePortal(w, h) {
     this.portals.push(new DoctorStrangePortal(w, h));
 

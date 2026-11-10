@@ -246,8 +246,12 @@ export class GameEngine {
       const dt = Math.min((currentTime - this.lastTime) / 1000, 0.1);
       this.lastTime = currentTime;
 
-      this.update(dt, currentTime);
-      this.render();
+      try {
+        this.update(dt, currentTime);
+        this.render();
+      } catch (err) {
+        console.error('Frame execution error:', err);
+      }
 
       requestAnimationFrame(loop);
     };

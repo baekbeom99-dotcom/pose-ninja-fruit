@@ -7,13 +7,14 @@
 import { CONFIG } from '../config.js';
 
 export class HalfFruit {
-  constructor(fruitConfig, x, y, vx, vy, cutAngle, isLeftHalf) {
+  constructor(fruitConfig, x, y, vx, vy, cutAngle, isLeftHalf, scale = 1.0) {
     this.config = fruitConfig;
+    this.scale = scale;
     this.x = x;
     this.y = y;
     this.vx = vx;
     this.vy = vy;
-    this.radius = fruitConfig.radius;
+    this.radius = fruitConfig.radius * scale;
     this.cutAngle = cutAngle;
     this.isLeftHalf = isLeftHalf;
     this.rotation = cutAngle;
@@ -59,9 +60,11 @@ export class HalfFruit {
     ctx.globalAlpha = alpha;
     ctx.translate(this.x, this.y);
     ctx.rotate(this.rotation);
+    ctx.scale(this.scale, this.scale);
 
     // Clip to half space cleanly along the cut line (x <= 0 or x >= 0)
-    const clipR = this.radius * 2.5;
+    const baseR = this.radius / this.scale;
+    const clipR = baseR * 2.5;
     ctx.beginPath();
     if (this.isLeftHalf) {
       ctx.rect(-clipR, -clipR, clipR, clipR * 2);
@@ -78,10 +81,11 @@ export class HalfFruit {
 }
 
 export class Fruit {
-  constructor(fruitConfig, startX, startY, vx, vy) {
+  constructor(fruitConfig, startX, startY, vx, vy, scale = 1.0) {
     this.config = fruitConfig;
     this.type = fruitConfig.type;
-    this.radius = fruitConfig.radius;
+    this.scale = scale;
+    this.radius = fruitConfig.radius * scale;
     this.points = fruitConfig.points;
 
     this.x = startX;
@@ -129,7 +133,8 @@ export class Fruit {
       this.vx + normal.x * pushSpeed,
       this.vy + normal.y * pushSpeed - 50,
       cutAngle,
-      true
+      true,
+      this.scale
     );
 
     const h2 = new HalfFruit(
@@ -139,7 +144,8 @@ export class Fruit {
       this.vx - normal.x * pushSpeed,
       this.vy - normal.y * pushSpeed - 50,
       cutAngle,
-      false
+      false,
+      this.scale
     );
 
     return [h1, h2];
@@ -151,6 +157,7 @@ export class Fruit {
     ctx.save();
     ctx.translate(this.x, this.y);
     ctx.rotate(this.rotation);
+    ctx.scale(this.scale, this.scale);
 
     FruitRenderer.drawFruitBody(ctx, this.config, this.animTimer);
 
