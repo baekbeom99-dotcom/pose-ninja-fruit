@@ -266,7 +266,10 @@ export class GameEngine {
       }
     }
 
-    // 2. Evaluate Consonant Pose for Ultimate Move if Ready
+    // 2. Update Blade Tracker with filtered poses first
+    this.blades.update(poses, this.width, this.height, currentTime, CONFIG.CANVAS.MIRROR);
+
+    // 3. Evaluate Consonant Pose for Ultimate Move if Ready
     if (this.state === GameState.PLAYING && this.isUltimateReady && poses && poses.length > 0) {
       let triggered = false;
       let maxProgress = 0;
@@ -274,11 +277,17 @@ export class GameEngine {
 
       poses.forEach((lm, pIdx) => {
         const owner = pIdx === 0 ? 'P1' : 'P2';
+        // If player is actively swinging blades to slice fruits, pose charging is paused
+        const isSwinging = owner === 'P1'
+          ? (this.blades.p1LeftBlade.isSwinging || this.blades.p1RightBlade.isSwinging)
+          : (this.blades.p2LeftBlade.isSwinging || this.blades.p2RightBlade.isSwinging);
+
         const evalResult = this.gestureDetector.evaluate(
           this.currentConsonantPose.id,
           lm,
           dt,
-          CONFIG.CANVAS.MIRROR
+          CONFIG.CANVAS.MIRROR,
+          isSwinging
         );
         if (evalResult.progress > maxProgress) {
           maxProgress = evalResult.progress;
@@ -298,15 +307,13 @@ export class GameEngine {
       this.ui.updateChargingProgress(0);
     }
 
-    // 3. Update Blade Tracker with filtered poses
-    this.blades.update(poses, this.width, this.height, currentTime, CONFIG.CANVAS.MIRROR);
+    // 4. Update Particle FX (always update every frame so slashes, flashes, and splatters fade and clear)
+    this.particles.update(dt);
 
-    // 4. Update Game & Fruits
+    // 5. Update Game & Fruits
     if (this.state === GameState.PLAYING) {
       const activeSegments = this.blades.getActiveSegments();
       this.fruitManager.update(dt, activeSegments, this.width, this.height, currentTime, this.lives);
-    } else {
-      this.particles.update(dt);
     }
 
     this.lastPoses = poses;

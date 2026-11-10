@@ -44,10 +44,10 @@ function runTests() {
   {
     detector.reset();
     const lm = createMockLandmarks({ lwY: 0.1, rwY: 0.1, lwX: 0.15, rwX: 0.85, headY: 0.25 });
-    const r1 = detector.evaluate('JIEUT', lm, 0.15, true);
-    assert(r1.matched === true && !r1.triggered, 'Progress accumulating at 0.15s');
-    const r2 = detector.evaluate('JIEUT', lm, 0.20, true);
-    assert(r2.triggered === true, 'Triggered after reaching required hold time');
+    const r1 = detector.evaluate('JIEUT', lm, 0.25, true);
+    assert(r1.matched === true && !r1.triggered, 'Progress accumulating at 0.25s');
+    const r2 = detector.evaluate('JIEUT', lm, 0.30, true);
+    assert(r2.triggered === true, 'Triggered after reaching required hold time (0.50s)');
   }
 
   // Test 4: False positive check - hands at waist

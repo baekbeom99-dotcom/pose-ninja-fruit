@@ -36,12 +36,13 @@ export const CONFIG = {
   GAME: {
     START_LIVES: 5,
     MAX_LIVES: 5,
-    COMBO_WINDOW_MS: 380,        // More generous combo window for larger fruits
+    COMBO_WINDOW_MS: 380,        // Generous combo window for larger fruits
     SPAWN_INTERVAL_MIN: 1.2,
     SPAWN_INTERVAL_MAX: 2.2,
     BOMB_PROBABILITY: 0.15,
     HEART_BONUS_PROBABILITY: 0.12,
-    ULTIMATE_THRESHOLD: 10
+    ULTIMATE_THRESHOLD: 12,      // 12 fruits to charge up ultimate
+    GESTURE_HOLD_TIME: 0.50      // 500ms deliberate martial pose hold
   },
 
   // Visual Themes randomly chosen on game start

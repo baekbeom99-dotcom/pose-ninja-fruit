@@ -82,16 +82,20 @@ export const CONSONANT_POSES = [
 ];
 
 export class GestureDetector {
-  constructor() {
+  constructor(requiredHoldTime = 0.50) {
     this.currentHoldTime = 0;
-    this.requiredHoldTime = 0.18; // Fast 180ms reaction
+    this.requiredHoldTime = requiredHoldTime; // Deliberate 500ms pose hold
     this.isTriggered = false;
   }
 
-  evaluate(targetPoseId, landmarks, dt, mirror = true) {
-    if (!landmarks || landmarks.length < 25) {
-      this.currentHoldTime = Math.max(0, this.currentHoldTime - dt * 2);
-      return { matched: false, progress: 0, triggered: false };
+  /**
+   * Evaluates pose against target consonant.
+   * If isSwingingFast is true, player is actively slicing fruits, so pose charging is paused.
+   */
+  evaluate(targetPoseId, landmarks, dt, mirror = true, isSwingingFast = false) {
+    if (!landmarks || landmarks.length < 25 || isSwingingFast) {
+      this.currentHoldTime = Math.max(0, this.currentHoldTime - dt * 2.5);
+      return { matched: false, progress: Math.min(1.0, this.currentHoldTime / this.requiredHoldTime), triggered: false };
     }
 
     const matched = this._checkPose(targetPoseId, landmarks, mirror);
@@ -121,7 +125,8 @@ export class GestureDetector {
   }
 
   /**
-   * Relaxed, webcam-friendly posture detection using shoulder relative coordinates
+   * Precise, webcam-friendly posture detection using shoulder relative coordinates.
+   * Requires deliberate arm positioning so normal slicing does not trigger accidentally.
    */
   _checkPose(poseId, lm, mirror) {
     const lSh = lm[11];
@@ -144,39 +149,39 @@ export class GestureDetector {
 
     switch (poseId) {
       case 'SIOT': {
-        // 'ㅅ' (Mountain/Roof): Both hands ABOVE shoulders AND close together (less than 1.4x shoulder distance)
-        const bothHandsAboveShoulders = lw.y < avgShoulderY && rw.y < avgShoulderY;
-        const handsClose = Math.abs(lw.x - rw.x) < Math.max(0.28, shoulderDist * 1.3);
-        return bothHandsAboveShoulders && handsClose;
+        // 'ㅅ' (Mountain/Roof): Both hands distinctly HIGH above head AND brought together at apex
+        const bothHandsHighAboveHead = lw.y < avgShoulderY - 0.12 && rw.y < avgShoulderY - 0.12;
+        const handsCloseTogether = Math.abs(lw.x - rw.x) < Math.max(0.18, shoulderDist * 0.75);
+        return bothHandsHighAboveHead && handsCloseTogether;
       }
 
       case 'JIEUT': {
-        // 'ㅈ' / V Victory: Both hands ABOVE shoulders AND wide apart (greater than 1.1x shoulder distance)
-        const bothHandsAboveShoulders = lw.y < avgShoulderY && rw.y < avgShoulderY;
-        const handsWide = Math.abs(lw.x - rw.x) > Math.max(0.30, shoulderDist * 1.1);
-        return bothHandsAboveShoulders && handsWide;
+        // 'ㅈ' / V Victory: Both hands HIGH above head AND spread wide in a clear V shape
+        const bothHandsHighAboveHead = lw.y < avgShoulderY - 0.12 && rw.y < avgShoulderY - 0.12;
+        const handsWideV = Math.abs(lw.x - rw.x) > Math.max(0.35, shoulderDist * 1.45);
+        return bothHandsHighAboveHead && handsWideV;
       }
 
       case 'GIYEOK': {
-        // 'ㄱ' (One hand high/horizontal, other hand low/vertical)
-        const hand1High = lw.y < avgShoulderY + 0.12;
-        const hand2Low = rw.y > avgShoulderY + 0.15;
+        // 'ㄱ' (One arm horizontal across chest/shoulder, other arm vertical down at 90°)
+        const lHoriz = Math.abs(lw.y - avgShoulderY) < 0.12 && Math.abs(lw.x - l_sh.x) > 0.16;
+        const rVertDown = rw.y > avgShoulderY + 0.18 && Math.abs(rw.x - r_sh.x) < 0.16;
 
-        const altHand1High = rw.y < avgShoulderY + 0.12;
-        const altHand2Low = lw.y > avgShoulderY + 0.15;
+        const rHoriz = Math.abs(rw.y - avgShoulderY) < 0.12 && Math.abs(rw.x - r_sh.x) > 0.16;
+        const lVertDown = lw.y > avgShoulderY + 0.18 && Math.abs(lw.x - l_sh.x) < 0.16;
 
-        return (hand1High && hand2Low) || (altHand1High && altHand2Low);
+        return (lHoriz && rVertDown) || (rHoriz && lVertDown);
       }
 
       case 'NIEUN': {
-        // 'ㄴ' (One hand low near waist, other hand extended horizontal out)
-        const oneLow = lw.y > avgShoulderY + 0.18;
-        const otherHoriz = Math.abs(rw.y - avgShoulderY) < 0.22 && Math.abs(rw.x - r_sh.x) > 0.12;
+        // 'ㄴ' (One arm held straight down along body, other arm horizontal out at 90°)
+        const lDown = lw.y > avgShoulderY + 0.20 && Math.abs(lw.x - l_sh.x) < 0.15;
+        const rHoriz = Math.abs(rw.y - avgShoulderY) < 0.12 && Math.abs(rw.x - r_sh.x) > 0.20;
 
-        const altOneLow = rw.y > avgShoulderY + 0.18;
-        const altOtherHoriz = Math.abs(lw.y - avgShoulderY) < 0.22 && Math.abs(lw.x - l_sh.x) > 0.12;
+        const rDown = rw.y > avgShoulderY + 0.20 && Math.abs(rw.x - r_sh.x) < 0.15;
+        const lHoriz = Math.abs(lw.y - avgShoulderY) < 0.12 && Math.abs(lw.x - l_sh.x) > 0.20;
 
-        return (oneLow && otherHoriz) || (altOneLow && altOtherHoriz);
+        return (lDown && rHoriz) || (rDown && lHoriz);
       }
 
       default:
