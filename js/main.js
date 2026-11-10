@@ -75,7 +75,7 @@ class App {
     const unlockAudioAndStart = () => {
       soundManager.init();
       soundManager.resume();
-      this.gameEngine.startNewGame();
+      this.gameEngine.startNewGame(this.ui.isTwoPlayer);
     };
 
     if (this.startBtn) {
@@ -96,8 +96,8 @@ class App {
     const handlePointerMove = (x, y) => {
       if (!isDown) return;
       const now = performance.now();
-      // Inject into Right Blade as pointer emulation
-      this.gameEngine.blades.rightBlade.update({ x, y }, now);
+      // Inject into P1 Right Blade as pointer emulation
+      this.gameEngine.blades.p1RightBlade.update({ x, y }, now);
     };
 
     window.addEventListener('mousedown', (e) => {
@@ -111,7 +111,7 @@ class App {
 
     window.addEventListener('mouseup', () => {
       isDown = false;
-      this.gameEngine.blades.rightBlade.update(null, performance.now());
+      this.gameEngine.blades.p1RightBlade.update(null, performance.now());
     });
 
     // Touch support
@@ -130,7 +130,7 @@ class App {
 
     window.addEventListener('touchend', () => {
       isDown = false;
-      this.gameEngine.blades.rightBlade.update(null, performance.now());
+      this.gameEngine.blades.p1RightBlade.update(null, performance.now());
     });
   }
 }

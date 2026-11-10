@@ -1,6 +1,5 @@
 /**
- * Fruit, HalfFruit, Bomb, and HeartBonus Entities with Multi-Theme Support
- * Supports: CLAYMORPHISM, PIXEL_ART, PAPER_CUT, CLASSIC_VECTOR
+ * Fruit, HalfFruit, Bomb, and HeartBonus Entities with Multi-Theme Support (2x Size Scale)
  */
 import { CONFIG } from '../config.js';
 
@@ -27,7 +26,7 @@ export class HalfFruit {
     this.y += this.vy * dt;
     this.rotation += this.angularVelocity * dt;
 
-    if (this.y > CONFIG.CANVAS.HEIGHT + 140) {
+    if (this.y > CONFIG.CANVAS.HEIGHT + 180) {
       this.isDead = true;
     }
   }
@@ -40,9 +39,9 @@ export class HalfFruit {
     // Clip to half circle along the cut line
     ctx.beginPath();
     if (this.isLeftHalf) {
-      ctx.arc(0, 0, this.radius + 6, -Math.PI / 2, Math.PI / 2, true);
+      ctx.arc(0, 0, this.radius + 8, -Math.PI / 2, Math.PI / 2, true);
     } else {
-      ctx.arc(0, 0, this.radius + 6, -Math.PI / 2, Math.PI / 2, false);
+      ctx.arc(0, 0, this.radius + 8, -Math.PI / 2, Math.PI / 2, false);
     }
     ctx.closePath();
     ctx.clip();
@@ -60,7 +59,7 @@ export class HalfFruit {
     ctx.moveTo(0, -this.radius);
     ctx.lineTo(0, this.radius);
     ctx.strokeStyle = this.config.fleshColor || '#ffffff';
-    ctx.lineWidth = 4;
+    ctx.lineWidth = 6;
     ctx.stroke();
     ctx.restore();
   }
@@ -79,7 +78,7 @@ export class Fruit {
     this.vy = vy;
 
     this.rotation = Math.random() * Math.PI * 2;
-    this.angularVelocity = (Math.random() - 0.5) * 4.5;
+    this.angularVelocity = (Math.random() - 0.5) * 3.5;
 
     this.isSliced = false;
     this.isMissed = false;
@@ -97,7 +96,7 @@ export class Fruit {
     this.rotation += this.angularVelocity * dt;
     this.animTimer += dt;
 
-    if (!this.isSliced && this.vy > 0 && this.y > CONFIG.CANVAS.HEIGHT + this.radius + 15) {
+    if (!this.isSliced && this.vy > 0 && this.y > CONFIG.CANVAS.HEIGHT + this.radius + 20) {
       this.isMissed = true;
       this.isDead = true;
     }
@@ -117,7 +116,7 @@ export class Fruit {
       this.x,
       this.y,
       this.vx + normal.x * pushSpeed,
-      this.vy + normal.y * pushSpeed - 60,
+      this.vy + normal.y * pushSpeed - 50,
       cutAngle,
       true,
       this.themeId
@@ -128,7 +127,7 @@ export class Fruit {
       this.x,
       this.y,
       this.vx - normal.x * pushSpeed,
-      this.vy - normal.y * pushSpeed - 60,
+      this.vy - normal.y * pushSpeed - 50,
       cutAngle,
       false,
       this.themeId
@@ -157,7 +156,7 @@ export class Fruit {
 }
 
 /**
- * Multi-Theme Procedural Graphics Renderer
+ * Multi-Theme Procedural Graphics Renderer (Scaled for 2x size)
  */
 class FruitRenderer {
   static drawFruitBody(ctx, config, animTimer = 0, theme = 'CLAYMORPHISM') {
@@ -184,8 +183,8 @@ class FruitRenderer {
     // Clay drop shadow
     ctx.save();
     ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
-    ctx.shadowBlur = 16;
-    ctx.shadowOffsetY = 10;
+    ctx.shadowBlur = 24;
+    ctx.shadowOffsetY = 14;
 
     // Base Puffy Body
     ctx.beginPath();
@@ -195,11 +194,11 @@ class FruitRenderer {
     ctx.restore();
 
     // Inner bevel / 3D inflated volume highlight
-    const clayGrad = ctx.createRadialGradient(-r * 0.35, -r * 0.35, 4, 0, 0, r);
+    const clayGrad = ctx.createRadialGradient(-r * 0.35, -r * 0.35, 6, 0, 0, r);
     clayGrad.addColorStop(0, 'rgba(255, 255, 255, 0.65)');
     clayGrad.addColorStop(0.35, 'rgba(255, 255, 255, 0.15)');
     clayGrad.addColorStop(0.8, 'rgba(0, 0, 0, 0)');
-    clayGrad.addColorStop(1, 'rgba(0, 0, 0, 0.35)');
+    clayGrad.addColorStop(1, 'rgba(0, 0, 0, 0.38)');
 
     ctx.beginPath();
     ctx.arc(0, 0, r, 0, Math.PI * 2);
@@ -212,20 +211,19 @@ class FruitRenderer {
     ctx.fillStyle = config.fleshColor;
     ctx.fill();
 
-    // Glossy specular pimple
+    // Glossy specular highlight
     ctx.beginPath();
     ctx.arc(-r * 0.35, -r * 0.35, r * 0.18, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.78)';
     ctx.fill();
   }
 
   /* ---------------- 2. RETRO PIXEL ART STYLE ---------------- */
   static drawPixelStyle(ctx, config) {
     const r = config.radius;
-    const px = 6; // 6px pixel block size
+    const px = 10; // Scaled pixel block size for 2x
     const steps = Math.floor(r / px);
 
-    // Draw stepped pixel blocks
     for (let gx = -steps; gx <= steps; gx++) {
       for (let gy = -steps; gy <= steps; gy++) {
         const dist = Math.sqrt(gx * gx + gy * gy) * px;
@@ -233,7 +231,6 @@ class FruitRenderer {
           const x = gx * px;
           const y = gy * px;
 
-          // Color zone determination
           let blockColor = config.color;
           if (dist > r - px * 1.5) {
             blockColor = '#0f172a'; // Black pixel outline
@@ -241,7 +238,6 @@ class FruitRenderer {
             blockColor = config.fleshColor;
           }
 
-          // Specular pixel highlight top-left
           if (gx >= -steps * 0.6 && gx <= -steps * 0.3 && gy >= -steps * 0.6 && gy <= -steps * 0.3) {
             blockColor = '#ffffff';
           }
@@ -260,8 +256,8 @@ class FruitRenderer {
     // Layer 1: Dark Backing Paper
     ctx.save();
     ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
-    ctx.shadowBlur = 10;
-    ctx.shadowOffsetY = 6;
+    ctx.shadowBlur = 14;
+    ctx.shadowOffsetY = 8;
 
     ctx.beginPath();
     ctx.arc(0, 0, r, 0, Math.PI * 2);
@@ -272,8 +268,8 @@ class FruitRenderer {
     // Layer 2: Middle Rind Paper Sheet with Crease
     ctx.save();
     ctx.shadowColor = 'rgba(0, 0, 0, 0.35)';
-    ctx.shadowBlur = 6;
-    ctx.shadowOffsetY = 4;
+    ctx.shadowBlur = 8;
+    ctx.shadowOffsetY = 6;
 
     ctx.beginPath();
     ctx.arc(0, 0, r * 0.85, 0, Math.PI * 2);
@@ -284,8 +280,8 @@ class FruitRenderer {
     // Layer 3: Top Flesh Paper Cutout
     ctx.save();
     ctx.shadowColor = 'rgba(0, 0, 0, 0.25)';
-    ctx.shadowBlur = 4;
-    ctx.shadowOffsetY = 2;
+    ctx.shadowBlur = 6;
+    ctx.shadowOffsetY = 3;
 
     ctx.beginPath();
     ctx.arc(0, 0, r * 0.72, 0, Math.PI * 2);
@@ -297,8 +293,8 @@ class FruitRenderer {
     ctx.beginPath();
     ctx.moveTo(-r * 0.7, 0);
     ctx.lineTo(r * 0.7, 0);
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+    ctx.lineWidth = 3;
     ctx.stroke();
   }
 
@@ -311,6 +307,17 @@ class FruitRenderer {
     ctx.fillStyle = config.color;
     ctx.fill();
 
+    // Outer Rind Stripes for Watermelon
+    if (config.type === 'WATERMELON') {
+      ctx.strokeStyle = '#14532d';
+      ctx.lineWidth = 6;
+      for (let i = 0; i < 6; i++) {
+        ctx.beginPath();
+        ctx.ellipse(0, 0, r - 3, r * 0.72, (i * Math.PI) / 6, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
+
     // Inner Rind
     ctx.beginPath();
     ctx.arc(0, 0, r * 0.86, 0, Math.PI * 2);
@@ -322,20 +329,31 @@ class FruitRenderer {
     ctx.arc(0, 0, r * 0.76, 0, Math.PI * 2);
     ctx.fillStyle = config.fleshColor;
     ctx.fill();
+
+    // Seeds for Watermelon
+    if (config.type === 'WATERMELON') {
+      ctx.fillStyle = '#0f172a';
+      const seedAngles = [0, 0.7, 1.4, 2.1, 2.8, 3.5, 4.2, 4.9, 5.6];
+      seedAngles.forEach(a => {
+        const sx = Math.cos(a) * (r * 0.52);
+        const sy = Math.sin(a) * (r * 0.52);
+        ctx.beginPath();
+        ctx.ellipse(sx, sy, 5, 3, a + Math.PI / 2, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
   }
 
-  /* ---------------- HEART BONUS RENDERER ---------------- */
+  /* ---------------- HEART BONUS RENDERER (2x) ---------------- */
   static drawHeartBonus(ctx, config, animTimer, theme) {
     const r = config.radius;
-    const pulse = 1 + Math.sin(animTimer * 6.5) * 0.09;
+    const pulse = 1 + Math.sin(animTimer * 6.5) * 0.08;
 
     ctx.save();
     ctx.scale(pulse, pulse);
 
     if (theme === 'PIXEL_ART') {
-      const px = 6;
-      ctx.fillStyle = '#ec4899';
-      // 8-bit Pixel Heart Matrix
+      const px = 10;
       const heartMatrix = [
         [0, 1, 1, 0, 0, 1, 1, 0],
         [1, 1, 1, 1, 1, 1, 1, 1],
@@ -359,9 +377,8 @@ class FruitRenderer {
       return;
     }
 
-    // Default Glowing Clay/Paper Heart
     ctx.shadowColor = '#f43f5e';
-    ctx.shadowBlur = 24;
+    ctx.shadowBlur = 32;
 
     ctx.beginPath();
     const topCurveHeight = r * 0.6;
@@ -370,7 +387,7 @@ class FruitRenderer {
     ctx.bezierCurveTo(r * 0.95, topCurveHeight, r * 0.9, -r * 0.45, 0, r * 0.25);
     ctx.closePath();
 
-    const grad = ctx.createRadialGradient(0, 0, 4, 0, 0, r);
+    const grad = ctx.createRadialGradient(0, 0, 6, 0, 0, r);
     grad.addColorStop(0, '#fef08a');
     grad.addColorStop(0.3, '#ec4899');
     grad.addColorStop(1, '#e11d48');
@@ -378,18 +395,18 @@ class FruitRenderer {
     ctx.fill();
 
     ctx.strokeStyle = '#fef08a';
-    ctx.lineWidth = 4;
+    ctx.lineWidth = 6;
     ctx.stroke();
 
     ctx.restore();
   }
 
-  /* ---------------- BOMB RENDERER ---------------- */
+  /* ---------------- BOMB RENDERER (2x) ---------------- */
   static drawBomb(ctx, config, fuseTimer, theme) {
     const r = config.radius;
 
     if (theme === 'PIXEL_ART') {
-      const px = 6;
+      const px = 10;
       const steps = Math.floor(r / px);
       for (let gx = -steps; gx <= steps; gx++) {
         for (let gy = -steps; gy <= steps; gy++) {
@@ -399,16 +416,15 @@ class FruitRenderer {
           }
         }
       }
-      // Spark
       ctx.fillStyle = Math.sin(fuseTimer * 20) > 0 ? '#facc15' : '#ef4444';
-      ctx.fillRect(8, -r - 12, px, px);
+      ctx.fillRect(12, -r - 18, px, px);
       return;
     }
 
     // Sphere Body
     ctx.beginPath();
     ctx.arc(0, 0, r, 0, Math.PI * 2);
-    const grad = ctx.createRadialGradient(-r * 0.3, -r * 0.3, 2, 0, 0, r);
+    const grad = ctx.createRadialGradient(-r * 0.3, -r * 0.3, 4, 0, 0, r);
     grad.addColorStop(0, '#64748b');
     grad.addColorStop(0.5, '#1e293b');
     grad.addColorStop(1, '#020617');
@@ -417,23 +433,23 @@ class FruitRenderer {
 
     // Fuse cap & line
     ctx.fillStyle = '#94a3b8';
-    ctx.fillRect(-6, -r - 5, 12, 6);
+    ctx.fillRect(-10, -r - 8, 20, 10);
 
     ctx.beginPath();
-    ctx.moveTo(0, -r - 5);
-    ctx.quadraticCurveTo(10, -r - 18, 16, -r - 22);
+    ctx.moveTo(0, -r - 8);
+    ctx.quadraticCurveTo(14, -r - 26, 22, -r - 32);
     ctx.strokeStyle = '#d97706';
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 5;
     ctx.stroke();
 
     // Animated spark
-    const sparkX = 16 + Math.sin(fuseTimer * 25) * 2;
-    const sparkY = -r - 22 + Math.cos(fuseTimer * 25) * 2;
+    const sparkX = 22 + Math.sin(fuseTimer * 25) * 3;
+    const sparkY = -r - 32 + Math.cos(fuseTimer * 25) * 3;
     ctx.beginPath();
-    ctx.arc(sparkX, sparkY, 6, 0, Math.PI * 2);
+    ctx.arc(sparkX, sparkY, 9, 0, Math.PI * 2);
     ctx.fillStyle = '#facc15';
     ctx.shadowColor = '#f97316';
-    ctx.shadowBlur = 16;
+    ctx.shadowBlur = 22;
     ctx.fill();
     ctx.shadowBlur = 0;
   }

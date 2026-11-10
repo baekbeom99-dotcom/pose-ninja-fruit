@@ -11,42 +11,35 @@ export const CONFIG = {
 
   // Blade Tracking & Sensitivity
   BLADE: {
-    MIN_VELOCITY_TO_SLICE: 350,
+    MIN_VELOCITY_TO_SLICE: 320, // Slightly more accessible
     TRAIL_LENGTH: 16,
     SMOOTHING_ALPHA: 0.65,
     COLORS: {
-      LEFT: {
-        CORE: '#ffffff',
-        GLOW: '#00e5ff', // Cyan
-        SPARK: '#38bdf8'
-      },
-      RIGHT: {
-        CORE: '#ffffff',
-        GLOW: '#ff007f', // Neon Magenta/Pink
-        SPARK: '#f43f5e'
-      }
+      P1_LEFT: { CORE: '#ffffff', GLOW: '#00e5ff', SPARK: '#38bdf8' },   // Cyan
+      P1_RIGHT: { CORE: '#ffffff', GLOW: '#3b82f6', SPARK: '#60a5fa' },  // Blue
+      P2_LEFT: { CORE: '#ffffff', GLOW: '#ff007f', SPARK: '#f43f5e' },   // Magenta / Pink
+      P2_RIGHT: { CORE: '#ffffff', GLOW: '#f59e0b', SPARK: '#fcd34d' }   // Gold / Amber
     }
   },
 
-  // Game Physics
+  // Game Physics (75% projectile speed & adjusted floaty gravity)
   PHYSICS: {
-    GRAVITY: 940,
-    AIR_RESISTANCE: 0.998,
-    HALF_SEPARATION_SPEED: 320,
-    HALF_ANGULAR_VELOCITY: 5.5
+    GRAVITY: 620,               // Softened gravity for 75% speed
+    AIR_RESISTANCE: 0.999,
+    HALF_SEPARATION_SPEED: 240, // 75% of previous 320
+    HALF_ANGULAR_VELOCITY: 4.2  // 75% rotation speed
   },
 
   // Gameplay Settings
   GAME: {
     START_LIVES: 5,
     MAX_LIVES: 5,
-    COMBO_WINDOW_MS: 340,
-    SPAWN_INTERVAL_MIN: 1.4,
-    SPAWN_INTERVAL_MAX: 2.6,
-    DIFFICULTY_RAMP_INTERVAL: 12,
-    BOMB_PROBABILITY: 0.16,
+    COMBO_WINDOW_MS: 380,        // More generous combo window for larger fruits
+    SPAWN_INTERVAL_MIN: 1.2,
+    SPAWN_INTERVAL_MAX: 2.2,
+    BOMB_PROBABILITY: 0.15,
     HEART_BONUS_PROBABILITY: 0.12,
-    ULTIMATE_THRESHOLD: 10 // Fruits needed to charge ultimate move
+    ULTIMATE_THRESHOLD: 10
   },
 
   // Visual Themes randomly chosen on game start
@@ -77,69 +70,69 @@ export const CONFIG = {
     }
   ],
 
-  // Fruit Types and Visual Palette
+  // Fruit Types - ALL RADII DOUBLED (2x Size)
   FRUITS: {
     WATERMELON: {
       type: 'WATERMELON',
-      radius: 46,
+      radius: 92, // was 46 (2x)
       points: 1,
-      color: '#22c55e',       // Rind green
-      fleshColor: '#ef4444',  // Red flesh
-      juiceColor: '#dc2626',  // Deep red juice
-      rindColor: '#86efac'    // Pale green inner rind
+      color: '#22c55e',
+      fleshColor: '#ef4444',
+      juiceColor: '#dc2626',
+      rindColor: '#86efac'
     },
     ORANGE: {
       type: 'ORANGE',
-      radius: 38,
+      radius: 76, // was 38 (2x)
       points: 1,
-      color: '#f97316',       // Bright orange
+      color: '#f97316',
       fleshColor: '#fb923c',
       juiceColor: '#ea580c',
       rindColor: '#ffedd5'
     },
     APPLE: {
       type: 'APPLE',
-      radius: 36,
+      radius: 72, // was 36 (2x)
       points: 1,
-      color: '#dc2626',       // Bright red
-      fleshColor: '#fef08a',  // Pale yellow flesh
+      color: '#dc2626',
+      fleshColor: '#fef08a',
       juiceColor: '#b91c1c',
       rindColor: '#fecaca'
     },
     BANANA: {
       type: 'BANANA',
-      radius: 34,
+      radius: 68, // was 34 (2x)
       points: 2,
-      color: '#eab308',       // Bright yellow
-      fleshColor: '#fef9c3',  // Cream
+      color: '#eab308',
+      fleshColor: '#fef9c3',
       juiceColor: '#ca8a04',
       rindColor: '#fef08a'
     },
     PINEAPPLE: {
       type: 'PINEAPPLE',
-      radius: 48,
+      radius: 96, // was 48 (2x)
       points: 3,
-      color: '#d97706',       // Golden amber
-      fleshColor: '#fde047',  // Vibrant yellow
+      color: '#d97706',
+      fleshColor: '#fde047',
       juiceColor: '#b45309',
-      rindColor: '#65a30d'    // Green crown
+      rindColor: '#65a30d'
     },
     HEART_BONUS: {
       type: 'HEART_BONUS',
-      radius: 44,
+      radius: 88, // was 44 (2x)
       points: 5,
-      color: '#ec4899',       // Glowing Rose Pink
-      fleshColor: '#f43f5e',  // Radiant Heart Red
-      juiceColor: '#fb7185',  // Sparkle Petals
-      rindColor: '#facc15'    // Golden Halo
+      color: '#ec4899',
+      fleshColor: '#f43f5e',
+      juiceColor: '#fb7185',
+      rindColor: '#facc15'
     },
     BOMB: {
       type: 'BOMB',
-      radius: 40,
+      radius: 80, // was 40 (2x)
       points: 0,
-      color: '#1e293b',       // Dark slate
-      fleshColor: '#ff0044',  // Danger core
-      juiceColor: '#ffaa00',  // Sparks
+      color: '#1e293b',
+      fleshColor: '#ff0044',
+      juiceColor: '#ffaa00',
       rindColor: '#94a3b8'
     }
   }

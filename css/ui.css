@@ -13,6 +13,146 @@
   gap: 16px;
 }
 
+/* 2-Player Duo Scoreboard */
+.duo-score-panel {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(8px);
+  padding: 6px 16px;
+  border-radius: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+}
+
+.p-score-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.p-tag {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+.p1-card .p-tag {
+  color: #38bdf8;
+  text-shadow: 0 0 8px rgba(56, 189, 248, 0.6);
+}
+
+.p2-card .p-tag {
+  color: #f43f5e;
+  text-shadow: 0 0 8px rgba(244, 63, 94, 0.6);
+}
+
+.p-score-num {
+  font-size: 34px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.p1-card .p-score-num {
+  color: #ffffff;
+  text-shadow: 0 0 12px rgba(56, 189, 248, 0.8);
+}
+
+.p2-card .p-score-num {
+  color: #ffffff;
+  text-shadow: 0 0 12px rgba(244, 63, 94, 0.8);
+}
+
+.vs-badge {
+  font-size: 13px;
+  font-weight: 900;
+  font-style: italic;
+  color: #facc15;
+  background: rgba(250, 204, 21, 0.15);
+  padding: 2px 8px;
+  border-radius: 9999px;
+  border: 1px solid rgba(250, 204, 21, 0.4);
+}
+
+/* Mode Selection on Start Screen */
+.mode-select-container {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  justify-content: center;
+  width: 100%;
+}
+
+.mode-select-btn {
+  flex: 1;
+  background: rgba(30, 41, 59, 0.8);
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
+  color: #94a3b8;
+  font-size: 15px;
+  font-weight: 800;
+  padding: 12px 16px;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.mode-select-btn:hover {
+  background: rgba(51, 65, 85, 0.9);
+  color: #ffffff;
+}
+
+.mode-select-btn.active {
+  background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);
+  border-color: #38bdf8;
+  color: #ffffff;
+  box-shadow: 0 0 18px rgba(56, 189, 248, 0.5);
+  transform: scale(1.02);
+}
+
+/* Duo Game Over Results */
+.duo-winner-banner {
+  font-size: 32px;
+  font-weight: 900;
+  color: #facc15;
+  text-shadow: 0 0 20px rgba(250, 204, 21, 0.8);
+  margin-bottom: 16px;
+}
+
+.duo-final-scores {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+}
+
+.duo-final-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: rgba(15, 23, 42, 0.7);
+  padding: 14px 24px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.duo-final-tag {
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.duo-final-num {
+  font-size: 44px;
+  font-weight: 900;
+  color: #ffffff;
+}
+
+.duo-final-vs {
+  font-size: 18px;
+  font-weight: 900;
+  color: #facc15;
+}
+
 /* Ultimate Move HUD Panel (Top Right) */
 .ultimate-panel {
   display: flex;

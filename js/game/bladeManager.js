@@ -1,15 +1,16 @@
 /**
- * Neon Blade Tracker and Trail Motion System
- * Manages dual-hand tracking, EMA smoothing, velocity calculation, and glowing blade trails
+ * Neon Blade Tracker and Trail Motion System with Multi-Player Support
+ * Manages dual-hand tracking for Player 1 and Player 2
  */
 import { CONFIG } from '../config.js';
 import { soundManager } from '../audio/soundManager.js';
 
 class Blade {
-  constructor(name, colors) {
+  constructor(name, colors, owner = 'P1') {
     this.name = name;
     this.colors = colors;
-    this.history = []; // Array of {x, y, time}
+    this.owner = owner;
+    this.history = [];
     this.currentPos = null;
     this.previousPos = null;
     this.smoothedPos = null;
@@ -19,11 +20,6 @@ class Blade {
     this.wasActive = false;
   }
 
-  /**
-   * Updates blade position with EMA filter & calculates velocity
-   * @param {{x: number, y: number}|null} rawPos - Screen pixel coordinate
-   * @param {number} currentTime - Milliseconds
-   */
   update(rawPos, currentTime) {
     if (!rawPos) {
       if (this.history.length > 0) {
@@ -34,7 +30,6 @@ class Blade {
       return;
     }
 
-    // Apply Exponential Moving Average (EMA)
     const alpha = CONFIG.BLADE.SMOOTHING_ALPHA;
     if (!this.smoothedPos) {
       this.smoothedPos = { x: rawPos.x, y: rawPos.y };
@@ -48,14 +43,12 @@ class Blade {
     this.previousPos = this.currentPos;
     this.currentPos = { x: this.smoothedPos.x, y: this.smoothedPos.y };
 
-    // Add to history
     this.history.push({
       x: this.currentPos.x,
       y: this.currentPos.y,
       time: currentTime
     });
 
-    // Prune history to max length and expire older points (> 180ms)
     while (
       this.history.length > CONFIG.BLADE.TRAIL_LENGTH ||
       (this.history.length > 2 && currentTime - this.history[0].time > 190)
@@ -63,7 +56,6 @@ class Blade {
       this.history.shift();
     }
 
-    // Calculate instantaneous velocity over recent frames
     if (this.history.length >= 3) {
       const oldest = this.history[0];
       const newest = this.history[this.history.length - 1];
@@ -78,10 +70,8 @@ class Blade {
       this.velocity = 0;
     }
 
-    // Determine active slicing state
     this.isActive = this.velocity >= CONFIG.BLADE.MIN_VELOCITY_TO_SLICE;
 
-    // Trigger swish sound on high-speed entry
     if (this.isActive && !this.wasActive && currentTime - this.lastActiveTime > 260) {
       soundManager.playSwish();
       this.lastActiveTime = currentTime;
@@ -89,21 +79,16 @@ class Blade {
     this.wasActive = this.isActive;
   }
 
-  /**
-   * Returns current slicing line segment {p1, p2} if active
-   */
   getSegment() {
     if (!this.isActive || !this.previousPos || !this.currentPos) return null;
     return {
       p1: this.previousPos,
       p2: this.currentPos,
-      bladeName: this.name
+      bladeName: this.name,
+      owner: this.owner
     };
   }
 
-  /**
-   * Draws radiant, multi-layered neon blade trail with glowing halos
-   */
   draw(ctx) {
     if (this.history.length < 2) return;
 
@@ -111,7 +96,7 @@ class Blade {
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
-    // 1. Wide Atmospheric Glow (Lighter blend)
+    // Outer Glow
     ctx.globalCompositeOperation = 'lighter';
     ctx.shadowBlur = this.isActive ? 28 : 12;
     ctx.shadowColor = this.colors.GLOW;
@@ -120,7 +105,7 @@ class Blade {
     for (let i = 0; i < this.history.length - 1; i++) {
       const p1 = this.history[i];
       const p2 = this.history[i + 1];
-      const progress = (i + 1) / this.history.length; // 0 to 1
+      const progress = (i + 1) / this.history.length;
 
       ctx.beginPath();
       ctx.moveTo(p1.x, p1.y);
@@ -129,7 +114,7 @@ class Blade {
       ctx.stroke();
     }
 
-    // 2. Focused Intense Neon Stroke
+    // Focused Stroke
     ctx.shadowBlur = this.isActive ? 14 : 6;
     ctx.shadowColor = this.colors.SPARK;
     ctx.strokeStyle = this.colors.SPARK;
@@ -146,7 +131,7 @@ class Blade {
       ctx.stroke();
     }
 
-    // 3. Bright White Plasma Core
+    // Plasma Core
     ctx.shadowBlur = 6;
     ctx.shadowColor = '#ffffff';
     ctx.strokeStyle = this.colors.CORE;
@@ -163,7 +148,7 @@ class Blade {
       ctx.stroke();
     }
 
-    // 4. Leading blade tip marker with pulsating halo
+    // Blade Tip
     if (this.currentPos) {
       ctx.beginPath();
       ctx.arc(this.currentPos.x, this.currentPos.y, this.isActive ? 12 : 7, 0, Math.PI * 2);
@@ -185,24 +170,56 @@ class Blade {
 
 export class BladeManager {
   constructor() {
-    this.leftBlade = new Blade('LEFT', CONFIG.BLADE.COLORS.LEFT);
-    this.rightBlade = new Blade('RIGHT', CONFIG.BLADE.COLORS.RIGHT);
+    // Player 1 Blades
+    this.p1LeftBlade = new Blade('P1_LEFT', CONFIG.BLADE.COLORS.P1_LEFT, 'P1');
+    this.p1RightBlade = new Blade('P1_RIGHT', CONFIG.BLADE.COLORS.P1_RIGHT, 'P1');
+
+    // Player 2 Blades
+    this.p2LeftBlade = new Blade('P2_LEFT', CONFIG.BLADE.COLORS.P2_LEFT, 'P2');
+    this.p2RightBlade = new Blade('P2_RIGHT', CONFIG.BLADE.COLORS.P2_RIGHT, 'P2');
+
+    this.isTwoPlayerMode = false;
+  }
+
+  setMode(twoPlayer = false) {
+    this.isTwoPlayerMode = twoPlayer;
   }
 
   /**
-   * Updates blade tracking from MediaPipe landmarks
+   * Updates blade tracking from MediaPipe landmarks (supports array of poses for 1 or 2 players)
    */
-  update(landmarks, canvasWidth, canvasHeight, currentTime, mirror = true) {
-    let leftPt = null;
-    let rightPt = null;
+  update(poses, canvasWidth, canvasHeight, currentTime, mirror = true) {
+    const posesList = Array.isArray(poses) ? poses : (poses ? [poses] : []);
+    const p1Pose = posesList[0] || null;
+    const p2Pose = posesList[1] || null;
+
+    // Update Player 1
+    const p1Coords = this._extractWristCoords(p1Pose, canvasWidth, canvasHeight, mirror);
+    this.p1LeftBlade.update(p1Coords.left, currentTime);
+    this.p1RightBlade.update(p1Coords.right, currentTime);
+
+    // Update Player 2 if in 2-Player mode
+    if (this.isTwoPlayerMode) {
+      const p2Coords = this._extractWristCoords(p2Pose, canvasWidth, canvasHeight, mirror);
+      this.p2LeftBlade.update(p2Coords.left, currentTime);
+      this.p2RightBlade.update(p2Coords.right, currentTime);
+    } else {
+      this.p2LeftBlade.update(null, currentTime);
+      this.p2RightBlade.update(null, currentTime);
+    }
+  }
+
+  _extractWristCoords(landmarks, canvasWidth, canvasHeight, mirror) {
+    let left = null;
+    let right = null;
 
     if (landmarks && landmarks.length > 20) {
       const lIndex = landmarks[19];
       const lWrist = landmarks[15];
-      const lTarget = (lIndex && lIndex.visibility > 0.4) ? lIndex : lWrist;
+      const lTarget = (lIndex && lIndex.visibility > 0.35) ? lIndex : lWrist;
 
-      if (lTarget && (lTarget.visibility === undefined || lTarget.visibility > 0.35)) {
-        leftPt = {
+      if (lTarget && (lTarget.visibility === undefined || lTarget.visibility > 0.3)) {
+        left = {
           x: mirror ? (1 - lTarget.x) * canvasWidth : lTarget.x * canvasWidth,
           y: lTarget.y * canvasHeight
         };
@@ -210,33 +227,43 @@ export class BladeManager {
 
       const rIndex = landmarks[20];
       const rWrist = landmarks[16];
-      const rTarget = (rIndex && rIndex.visibility > 0.4) ? rIndex : rWrist;
+      const rTarget = (rIndex && rIndex.visibility > 0.35) ? rIndex : rWrist;
 
-      if (rTarget && (rTarget.visibility === undefined || rTarget.visibility > 0.35)) {
-        rightPt = {
+      if (rTarget && (rTarget.visibility === undefined || rTarget.visibility > 0.3)) {
+        right = {
           x: mirror ? (1 - rTarget.x) * canvasWidth : rTarget.x * canvasWidth,
           y: rTarget.y * canvasHeight
         };
       }
     }
 
-    this.leftBlade.update(leftPt, currentTime);
-    this.rightBlade.update(rightPt, currentTime);
+    return { left, right };
   }
 
   getActiveSegments() {
     const segments = [];
-    const leftSeg = this.leftBlade.getSegment();
-    if (leftSeg) segments.push(leftSeg);
+    const p1L = this.p1LeftBlade.getSegment();
+    if (p1L) segments.push(p1L);
+    const p1R = this.p1RightBlade.getSegment();
+    if (p1R) segments.push(p1R);
 
-    const rightSeg = this.rightBlade.getSegment();
-    if (rightSeg) segments.push(rightSeg);
+    if (this.isTwoPlayerMode) {
+      const p2L = this.p2LeftBlade.getSegment();
+      if (p2L) segments.push(p2L);
+      const p2R = this.p2RightBlade.getSegment();
+      if (p2R) segments.push(p2R);
+    }
 
     return segments;
   }
 
   draw(ctx) {
-    this.leftBlade.draw(ctx);
-    this.rightBlade.draw(ctx);
+    this.p1LeftBlade.draw(ctx);
+    this.p1RightBlade.draw(ctx);
+
+    if (this.isTwoPlayerMode) {
+      this.p2LeftBlade.draw(ctx);
+      this.p2RightBlade.draw(ctx);
+    }
   }
 }

@@ -1,7 +1,7 @@
 /**
  * Game Engine - 60 FPS Multi-Layer Canvas Orchestrator
  * Coordinates rendering pipeline, physics delta-time, camera video, state machine,
- * Ultimate Move Consonant Gestures, and Random Visual Themes.
+ * Ultimate Move Consonant Gestures, Random Visual Themes, and 1P/2P Duo Mode.
  */
 import { CONFIG } from '../config.js';
 import { BladeManager } from './bladeManager.js';
@@ -36,7 +36,9 @@ export class GameEngine {
     this.gestureDetector = new GestureDetector();
 
     this.state = GameState.READY;
-    this.score = 0;
+    this.isTwoPlayerMode = false;
+    this.p1Score = 0;
+    this.p2Score = 0;
     this.lives = CONFIG.GAME.START_LIVES;
 
     // Ultimate Move System
@@ -54,16 +56,23 @@ export class GameEngine {
 
     this.shakeDuration = 0;
     this.shakeIntensity = 0;
+    this.lastPoses = null;
 
     this._bindFruitCallbacks();
     this._setupResizeHandler();
   }
 
   _bindFruitCallbacks() {
-    this.fruitManager.onScore = (points, fruit, hitPoint) => {
+    this.fruitManager.onScore = (points, fruit, hitPoint, owner = 'P1') => {
       if (this.state !== GameState.PLAYING) return;
-      this.score += points;
-      this.ui.updateScore(this.score);
+
+      if (owner === 'P2') {
+        this.p2Score += points;
+      } else {
+        this.p1Score += points;
+      }
+
+      this.ui.updateScores(this.p1Score, this.p2Score, this.isTwoPlayerMode);
 
       // Charge Ultimate Move
       if (!this.isUltimateReady) {
@@ -92,7 +101,7 @@ export class GameEngine {
       }
     };
 
-    this.fruitManager.onBomb = (bomb) => {
+    this.fruitManager.onBomb = (bomb, owner = 'P1') => {
       if (this.state !== GameState.PLAYING) return;
       this.triggerScreenShake(0.65, 24);
       this.lives = 0;
@@ -100,20 +109,25 @@ export class GameEngine {
       this.triggerGameOver();
     };
 
-    this.fruitManager.onHeart = (item, hitPoint) => {
+    this.fruitManager.onHeart = (item, hitPoint, owner = 'P1') => {
       if (this.state !== GameState.PLAYING) return;
       if (this.lives < CONFIG.GAME.MAX_LIVES) {
         this.lives++;
         this.ui.updateLives(this.lives, CONFIG.GAME.MAX_LIVES);
       }
-      this.score += item.points || 5;
-      this.ui.updateScore(this.score);
+      const points = item.points || 5;
+      if (owner === 'P2') {
+        this.p2Score += points;
+      } else {
+        this.p1Score += points;
+      }
+      this.ui.updateScores(this.p1Score, this.p2Score, this.isTwoPlayerMode);
       this.ui.showHeal();
     };
 
-    this.fruitManager.onCombo = (count, bonus) => {
+    this.fruitManager.onCombo = (count, bonus, owner = 'P1') => {
       if (this.state !== GameState.PLAYING) return;
-      this.ui.showCombo(count, bonus);
+      this.ui.showCombo(count, bonus, owner);
     };
   }
 
@@ -142,22 +156,24 @@ export class GameEngine {
     this.shakeIntensity = intensity;
   }
 
-  /**
-   * Resets and initializes new game with a random visual theme and random target consonant
-   */
-  startNewGame() {
-    this.score = 0;
+  startNewGame(twoPlayer = false) {
+    this.isTwoPlayerMode = twoPlayer;
+    this.p1Score = 0;
+    this.p2Score = 0;
     this.lives = CONFIG.GAME.START_LIVES;
-    this.ui.updateScore(0);
+
+    this.blades.setMode(twoPlayer);
+    this.ui.updateHUDMode(twoPlayer);
+    this.ui.updateScores(0, 0, twoPlayer);
     this.ui.updateLives(this.lives, CONFIG.GAME.MAX_LIVES);
 
-    // 1. Pick Random Visual Theme
+    // Pick Random Visual Theme
     const themeIdx = Math.floor(Math.random() * CONFIG.THEMES.length);
     this.currentTheme = CONFIG.THEMES[themeIdx];
     this.fruitManager.setTheme(this.currentTheme.id);
     this.ui.setThemeBadge(this.currentTheme);
 
-    // 2. Reset Ultimate Move & Pick Random Consonant Pose
+    // Reset Ultimate Move
     this.ultimateCount = 0;
     this.isUltimateReady = false;
     this._pickRandomConsonantPose();
@@ -177,23 +193,17 @@ export class GameEngine {
     this.currentConsonantPose = CONSONANT_POSES[randIdx];
   }
 
-  /**
-   * Triggers the Ultimate Consonant Fullscreen Slash!
-   */
-  activateUltimateMove() {
+  activateUltimateMove(owner = 'P1') {
     this.isUltimateReady = false;
     this.ultimateCount = 0;
 
-    // Visual & Sound Spectacle
     soundManager.playUltimateTrigger();
     this.particles.createUltimateScreenSlashes(this.width, this.height, this.currentConsonantPose.color);
     this.triggerScreenShake(0.8, 30);
-    this.ui.showUltimateBanner(this.currentConsonantPose.name);
+    this.ui.showUltimateBanner(this.currentConsonantPose.name, owner);
 
-    // Wipe out all fruits on screen!
-    this.fruitManager.sliceAllFruits();
+    this.fruitManager.sliceAllFruits(owner);
 
-    // Select new random consonant pose for next round
     this._pickRandomConsonantPose();
     this.gestureDetector.reset();
     this.ui.updateChargingProgress(0);
@@ -202,7 +212,7 @@ export class GameEngine {
 
   triggerGameOver() {
     this.state = GameState.GAMEOVER;
-    this.ui.showGameOverModal(this.score);
+    this.ui.showGameOverModal(this.p1Score, this.p2Score, this.isTwoPlayerMode);
   }
 
   startLoop() {
@@ -227,32 +237,46 @@ export class GameEngine {
       }
     }
 
-    // 1. MediaPipe Pose Detection
-    let landmarks = null;
+    // 1. MediaPipe Pose Detection (supports array of poses)
+    let poses = null;
     if (this.poseTracker && this.video.readyState >= 2) {
-      landmarks = this.poseTracker.detect(this.video, currentTime);
+      poses = this.poseTracker.detect(this.video, currentTime);
     }
 
-    // 2. Evaluate Consonant Pose for Ultimate Move if Ready
-    if (this.state === GameState.PLAYING && this.isUltimateReady && landmarks) {
-      const evalResult = this.gestureDetector.evaluate(
-        this.currentConsonantPose.id,
-        landmarks,
-        dt,
-        CONFIG.CANVAS.MIRROR
-      );
+    // 2. Evaluate Consonant Pose for Ultimate Move if Ready (either player can trigger)
+    if (this.state === GameState.PLAYING && this.isUltimateReady && poses && poses.length > 0) {
+      let triggered = false;
+      let maxProgress = 0;
+      let triggeringOwner = 'P1';
 
-      this.ui.updateChargingProgress(evalResult.progress);
+      poses.forEach((lm, pIdx) => {
+        const owner = pIdx === 0 ? 'P1' : 'P2';
+        const evalResult = this.gestureDetector.evaluate(
+          this.currentConsonantPose.id,
+          lm,
+          dt,
+          CONFIG.CANVAS.MIRROR
+        );
+        if (evalResult.progress > maxProgress) {
+          maxProgress = evalResult.progress;
+        }
+        if (evalResult.triggered) {
+          triggered = true;
+          triggeringOwner = owner;
+        }
+      });
 
-      if (evalResult.triggered) {
-        this.activateUltimateMove();
+      this.ui.updateChargingProgress(maxProgress);
+
+      if (triggered) {
+        this.activateUltimateMove(triggeringOwner);
       }
     } else {
       this.ui.updateChargingProgress(0);
     }
 
-    // 3. Update Blade Tracker
-    this.blades.update(landmarks, this.width, this.height, currentTime, CONFIG.CANVAS.MIRROR);
+    // 3. Update Blade Tracker with all detected player poses
+    this.blades.update(poses, this.width, this.height, currentTime, CONFIG.CANVAS.MIRROR);
 
     // 4. Update Game & Fruits
     if (this.state === GameState.PLAYING) {
@@ -262,7 +286,7 @@ export class GameEngine {
       this.particles.update(dt);
     }
 
-    this.lastLandmarks = landmarks;
+    this.lastPoses = poses;
   }
 
   render() {
@@ -276,7 +300,7 @@ export class GameEngine {
       offsetY = (Math.random() - 0.5) * this.shakeIntensity;
     }
 
-    // Layer 1: Background Video & Skeleton
+    // Layer 1: Background Video & Skeletons
     this.bgCtx.clearRect(0, 0, w, h);
     if (this.video.readyState >= 2) {
       this.bgCtx.save();
@@ -286,8 +310,8 @@ export class GameEngine {
       this.bgCtx.restore();
     }
 
-    if (this.lastLandmarks) {
-      this.poseTracker.drawSkeleton(this.bgCtx, this.lastLandmarks, w, h, CONFIG.CANVAS.MIRROR);
+    if (this.lastPoses) {
+      this.poseTracker.drawSkeletons(this.bgCtx, this.lastPoses, w, h, CONFIG.CANVAS.MIRROR);
     }
 
     // Layer 2: Game Objects (Fruits, Halves, Splatters, Shockwaves, Lightning)
