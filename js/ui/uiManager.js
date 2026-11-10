@@ -1,6 +1,6 @@
 /**
  * UI Manager - Handles HUD, Hearts, Combo Popups, High Scores, Ultimate Gauge,
- * and 1-Player vs 2-Player Duo Mode Display.
+ * 1-Player vs 2-Player Duo Mode, Fullscreen, Exit, and Visual Posture Guide Modal.
  */
 export class UIManager {
   constructor() {
@@ -25,15 +25,22 @@ export class UIManager {
     this.healContainer = document.getElementById('heal-container');
     this.startModal = document.getElementById('start-modal');
     this.gameoverModal = document.getElementById('gameover-modal');
+    this.guideModal = document.getElementById('guide-modal');
     this.statusPill = document.getElementById('status-pill');
     this.statusDot = document.getElementById('status-dot');
     this.statusText = document.getElementById('status-text');
+
+    // Controls
+    this.btnFullscreen = document.getElementById('btn-fullscreen');
+    this.btnExit = document.getElementById('btn-exit');
+    this.btnGuide = document.getElementById('btn-guide');
+    this.closeGuideBtn = document.getElementById('close-guide-btn');
 
     // Ultimate HUD elements
     this.ultimateCount = document.getElementById('ultimate-count');
     this.ultimateGaugeFill = document.getElementById('ultimate-gauge-fill');
     this.ultimatePoseCard = document.getElementById('ultimate-pose-card');
-    this.poseSymbolSvg = document.getElementById('pose-symbol-svg');
+    this.poseStickmanWrap = document.getElementById('pose-stickman-wrap');
     this.chargeRingCircle = document.getElementById('charge-ring-circle');
     this.ultimateMoveName = document.getElementById('ultimate-move-name');
     this.ultimateMoveDesc = document.getElementById('ultimate-move-desc');
@@ -47,6 +54,8 @@ export class UIManager {
     this.btnModeDuo = document.getElementById('btn-mode-duo');
     this.instructionPlayers = document.getElementById('instruction-players');
 
+    this.onExitRequested = () => {};
+
     this.comboTimeout = null;
     this.healTimeout = null;
     this.ultimateTimeout = null;
@@ -55,10 +64,11 @@ export class UIManager {
     this.isTwoPlayer = false;
 
     this.updateHighScoreDisplay();
-    this._bindModeButtons();
+    this._bindControls();
   }
 
-  _bindModeButtons() {
+  _bindControls() {
+    // Mode Buttons
     if (this.btnModeSolo && this.btnModeDuo) {
       this.btnModeSolo.addEventListener('click', () => {
         this.setMode(false);
@@ -67,6 +77,41 @@ export class UIManager {
         this.setMode(true);
       });
     }
+
+    // Fullscreen Toggle
+    if (this.btnFullscreen) {
+      this.btnFullscreen.addEventListener('click', () => {
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen().catch((err) => {
+            console.warn('Fullscreen request failed:', err);
+          });
+          this.btnFullscreen.textContent = '⛶ 창모드';
+        } else {
+          document.exitFullscreen().catch(() => {});
+          this.btnFullscreen.textContent = '⛶ 전체화면';
+        }
+      });
+    }
+
+    // Exit Button
+    if (this.btnExit) {
+      this.btnExit.addEventListener('click', () => {
+        this.onExitRequested();
+        this.showStartModal();
+      });
+    }
+
+    // Guide Modal
+    const openGuide = () => {
+      if (this.guideModal) this.guideModal.classList.remove('hidden');
+    };
+    const closeGuide = () => {
+      if (this.guideModal) this.guideModal.classList.add('hidden');
+    };
+
+    if (this.btnGuide) this.btnGuide.addEventListener('click', openGuide);
+    if (this.ultimatePoseCard) this.ultimatePoseCard.addEventListener('click', openGuide);
+    if (this.closeGuideBtn) this.closeGuideBtn.addEventListener('click', closeGuide);
   }
 
   setMode(twoPlayer) {
@@ -76,7 +121,7 @@ export class UIManager {
       this.btnModeSolo.classList.remove('active');
       if (this.instructionPlayers) {
         this.instructionPlayers.innerHTML =
-          '👥 <strong>2인 대결 모드</strong>: 1P(왼쪽 하늘색) vs 2P(오른쪽 분홍색) 실시간 골격 분리 경쟁!';
+          '👥 <strong>2인 대결 모드</strong>: 1P(왼쪽 하늘색) vs 2P(오른쪽 핑크색) 실시간 골격 분리 경쟁!';
       }
     } else {
       this.btnModeSolo.classList.add('active');
@@ -86,6 +131,7 @@ export class UIManager {
           '⚔️ <strong>1인 모드</strong>: 양손(왼손 하늘색 / 오른손 파란색)을 빠르게 휘둘러 베기!';
       }
     }
+    this.updateHUDMode(twoPlayer);
   }
 
   updateHUDMode(twoPlayer) {
@@ -156,18 +202,20 @@ export class UIManager {
     }
 
     if (this.ultimatePoseCard && currentPose) {
+      if (this.poseStickmanWrap) {
+        this.poseStickmanWrap.innerHTML = currentPose.illustrationSvg || '';
+      }
+
       if (isReady) {
         this.ultimatePoseCard.classList.remove('locked');
         this.ultimatePoseCard.classList.add('ready');
         this.ultimateMoveName.textContent = currentPose.name;
         this.ultimateMoveDesc.textContent = currentPose.desc;
-        this.poseSymbolSvg.innerHTML = `<text x="50" y="70" font-size="64" font-weight="900" text-anchor="middle" fill="${currentPose.color}">${currentPose.symbol}</text>`;
       } else {
         this.ultimatePoseCard.classList.add('locked');
         this.ultimatePoseCard.classList.remove('ready');
         this.ultimateMoveName.textContent = currentPose.name;
-        this.ultimateMoveDesc.textContent = `${threshold - clamped}개 더 베면 개방!`;
-        this.poseSymbolSvg.innerHTML = `<text x="50" y="70" font-size="64" font-weight="900" text-anchor="middle" fill="#94a3b8">${currentPose.symbol}</text>`;
+        this.ultimateMoveDesc.textContent = `${threshold - clamped}개 더 베면 개방! (클릭 시 가이드)`;
       }
     }
   }

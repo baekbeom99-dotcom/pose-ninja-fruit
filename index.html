@@ -76,12 +76,10 @@
             <div id="ultimate-gauge-fill" class="ultimate-gauge-fill"></div>
           </div>
 
-          <!-- Pose Target Card -->
-          <div id="ultimate-pose-card" class="ultimate-pose-card locked">
-            <div class="pose-glyph-container">
-              <svg id="pose-symbol-svg" class="pose-glyph-svg" viewBox="0 0 100 100">
-                <text x="50" y="70" font-size="64" font-weight="900" text-anchor="middle" fill="#38bdf8">ㅅ</text>
-              </svg>
+          <!-- Pose Target Card with Visual Stickman Illustration -->
+          <div id="ultimate-pose-card" class="ultimate-pose-card locked" title="클릭하면 자세 가이드가 열립니다">
+            <div class="pose-glyph-container" id="pose-glyph-container">
+              <div id="pose-stickman-wrap"></div>
               <!-- Circular charging ring -->
               <svg class="charge-ring-svg" viewBox="0 0 100 100">
                 <circle cx="50" cy="50" r="44" class="charge-ring-bg"></circle>
@@ -94,6 +92,13 @@
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- Control Bar (Fullscreen, Exit, Guide) -->
+      <div class="hud-controls">
+        <button id="btn-guide" class="hud-btn" title="필살기 자세 예시 보기">❓ 자세 가이드</button>
+        <button id="btn-fullscreen" class="hud-btn" title="전체화면 토글">⛶ 전체화면</button>
+        <button id="btn-exit" class="hud-btn exit-btn" title="시작 메뉴로 나가기">🚪 나가기</button>
       </div>
 
       <!-- Theme Badge Pill -->
@@ -179,6 +184,97 @@
           </div>
 
           <button id="restart-btn" class="primary-btn">다시 플레이</button>
+        </div>
+      </div>
+
+      <!-- Posture Guide Modal -->
+      <div id="guide-modal" class="modal-screen hidden">
+        <div class="modal-content guide-modal-content">
+          <h2 class="game-title" style="font-size: 32px; margin-bottom: 8px;">⚡ 한글 자음 필살기 자세 가이드</h2>
+          <p class="modal-desc" style="margin-bottom: 16px;">과일 10개를 벤 후, 요구되는 자음 모양을 0.2초간 취하면 발동됩니다!</p>
+
+          <div class="guide-grid">
+            <!-- 1. SIOT -->
+            <div class="guide-card">
+              <div class="guide-fig-wrap">
+                <svg viewBox="0 0 100 100" class="pose-stickman">
+                  <circle cx="50" cy="22" r="8" fill="#38bdf8"/>
+                  <line x1="50" y1="30" x2="50" y2="65" stroke="#38bdf8" stroke-width="4" stroke-linecap="round"/>
+                  <line x1="50" y1="65" x2="35" y2="90" stroke="#38bdf8" stroke-width="4" stroke-linecap="round"/>
+                  <line x1="50" y1="65" x2="65" y2="90" stroke="#38bdf8" stroke-width="4" stroke-linecap="round"/>
+                  <polyline points="35,40 30,22 48,10" fill="none" stroke="#facc15" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+                  <polyline points="65,40 70,22 52,10" fill="none" stroke="#facc15" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+                  <circle cx="50" cy="10" r="4.5" fill="#ffffff"/>
+                </svg>
+              </div>
+              <div class="guide-info">
+                <div class="guide-title">1. 시옷(ㅅ) 참격</div>
+                <div class="guide-desc">머리 위/앞으로 양손을 모아 세모(∧) 지붕 만들기</div>
+              </div>
+            </div>
+
+            <!-- 2. JIEUT -->
+            <div class="guide-card">
+              <div class="guide-fig-wrap">
+                <svg viewBox="0 0 100 100" class="pose-stickman">
+                  <circle cx="50" cy="24" r="8" fill="#f43f5e"/>
+                  <line x1="50" y1="32" x2="50" y2="65" stroke="#f43f5e" stroke-width="4" stroke-linecap="round"/>
+                  <line x1="50" y1="65" x2="35" y2="90" stroke="#f43f5e" stroke-width="4" stroke-linecap="round"/>
+                  <line x1="50" y1="65" x2="65" y2="90" stroke="#f43f5e" stroke-width="4" stroke-linecap="round"/>
+                  <line x1="50" y1="38" x2="20" y2="10" stroke="#facc15" stroke-width="5" stroke-linecap="round"/>
+                  <line x1="50" y1="38" x2="80" y2="10" stroke="#facc15" stroke-width="5" stroke-linecap="round"/>
+                  <circle cx="20" cy="10" r="4.5" fill="#ffffff"/>
+                  <circle cx="80" cy="10" r="4.5" fill="#ffffff"/>
+                </svg>
+              </div>
+              <div class="guide-info">
+                <div class="guide-title">2. 지읒(ㅈ) 천벌</div>
+                <div class="guide-desc">양팔을 머리 위 대각선 양옆으로 만세(V) 벌리기</div>
+              </div>
+            </div>
+
+            <!-- 3. GIYEOK -->
+            <div class="guide-card">
+              <div class="guide-fig-wrap">
+                <svg viewBox="0 0 100 100" class="pose-stickman">
+                  <circle cx="50" cy="24" r="8" fill="#facc15"/>
+                  <line x1="50" y1="32" x2="50" y2="65" stroke="#facc15" stroke-width="4" stroke-linecap="round"/>
+                  <line x1="50" y1="65" x2="35" y2="90" stroke="#facc15" stroke-width="4" stroke-linecap="round"/>
+                  <line x1="50" y1="65" x2="65" y2="90" stroke="#facc15" stroke-width="4" stroke-linecap="round"/>
+                  <line x1="50" y1="38" x2="16" y2="38" stroke="#38bdf8" stroke-width="5" stroke-linecap="round"/>
+                  <polyline points="50,38 74,38 74,68" fill="none" stroke="#38bdf8" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+                  <circle cx="16" cy="38" r="4.5" fill="#ffffff"/>
+                  <circle cx="74" cy="68" r="4.5" fill="#ffffff"/>
+                </svg>
+              </div>
+              <div class="guide-info">
+                <div class="guide-title">3. 기역(ㄱ) 뇌격</div>
+                <div class="guide-desc">한 팔은 옆으로 수평, 다른 팔은 아래로 직각(ㄱ)</div>
+              </div>
+            </div>
+
+            <!-- 4. NIEUN -->
+            <div class="guide-card">
+              <div class="guide-fig-wrap">
+                <svg viewBox="0 0 100 100" class="pose-stickman">
+                  <circle cx="50" cy="24" r="8" fill="#a855f7"/>
+                  <line x1="50" y1="32" x2="50" y2="65" stroke="#a855f7" stroke-width="4" stroke-linecap="round"/>
+                  <line x1="50" y1="65" x2="35" y2="90" stroke="#a855f7" stroke-width="4" stroke-linecap="round"/>
+                  <line x1="50" y1="65" x2="65" y2="90" stroke="#a855f7" stroke-width="4" stroke-linecap="round"/>
+                  <polyline points="50,38 26,38 26,68" fill="none" stroke="#facc15" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+                  <line x1="50" y1="38" x2="82" y2="38" stroke="#facc15" stroke-width="5" stroke-linecap="round"/>
+                  <circle cx="26" cy="68" r="4.5" fill="#ffffff"/>
+                  <circle cx="82" cy="38" r="4.5" fill="#ffffff"/>
+                </svg>
+              </div>
+              <div class="guide-info">
+                <div class="guide-title">4. 니은(ㄴ) 파도</div>
+                <div class="guide-desc">한 팔은 아래로 수직, 다른 팔은 옆으로 수평(ㄴ)</div>
+              </div>
+            </div>
+          </div>
+
+          <button id="close-guide-btn" class="close-guide-btn">닫기</button>
         </div>
       </div>
     </div>

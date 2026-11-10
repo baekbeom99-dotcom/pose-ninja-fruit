@@ -60,13 +60,20 @@ export class GameEngine {
 
     this._bindFruitCallbacks();
     this._setupResizeHandler();
+    this._bindUIExit();
+  }
+
+  _bindUIExit() {
+    this.ui.onExitRequested = () => {
+      this.stopGameAndReset();
+    };
   }
 
   _bindFruitCallbacks() {
     this.fruitManager.onScore = (points, fruit, hitPoint, owner = 'P1') => {
       if (this.state !== GameState.PLAYING) return;
 
-      if (owner === 'P2') {
+      if (this.isTwoPlayerMode && owner === 'P2') {
         this.p2Score += points;
       } else {
         this.p1Score += points;
@@ -116,7 +123,7 @@ export class GameEngine {
         this.ui.updateLives(this.lives, CONFIG.GAME.MAX_LIVES);
       }
       const points = item.points || 5;
-      if (owner === 'P2') {
+      if (this.isTwoPlayerMode && owner === 'P2') {
         this.p2Score += points;
       } else {
         this.p1Score += points;
@@ -156,15 +163,26 @@ export class GameEngine {
     this.shakeIntensity = intensity;
   }
 
+  stopGameAndReset() {
+    this.state = GameState.READY;
+    this.p1Score = 0;
+    this.p2Score = 0;
+    this.fruitManager.reset();
+    this.particles.clear();
+    this.ui.updateScores(0, 0, this.isTwoPlayerMode);
+    this.ui.updateChargingProgress(0);
+    this.ui.updateUltimateGauge(0, this.ultimateThreshold, false, this.currentConsonantPose);
+  }
+
   startNewGame(twoPlayer = false) {
-    this.isTwoPlayerMode = twoPlayer;
+    this.isTwoPlayerMode = !!twoPlayer;
     this.p1Score = 0;
     this.p2Score = 0;
     this.lives = CONFIG.GAME.START_LIVES;
 
-    this.blades.setMode(twoPlayer);
-    this.ui.updateHUDMode(twoPlayer);
-    this.ui.updateScores(0, 0, twoPlayer);
+    this.blades.setMode(this.isTwoPlayerMode);
+    this.ui.updateHUDMode(this.isTwoPlayerMode);
+    this.ui.updateScores(0, 0, this.isTwoPlayerMode);
     this.ui.updateLives(this.lives, CONFIG.GAME.MAX_LIVES);
 
     // Pick Random Visual Theme
@@ -237,13 +255,18 @@ export class GameEngine {
       }
     }
 
-    // 1. MediaPipe Pose Detection (supports array of poses)
+    // 1. MediaPipe Pose Detection
     let poses = null;
     if (this.poseTracker && this.video.readyState >= 2) {
       poses = this.poseTracker.detect(this.video, currentTime);
+
+      // STRICT 1-PLAYER ISOLATION: Never track or register second person if not in 2-Player mode!
+      if (poses && !this.isTwoPlayerMode) {
+        poses = poses.slice(0, 1);
+      }
     }
 
-    // 2. Evaluate Consonant Pose for Ultimate Move if Ready (either player can trigger)
+    // 2. Evaluate Consonant Pose for Ultimate Move if Ready
     if (this.state === GameState.PLAYING && this.isUltimateReady && poses && poses.length > 0) {
       let triggered = false;
       let maxProgress = 0;
@@ -275,7 +298,7 @@ export class GameEngine {
       this.ui.updateChargingProgress(0);
     }
 
-    // 3. Update Blade Tracker with all detected player poses
+    // 3. Update Blade Tracker with filtered poses
     this.blades.update(poses, this.width, this.height, currentTime, CONFIG.CANVAS.MIRROR);
 
     // 4. Update Game & Fruits
