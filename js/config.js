@@ -11,7 +11,9 @@ export const CONFIG = {
 
   // Blade Tracking & Sensitivity
   BLADE: {
-    MIN_VELOCITY_TO_SLICE: 320, // Slightly more accessible
+    MIN_VELOCITY_TO_SLICE: 0,    // Instant touch slicing (0 velocity threshold: any touch slices!)
+    SWING_SOUND_VELOCITY: 160,   // Velocity required to play whoosh sound
+    TOUCH_RADIUS: 28,            // Generous touch hitbox radius for hands/fingers
     TRAIL_LENGTH: 16,
     SMOOTHING_ALPHA: 0.65,
     COLORS: {
@@ -22,12 +24,12 @@ export const CONFIG = {
     }
   },
 
-  // Game Physics (75% projectile speed & adjusted floaty gravity)
+  // Game Physics (High arcing, floaty 75% projectile speed)
   PHYSICS: {
-    GRAVITY: 620,               // Softened gravity for 75% speed
-    AIR_RESISTANCE: 0.999,
-    HALF_SEPARATION_SPEED: 240, // 75% of previous 320
-    HALF_ANGULAR_VELOCITY: 4.2  // 75% rotation speed
+    GRAVITY: 560,               // Softened gravity for floaty hangtime and soaring apex
+    AIR_RESISTANCE: 0.9995,
+    HALF_SEPARATION_SPEED: 260, // Sliced half separation speed
+    HALF_ANGULAR_VELOCITY: 4.0  // Fruit rotation speed
   },
 
   // Gameplay Settings

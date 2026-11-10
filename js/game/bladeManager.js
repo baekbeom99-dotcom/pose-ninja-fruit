@@ -16,8 +16,9 @@ class Blade {
     this.smoothedPos = null;
     this.velocity = 0;
     this.isActive = false;
+    this.isSwinging = false;
     this.lastActiveTime = 0;
-    this.wasActive = false;
+    this.wasSwinging = false;
   }
 
   update(rawPos, currentTime) {
@@ -25,8 +26,12 @@ class Blade {
       if (this.history.length > 0) {
         this.history.shift();
       }
+      this.currentPos = null;
+      this.previousPos = null;
+      this.smoothedPos = null;
       this.isActive = false;
-      this.wasActive = false;
+      this.isSwinging = false;
+      this.wasSwinging = false;
       return;
     }
 
@@ -70,19 +75,21 @@ class Blade {
       this.velocity = 0;
     }
 
-    this.isActive = this.velocity >= CONFIG.BLADE.MIN_VELOCITY_TO_SLICE;
+    // Touch slicing: Always active whenever the hand/touch point is tracked!
+    this.isActive = true;
+    this.isSwinging = this.velocity >= (CONFIG.BLADE.SWING_SOUND_VELOCITY || 160);
 
-    if (this.isActive && !this.wasActive && currentTime - this.lastActiveTime > 260) {
+    if (this.isSwinging && !this.wasSwinging && currentTime - this.lastActiveTime > 260) {
       soundManager.playSwish();
       this.lastActiveTime = currentTime;
     }
-    this.wasActive = this.isActive;
+    this.wasSwinging = this.isSwinging;
   }
 
   getSegment() {
-    if (!this.isActive || !this.previousPos || !this.currentPos) return null;
+    if (!this.isActive || !this.currentPos) return null;
     return {
-      p1: this.previousPos,
+      p1: this.previousPos || this.currentPos,
       p2: this.currentPos,
       bladeName: this.name,
       owner: this.owner
@@ -90,79 +97,79 @@ class Blade {
   }
 
   draw(ctx) {
-    if (this.history.length < 2) return;
+    if (!this.currentPos) return;
 
     ctx.save();
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
-    // Outer Glow
-    ctx.globalCompositeOperation = 'lighter';
-    ctx.shadowBlur = this.isActive ? 28 : 12;
-    ctx.shadowColor = this.colors.GLOW;
-    ctx.strokeStyle = this.colors.GLOW;
+    // Outer Glow Trail
+    if (this.history.length >= 2) {
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.shadowBlur = this.isSwinging ? 28 : 16;
+      ctx.shadowColor = this.colors.GLOW;
+      ctx.strokeStyle = this.colors.GLOW;
 
-    for (let i = 0; i < this.history.length - 1; i++) {
-      const p1 = this.history[i];
-      const p2 = this.history[i + 1];
-      const progress = (i + 1) / this.history.length;
+      for (let i = 0; i < this.history.length - 1; i++) {
+        const p1 = this.history[i];
+        const p2 = this.history[i + 1];
+        const progress = (i + 1) / this.history.length;
 
-      ctx.beginPath();
-      ctx.moveTo(p1.x, p1.y);
-      ctx.lineTo(p2.x, p2.y);
-      ctx.lineWidth = progress * (this.isActive ? 22 : 9);
-      ctx.stroke();
-    }
-
-    // Focused Stroke
-    ctx.shadowBlur = this.isActive ? 14 : 6;
-    ctx.shadowColor = this.colors.SPARK;
-    ctx.strokeStyle = this.colors.SPARK;
-
-    for (let i = 0; i < this.history.length - 1; i++) {
-      const p1 = this.history[i];
-      const p2 = this.history[i + 1];
-      const progress = (i + 1) / this.history.length;
-
-      ctx.beginPath();
-      ctx.moveTo(p1.x, p1.y);
-      ctx.lineTo(p2.x, p2.y);
-      ctx.lineWidth = progress * (this.isActive ? 12 : 5);
-      ctx.stroke();
-    }
-
-    // Plasma Core
-    ctx.shadowBlur = 6;
-    ctx.shadowColor = '#ffffff';
-    ctx.strokeStyle = this.colors.CORE;
-
-    for (let i = 0; i < this.history.length - 1; i++) {
-      const p1 = this.history[i];
-      const p2 = this.history[i + 1];
-      const progress = (i + 1) / this.history.length;
-
-      ctx.beginPath();
-      ctx.moveTo(p1.x, p1.y);
-      ctx.lineTo(p2.x, p2.y);
-      ctx.lineWidth = progress * (this.isActive ? 5 : 2);
-      ctx.stroke();
-    }
-
-    // Blade Tip
-    if (this.currentPos) {
-      ctx.beginPath();
-      ctx.arc(this.currentPos.x, this.currentPos.y, this.isActive ? 12 : 7, 0, Math.PI * 2);
-      ctx.fillStyle = this.colors.CORE;
-      ctx.fill();
-
-      if (this.isActive) {
         ctx.beginPath();
-        ctx.arc(this.currentPos.x, this.currentPos.y, 18, 0, Math.PI * 2);
-        ctx.strokeStyle = this.colors.GLOW;
-        ctx.lineWidth = 2.5;
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.lineWidth = progress * (this.isSwinging ? 24 : 12);
+        ctx.stroke();
+      }
+
+      // Focused Stroke
+      ctx.shadowBlur = this.isSwinging ? 14 : 8;
+      ctx.shadowColor = this.colors.SPARK;
+      ctx.strokeStyle = this.colors.SPARK;
+
+      for (let i = 0; i < this.history.length - 1; i++) {
+        const p1 = this.history[i];
+        const p2 = this.history[i + 1];
+        const progress = (i + 1) / this.history.length;
+
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.lineWidth = progress * (this.isSwinging ? 14 : 6);
+        ctx.stroke();
+      }
+
+      // Plasma Core
+      ctx.shadowBlur = 6;
+      ctx.shadowColor = '#ffffff';
+      ctx.strokeStyle = this.colors.CORE;
+
+      for (let i = 0; i < this.history.length - 1; i++) {
+        const p1 = this.history[i];
+        const p2 = this.history[i + 1];
+        const progress = (i + 1) / this.history.length;
+
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.lineWidth = progress * (this.isSwinging ? 6 : 3);
         ctx.stroke();
       }
     }
+
+    // Touch Slicing Cursor / Blade Tip Orb
+    ctx.beginPath();
+    ctx.arc(this.currentPos.x, this.currentPos.y, this.isSwinging ? 14 : 10, 0, Math.PI * 2);
+    ctx.fillStyle = this.colors.CORE;
+    ctx.shadowBlur = this.isSwinging ? 20 : 12;
+    ctx.shadowColor = this.colors.GLOW;
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(this.currentPos.x, this.currentPos.y, this.isSwinging ? 24 : 16, 0, Math.PI * 2);
+    ctx.strokeStyle = this.colors.GLOW;
+    ctx.lineWidth = 3;
+    ctx.stroke();
 
     ctx.restore();
   }

@@ -54,7 +54,9 @@ export class FruitManager {
   }
 
   /**
-   * Spawns new fruits respecting the maximum onscreen density
+   * Spawns new fruits respecting the maximum onscreen density.
+   * Features high ballistic launch heights (reaching top 6%~18% of screen)
+   * and diverse launch angles (Tower Pop, Diagonal Cross, Rainbow Arc, Side Ejection, V-Volley).
    */
   spawnWave(canvasWidth, canvasHeight, currentLives = 5) {
     const maxAllowed = this.getMaxAllowedOnscreen();
@@ -85,58 +87,118 @@ export class FruitManager {
       return CONFIG.FRUITS[key];
     };
 
-    // Velocity scale factor: 75% speed
-    const VELOCITY_SCALE = 0.75;
+    const g = CONFIG.PHYSICS.GRAVITY;
 
-    for (let i = 0; i < availableSlots; i++) {
-      const pattern = Math.floor(Math.random() * 4);
-      const cfg = getRandomConfig();
+    // Helper: calculate exact ballistic vy to reach designated high target apex
+    const calcLaunchVy = (startY, targetApexY) => {
+      const dy = Math.max(120, startY - targetApexY);
+      return -Math.sqrt(2 * g * dy);
+    };
 
-      if (pattern === 0 && availableSlots >= 2 && i === 0) {
-        // Double Cross (P1 & P2 cooperative reach)
-        const cfg1 = getRandomConfig();
-        const x1 = canvasWidth * 0.12;
-        const y1 = canvasHeight + cfg1.radius;
-        const targetH1 = canvasHeight * (0.2 + Math.random() * 0.25);
-        const vy1 = -Math.sqrt(2 * CONFIG.PHYSICS.GRAVITY * (y1 - targetH1)) * VELOCITY_SCALE;
-        const vx1 = (280 + Math.random() * 180) * VELOCITY_SCALE;
-        this.fruits.push(new Fruit(cfg1, x1, y1, vx1, vy1, this.currentTheme));
+    let remainingSlots = availableSlots;
 
-        const cfg2 = getRandomConfig();
-        const x2 = canvasWidth * 0.88;
-        const y2 = canvasHeight + cfg2.radius;
-        const targetH2 = canvasHeight * (0.2 + Math.random() * 0.25);
-        const vy2 = -Math.sqrt(2 * CONFIG.PHYSICS.GRAVITY * (y2 - targetH2)) * VELOCITY_SCALE;
-        const vx2 = -(280 + Math.random() * 180) * VELOCITY_SCALE;
-        this.fruits.push(new Fruit(cfg2, x2, y2, vx2, vy2, this.currentTheme));
-        i++; // used 2 slots
-      } else if (pattern === 1) {
-        // Left Side Wall
-        const x = -cfg.radius - 10;
-        const y = canvasHeight * (0.45 + Math.random() * 0.3);
-        const vx = (380 + Math.random() * 240) * VELOCITY_SCALE;
-        const vy = -(320 + Math.random() * 220) * VELOCITY_SCALE;
-        this.fruits.push(new Fruit(cfg, x, y, vx, vy, this.currentTheme));
-      } else if (pattern === 2) {
-        // Right Side Wall
-        const x = canvasWidth + cfg.radius + 10;
-        const y = canvasHeight * (0.45 + Math.random() * 0.3);
-        const vx = -(380 + Math.random() * 240) * VELOCITY_SCALE;
-        const vy = -(320 + Math.random() * 220) * VELOCITY_SCALE;
-        this.fruits.push(new Fruit(cfg, x, y, vx, vy, this.currentTheme));
-      } else {
-        // Standard Upward Launch
-        const margin = canvasWidth * 0.18;
-        const x = margin + Math.random() * (canvasWidth - margin * 2);
-        const y = canvasHeight + cfg.radius + 10;
-        const targetHeight = canvasHeight * (0.16 + Math.random() * 0.35);
-        const dy = y - targetHeight;
-        const vy = -Math.sqrt(2 * CONFIG.PHYSICS.GRAVITY * dy) * VELOCITY_SCALE;
-        const centerX = canvasWidth / 2;
-        const dirX = (centerX - x) / canvasWidth;
-        const vx = (dirX * (220 + Math.random() * 220) + (Math.random() - 0.5) * 80) * VELOCITY_SCALE;
-        this.fruits.push(new Fruit(cfg, x, y, vx, vy, this.currentTheme));
+    while (remainingSlots > 0) {
+      // Coordinated multi-projectile formations when 2+ slots are open
+      if (remainingSlots >= 2 && Math.random() < 0.45) {
+        const formation = Math.floor(Math.random() * 3);
+
+        if (formation === 0) {
+          // Formation 1: Double V-Volley (Splits outwards from bottom center)
+          const cfg1 = getRandomConfig();
+          const cfg2 = getRandomConfig();
+          const startX = canvasWidth * 0.5 + (Math.random() - 0.5) * 50;
+          const startY = canvasHeight + Math.max(cfg1.radius, cfg2.radius) + 15;
+          const targetApex = canvasHeight * (0.07 + Math.random() * 0.10); // Soars to top 7%~17%
+          const vy = calcLaunchVy(startY, targetApex);
+          const spreadVx = 180 + Math.random() * 90;
+
+          this.fruits.push(new Fruit(cfg1, startX - 25, startY, -spreadVx, vy * (0.97 + Math.random() * 0.06), this.currentTheme));
+          this.fruits.push(new Fruit(cfg2, startX + 25, startY, spreadVx, vy * (0.97 + Math.random() * 0.06), this.currentTheme));
+          remainingSlots -= 2;
+          continue;
+        } else if (formation === 1) {
+          // Formation 2: Double Edge Converge (Left & Right sweep inwards)
+          const cfg1 = getRandomConfig();
+          const cfg2 = getRandomConfig();
+          const startY1 = canvasHeight + cfg1.radius + 15;
+          const startY2 = canvasHeight + cfg2.radius + 15;
+          const targetApex = canvasHeight * (0.08 + Math.random() * 0.12);
+          const vy1 = calcLaunchVy(startY1, targetApex);
+          const vy2 = calcLaunchVy(startY2, targetApex);
+
+          this.fruits.push(new Fruit(cfg1, canvasWidth * 0.12, startY1, 220 + Math.random() * 100, vy1, this.currentTheme));
+          this.fruits.push(new Fruit(cfg2, canvasWidth * 0.88, startY2, -(220 + Math.random() * 100), vy2, this.currentTheme));
+          remainingSlots -= 2;
+          continue;
+        } else {
+          // Formation 3: High Double Cross (Deep diagonal crossing)
+          const cfg1 = getRandomConfig();
+          const cfg2 = getRandomConfig();
+          const startY = canvasHeight + 85;
+          const targetApex1 = canvasHeight * (0.06 + Math.random() * 0.10);
+          const targetApex2 = canvasHeight * (0.10 + Math.random() * 0.12);
+          this.fruits.push(new Fruit(cfg1, canvasWidth * 0.22, startY, 200 + Math.random() * 90, calcLaunchVy(startY, targetApex1), this.currentTheme));
+          this.fruits.push(new Fruit(cfg2, canvasWidth * 0.78, startY, -(200 + Math.random() * 90), calcLaunchVy(startY, targetApex2), this.currentTheme));
+          remainingSlots -= 2;
+          continue;
+        }
       }
+
+      // Single projectile with rich varied launch angles:
+      const cfg = getRandomConfig();
+      const style = Math.floor(Math.random() * 5);
+
+      if (style === 0) {
+        // Pattern 1: Tower Pop (Near-vertical 82°~88°, soaring high to screen top)
+        const startX = canvasWidth * (0.30 + Math.random() * 0.40);
+        const startY = canvasHeight + cfg.radius + 15;
+        const targetApex = canvasHeight * (0.05 + Math.random() * 0.08); // Soars to top 5%~13%
+        const vy = calcLaunchVy(startY, targetApex);
+        const vx = (Math.random() - 0.5) * 70;
+        this.fruits.push(new Fruit(cfg, startX, startY, vx, vy, this.currentTheme));
+      } else if (style === 1) {
+        // Pattern 2: Deep Diagonal Cross (60°~75°, sweeping from left or right across screen)
+        const fromLeft = Math.random() < 0.5;
+        const startX = fromLeft ? canvasWidth * (0.08 + Math.random() * 0.15) : canvasWidth * (0.77 + Math.random() * 0.15);
+        const startY = canvasHeight + cfg.radius + 15;
+        const targetApex = canvasHeight * (0.08 + Math.random() * 0.12); // Top 8%~20%
+        const vy = calcLaunchVy(startY, targetApex);
+        const speedX = 220 + Math.random() * 160;
+        const vx = fromLeft ? speedX : -speedX;
+        this.fruits.push(new Fruit(cfg, startX, startY, vx, vy, this.currentTheme));
+      } else if (style === 2) {
+        // Pattern 3: Panoramic Rainbow Arc (45°~55°, giant sweeping arc across the entire screen)
+        const fromLeft = Math.random() < 0.5;
+        const startX = fromLeft ? canvasWidth * 0.04 : canvasWidth * 0.96;
+        const startY = canvasHeight + cfg.radius + 15;
+        const targetApex = canvasHeight * (0.10 + Math.random() * 0.12);
+        const vy = calcLaunchVy(startY, targetApex);
+        const tApex = -vy / g;
+        const targetDistance = canvasWidth * 0.72;
+        const vx = fromLeft ? (targetDistance / (2 * tApex)) : -(targetDistance / (2 * tApex));
+        this.fruits.push(new Fruit(cfg, startX, startY, vx, vy, this.currentTheme));
+      } else if (style === 3) {
+        // Pattern 4: Side-Wall Ejection (35°~50°, shoots out from screen side border)
+        const fromLeft = Math.random() < 0.5;
+        const startX = fromLeft ? (-cfg.radius - 10) : (canvasWidth + cfg.radius + 10);
+        const startY = canvasHeight * (0.50 + Math.random() * 0.25);
+        const targetApex = canvasHeight * (0.10 + Math.random() * 0.14);
+        const vy = calcLaunchVy(startY, targetApex);
+        const vx = fromLeft ? (320 + Math.random() * 140) : -(320 + Math.random() * 140);
+        this.fruits.push(new Fruit(cfg, startX, startY, vx, vy, this.currentTheme));
+      } else {
+        // Pattern 5: High Floater Lob (High apex with gentle spin for clean slicing)
+        const startX = canvasWidth * (0.20 + Math.random() * 0.60);
+        const startY = canvasHeight + cfg.radius + 15;
+        const targetApex = canvasHeight * (0.06 + Math.random() * 0.08);
+        const vy = calcLaunchVy(startY, targetApex);
+        const vx = (canvasWidth * 0.5 - startX) * 0.45 + (Math.random() - 0.5) * 80;
+        const fruit = new Fruit(cfg, startX, startY, vx, vy, this.currentTheme);
+        fruit.angularVelocity = (Math.random() - 0.5) * 1.8;
+        this.fruits.push(fruit);
+      }
+
+      remainingSlots--;
     }
 
     this.nextSpawnInterval =
@@ -150,6 +212,8 @@ export class FruitManager {
       this.spawnTimer = 0;
       this.spawnWave(canvasWidth, canvasHeight, currentLives);
     }
+
+    const touchRadius = CONFIG.BLADE.TOUCH_RADIUS || 28;
 
     for (let i = this.fruits.length - 1; i >= 0; i--) {
       const fruit = this.fruits[i];
@@ -165,7 +229,7 @@ export class FruitManager {
 
       if (!fruit.isDead && activeSegments.length > 0) {
         for (const seg of activeSegments) {
-          const col = checkSegmentCircleCollision(seg.p1, seg.p2, fruit);
+          const col = checkSegmentCircleCollision(seg.p1, seg.p2, fruit, touchRadius);
           if (col.hit) {
             this._handleSlice(fruit, col.cutAngle, col.normal, col.closestPoint, currentTime, seg.owner || 'P1');
             this.fruits.splice(i, 1);

@@ -69,6 +69,28 @@ function runTests() {
     assert(Math.abs(result.cutAngle - (Math.PI / 4)) < 0.01, 'Cut angle is 45 degrees');
   }
 
+  // Test 6: Stationary hand touch (p1 == p2 right inside circle)
+  {
+    const p1 = { x: 105, y: 105 };
+    const p2 = { x: 105, y: 105 };
+    const circle = { x: 100, y: 100, radius: 20 };
+    const result = checkSegmentCircleCollision(p1, p2, circle);
+
+    assert(result.hit === true, 'Stationary touch inside circle hits');
+  }
+
+  // Test 7: Touch padding enables grazing touch-to-slice outside base radius
+  {
+    const p1 = { x: 125, y: 100 };
+    const p2 = { x: 125, y: 100 };
+    const circle = { x: 100, y: 100, radius: 20 }; // distance = 25 > 20
+    const noPad = checkSegmentCircleCollision(p1, p2, circle, 0);
+    const withPad = checkSegmentCircleCollision(p1, p2, circle, 28); // 20 + 28 = 48 >= 25
+
+    assert(noPad.hit === false, 'No touch padding misses at distance 25');
+    assert(withPad.hit === true, 'Touch padding 28 detects contact at distance 25');
+  }
+
   console.log(`\nTest Summary: ${passed}/${total} tests passed.`);
   if (passed !== total) {
     process.exit(1);

@@ -20,27 +20,29 @@ export function distance(p1, p2) {
 
 /**
  * Checks if a line segment AB intersects with a circle at center C with radius R.
- * Also returns the closest point and collision details if true.
+ * Also supports touch padding for generous touch-to-slice detection and stationary hand touches.
  * 
  * @param {{x: number, y: number}} p1 - Start of blade segment
  * @param {{x: number, y: number}} p2 - End of blade segment
  * @param {{x: number, y: number, radius: number}} circle - Fruit bounding circle
+ * @param {number} [touchPadding=0] - Additional touch radius padding around hand/fruit
  * @returns {{hit: boolean, closestPoint?: {x: number, y: number}, normal?: {x: number, y: number}, cutAngle?: number}}
  */
-export function checkSegmentCircleCollision(p1, p2, circle) {
+export function checkSegmentCircleCollision(p1, p2, circle, touchPadding = 0) {
   const dx = p2.x - p1.x;
   const dy = p2.y - p1.y;
   const lenSq = dx * dx + dy * dy;
+  const effectiveRadius = (circle.radius || 0) + touchPadding;
 
-  // Handle case where p1 and p2 are practically identical
-  if (lenSq === 0) {
+  // Handle case where p1 and p2 are practically identical (stationary hand or single touch)
+  if (lenSq < 0.0001) {
     const dSq = distanceSquared(p1, circle);
-    if (dSq <= circle.radius * circle.radius) {
+    if (dSq <= effectiveRadius * effectiveRadius) {
       return {
         hit: true,
         closestPoint: { x: p1.x, y: p1.y },
         normal: { x: 0, y: -1 },
-        cutAngle: 0
+        cutAngle: (Math.random() - 0.5) * (Math.PI / 3)
       };
     }
     return { hit: false };
@@ -61,14 +63,14 @@ export function checkSegmentCircleCollision(p1, p2, circle) {
 
   const distSq = distanceSquared(closestPoint, circle);
 
-  if (distSq <= circle.radius * circle.radius) {
+  if (distSq <= effectiveRadius * effectiveRadius) {
     // Slicing angle in radians along the cut direction
-    const cutAngle = Math.atan2(dy, dx);
+    const cutAngle = lenSq > 1 ? Math.atan2(dy, dx) : (Math.random() - 0.5) * (Math.PI / 3);
 
     // Normal vector perpendicular to the cut direction (for separating fruit halves)
     const segLength = Math.sqrt(lenSq);
-    const unitDx = dx / segLength;
-    const unitDy = dy / segLength;
+    const unitDx = segLength > 0.001 ? dx / segLength : 0;
+    const unitDy = segLength > 0.001 ? dy / segLength : -1;
 
     // Normal vector pointing 90 degrees clockwise
     const normal = {
