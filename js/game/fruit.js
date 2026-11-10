@@ -74,14 +74,6 @@ export class HalfFruit {
     FruitRenderer.drawFruitBody(ctx, this.config, 0);
 
     ctx.restore();
-
-    // Draw realistic sliced cross-section cut face
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    ctx.translate(this.x, this.y);
-    ctx.rotate(this.rotation);
-    FruitRenderer.drawCutFaceDetails(ctx, this.config, this.radius);
-    ctx.restore();
   }
 }
 
@@ -199,104 +191,57 @@ export class FruitRenderer {
     }
   }
 
-  /* ---------------- 1. WATERMELON (수박 조각 슬라이스 - Reference Row 3, Col 2) ---------------- */
+  /* ---------------- 1. WATERMELON (둥근 수박) ---------------- */
   static drawWatermelon(ctx, config, animTimer) {
     const r = config.radius;
 
-    // Outer Crescent Wedge Contour
-    // Bottom curved rind arc
-    const startX = -r * 0.90;
-    const startY = -r * 0.22;
-    const endX = r * 0.90;
-    const endY = -r * 0.22;
-    const bottomY = r * 0.72;
-
-    // 1. Thick Green Outer Rind (진한 초록 껍질)
-    ctx.save();
+    // 1. Plump Round Green Watermelon Sphere (둥근 수박 몸체)
     ctx.beginPath();
-    ctx.moveTo(startX - 4, startY - 2);
-    ctx.quadraticCurveTo(0, bottomY + 12, endX + 4, endY - 2);
-    ctx.lineTo(endX, endY);
-    ctx.quadraticCurveTo(0, bottomY - 6, startX, startY);
-    ctx.closePath();
-    const rindGrad = ctx.createLinearGradient(0, startY, 0, bottomY + 12);
-    rindGrad.addColorStop(0, '#16a34a');
-    rindGrad.addColorStop(0.6, '#15803d');
-    rindGrad.addColorStop(1, '#052e16');
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    const rindGrad = ctx.createRadialGradient(-r * 0.28, -r * 0.28, 6, 0, 0, r);
+    rindGrad.addColorStop(0, '#4ade80');
+    rindGrad.addColorStop(0.35, '#22c55e');
+    rindGrad.addColorStop(0.75, '#16a34a');
+    rindGrad.addColorStop(1, '#15803d');
     ctx.fillStyle = rindGrad;
     ctx.fill();
-    ctx.restore();
 
-    // 2. Pale Mint/White Inner Rind Stripe (연두/흰색 속 껍질 줄기)
+    // 2. Iconic Wavy Dark Green Watermelon Stripes (선명한 수박 줄무늬)
     ctx.save();
     ctx.beginPath();
-    ctx.moveTo(startX + 2, startY);
-    ctx.quadraticCurveTo(0, bottomY - 6, endX - 2, endY);
-    ctx.lineTo(endX - 5, endY + 2);
-    ctx.quadraticCurveTo(0, bottomY - 14, startX + 5, startY + 2);
-    ctx.closePath();
-    ctx.fillStyle = '#dcfce7';
-    ctx.fill();
+    ctx.arc(0, 0, r - 2, 0, Math.PI * 2);
+    ctx.clip();
+
+    ctx.strokeStyle = '#052e16';
+    ctx.lineWidth = r * 0.15;
+    ctx.lineCap = 'round';
+
+    for (let stripe = -3; stripe <= 3; stripe++) {
+      const baseX = stripe * (r * 0.28);
+      ctx.beginPath();
+      for (let y = -r; y <= r; y += 8) {
+        const wave = Math.sin(y * 0.08 + stripe * 1.5) * (r * 0.07);
+        const x = baseX * Math.sqrt(Math.max(0, 1 - (y * y) / (r * r))) + wave;
+        if (y === -r) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
     ctx.restore();
 
-    // 3. Juicy Ruby-Red Watermelon Flesh (달콤한 빨간 과육 슬라이스)
-    ctx.save();
+    // 3. Top Stem Pip (상단 꼭지)
     ctx.beginPath();
-    ctx.moveTo(startX + 4, startY + 2);
-    // Outer curved boundary
-    ctx.quadraticCurveTo(0, bottomY - 14, endX - 4, endY + 2);
-    // Slightly dipped top cut edge
-    ctx.quadraticCurveTo(0, -r * 0.12, startX + 4, startY + 2);
-    ctx.closePath();
-
-    const fleshGrad = ctx.createRadialGradient(0, 0, r * 0.1, 0, 0, r * 0.85);
-    fleshGrad.addColorStop(0, '#f87171');
-    fleshGrad.addColorStop(0.4, '#ef4444');
-    fleshGrad.addColorStop(1, '#dc2626');
-    ctx.fillStyle = fleshGrad;
+    ctx.arc(0, -r * 0.94, 5, 0, Math.PI * 2);
+    ctx.fillStyle = '#78350f';
     ctx.fill();
 
-    // 4. Teardrop Black Seeds (선명한 수박씨)
-    const seeds = [
-      { x: -r * 0.58, y: -r * 0.05, rot: -0.35 },
-      { x: -r * 0.38, y: r * 0.16, rot: -0.22 },
-      { x: -r * 0.15, y: r * 0.32, rot: -0.08 },
-      { x: r * 0.12, y: r * 0.35, rot: 0.10 },
-      { x: r * 0.38, y: r * 0.20, rot: 0.25 },
-      { x: r * 0.60, y: -r * 0.02, rot: 0.38 }
-    ];
-
-    seeds.forEach(s => {
-      ctx.save();
-      ctx.translate(s.x, s.y);
-      ctx.rotate(s.rot);
-
-      // Teardrop seed shape
-      ctx.beginPath();
-      ctx.moveTo(0, -5);
-      ctx.bezierCurveTo(3, -2, 3.5, 3, 0, 4.5);
-      ctx.bezierCurveTo(-3.5, 3, -3, -2, 0, -5);
-      ctx.fillStyle = '#1e293b';
-      ctx.fill();
-
-      // Seed specular gleam dot
-      ctx.beginPath();
-      ctx.arc(0.8, -0.5, 1.2, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
-      ctx.fill();
-      ctx.restore();
-    });
-
-    // 5. Crisp Curved Specular Highlight (상단 흰색 광택 라인)
+    // 4. Smooth Curved Specular Highlight (우측 상단 곡선 광택)
     ctx.beginPath();
-    ctx.moveTo(startX + 18, startY + 12);
-    ctx.quadraticCurveTo(0, -r * 0.04, endX - 18, endY + 12);
+    ctx.arc(0, 0, r * 0.74, -Math.PI * 0.28, -Math.PI * 0.04);
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
-    ctx.lineWidth = r * 0.07;
+    ctx.lineWidth = r * 0.09;
     ctx.lineCap = 'round';
     ctx.stroke();
-
-    ctx.restore();
   }
 
   /* ---------------- 2. APPLE (사과 - Reference Row 2, Col 3) ---------------- */
@@ -711,57 +656,12 @@ export class FruitRenderer {
     ctx.fillStyle = heartGrad;
     ctx.fill();
 
-    // Curved Specular Highlight on Left Lobe
-    ctx.beginPath();
-    ctx.arc(-r * 0.45, -r * 0.48, r * 0.28, -Math.PI * 0.75, -Math.PI * 0.15);
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.75)';
-    ctx.lineWidth = r * 0.08;
-    ctx.lineCap = 'round';
-    ctx.stroke();
-
     ctx.restore();
   }
 
-  /* ---------------- Sliced Cross-Section Details ---------------- */
+  /* ---------------- Sliced Cross-Section Details (절단면 표현 없음) ---------------- */
   static drawCutFaceDetails(ctx, config, radius) {
-    const r = radius;
-
-    // Sliced cut rim line
-    ctx.beginPath();
-    ctx.moveTo(0, -r);
-    ctx.lineTo(0, r);
-    ctx.strokeStyle = config.fleshColor || '#ffffff';
-    ctx.lineWidth = 6;
-    ctx.stroke();
-
-    if (config.type === 'WATERMELON') {
-      // 2 black seeds visible along the cut face
-      ctx.fillStyle = '#1e293b';
-      ctx.beginPath();
-      ctx.arc(0, -r * 0.35, 4.5, 0, Math.PI * 2);
-      ctx.arc(0, r * 0.35, 4.5, 0, Math.PI * 2);
-      ctx.fill();
-    } else if (config.type === 'ORANGE') {
-      // Radial citrus segments and center core
-      ctx.fillStyle = '#fff7ed';
-      ctx.beginPath();
-      ctx.arc(0, 0, 6, 0, Math.PI * 2);
-      ctx.fill();
-    } else if (config.type === 'APPLE') {
-      // Core and seed pip
-      ctx.fillStyle = '#78350f';
-      ctx.beginPath();
-      ctx.ellipse(0, 0, 4, 7, 0, 0, Math.PI * 2);
-      ctx.fill();
-    } else if (config.type === 'BANANA') {
-      // 3 tiny black center seed specks
-      ctx.fillStyle = '#451a03';
-      ctx.beginPath();
-      ctx.arc(0, -8, 2.5, 0, Math.PI * 2);
-      ctx.arc(0, 0, 2.5, 0, Math.PI * 2);
-      ctx.arc(0, 8, 2.5, 0, Math.PI * 2);
-      ctx.fill();
-    }
+    // 절단면 표현 생략
   }
 
   static drawClassicBase(ctx, config) {

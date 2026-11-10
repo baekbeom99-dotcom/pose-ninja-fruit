@@ -4,6 +4,7 @@
  * Sine Wave, Lissajous Figure-8, Pulsing Dash-Glide, Spiral, and Screen Ricochet.
  */
 import { CONFIG } from '../config.js';
+import { FruitRenderer } from './fruit.js';
 
 export class HalfFish {
   constructor(fishConfig, x, y, vx, vy, cutAngle, isLeftHalf, themeId = 'CLASSIC_VECTOR') {
@@ -59,7 +60,7 @@ export class HalfFish {
     ctx.translate(this.x, this.y);
     ctx.rotate(this.rotation);
 
-    const clipR = this.radius * 2.2;
+    const clipR = this.radius * 2.5;
     ctx.beginPath();
     if (this.isLeftHalf) {
       ctx.rect(-clipR, -clipR, clipR, clipR * 2);
@@ -68,22 +69,8 @@ export class HalfFish {
     }
     ctx.clip();
 
-    FishRenderer.drawFishBody(ctx, this.config, 0);
+    FruitRenderer.drawFruitBody(ctx, this.config, 0);
 
-    ctx.restore();
-
-    // Sliced Cut Face Highlight
-    ctx.save();
-    ctx.translate(this.x, this.y);
-    ctx.rotate(this.rotation);
-    ctx.beginPath();
-    ctx.moveTo(0, -this.radius);
-    ctx.lineTo(0, this.radius);
-    ctx.strokeStyle = this.config.juiceColor || '#38bdf8';
-    ctx.lineWidth = 5;
-    ctx.shadowColor = this.config.juiceColor || '#38bdf8';
-    ctx.shadowBlur = 12;
-    ctx.stroke();
     ctx.restore();
   }
 }
@@ -226,7 +213,14 @@ export class Fish {
     ctx.translate(this.x, this.y);
     ctx.rotate(this.rotation);
 
-    FishRenderer.drawFishBody(ctx, this.config, this.animTimer);
+    // Subtle Zero-G UFO Antigravity Aura Ring around flying fruit
+    ctx.beginPath();
+    ctx.arc(0, 0, this.radius + 6, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(56, 189, 248, 0.40)';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    FruitRenderer.drawFruitBody(ctx, this.config, this.animTimer);
 
     ctx.restore();
   }

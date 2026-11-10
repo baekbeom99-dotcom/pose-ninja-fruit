@@ -84,27 +84,27 @@ export class FruitManager {
       Math.random() * (CONFIG.GAME.SPAWN_INTERVAL_MAX - CONFIG.GAME.SPAWN_INTERVAL_MIN);
   }
 
-  /* ---------------- 1. UFO FLYING FISH MODE (Zero-G Sinuous Waves) ---------------- */
+  /* ---------------- 1. UFO FRUIT MODE (Zero-G Trajectories with Existing Fruits) ---------------- */
   _spawnFishWave(canvasWidth, canvasHeight, availableSlots, currentLives) {
-    const fishKeys = Object.keys(CONFIG.FISHES).filter(
-      k => k !== 'ALIEN_BOMB' && k !== 'COSMIC_STAR'
+    const fruitKeys = Object.keys(CONFIG.FRUITS).filter(
+      k => k !== 'BOMB' && k !== 'HEART_BONUS'
     );
 
-    const getRandomFishConfig = () => {
-      const starChance = currentLives < 5
+    const getRandomFruitConfig = () => {
+      const heartChance = currentLives < 5
         ? CONFIG.GAME.HEART_BONUS_PROBABILITY * 1.5
         : CONFIG.GAME.HEART_BONUS_PROBABILITY;
 
-      if (Math.random() < starChance) return CONFIG.FISHES.COSMIC_STAR;
-      if (Math.random() < CONFIG.GAME.BOMB_PROBABILITY) return CONFIG.FISHES.ALIEN_BOMB;
+      if (Math.random() < heartChance) return CONFIG.FRUITS.HEART_BONUS;
+      if (Math.random() < CONFIG.GAME.BOMB_PROBABILITY) return CONFIG.FRUITS.BOMB;
 
-      const key = fishKeys[Math.floor(Math.random() * fishKeys.length)];
-      return CONFIG.FISHES[key];
+      const key = fruitKeys[Math.floor(Math.random() * fruitKeys.length)];
+      return CONFIG.FRUITS[key];
     };
 
     let remainingSlots = availableSlots;
     while (remainingSlots > 0) {
-      const cfg = getRandomFishConfig();
+      const cfg = getRandomFruitConfig();
       const pathTypeRand = Math.random();
 
       if (pathTypeRand < 0.45) {

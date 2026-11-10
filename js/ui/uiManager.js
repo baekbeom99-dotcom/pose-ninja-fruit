@@ -159,11 +159,11 @@ export class UIManager {
       if (this.btnModeUfo) this.btnModeUfo.classList.add('active');
       if (this.instructionModeDesc) {
         this.instructionModeDesc.innerHTML =
-          '🛸 <strong>UFO 우주 물고기 모드</strong>: 중력 없이 우주를 유영하는 네온 금붕어, 사이버 광대어, 우주 해파리를 베어보세요!';
+          '🛸 <strong>UFO 과일 모드</strong>: 중력의 영향을 받지 않는 무중력 우주 과일들이 개성 넘치는 궤적으로 비행합니다!';
       }
       if (this.instructionSpecial) {
         this.instructionSpecial.innerHTML =
-          '🌊 <strong>사인파 & 8자 순찰 궤적</strong>: 규칙적이고 부드러운 우주 파동 궤적으로 비행하는 물고기를 베어보세요!';
+          '🌊 <strong>무중력 비행 궤적</strong>: 사인파, 8자 순찰, 제트 대시, 벽면 반사 궤적으로 비행하는 과일들을 베어보세요!';
       }
     } else {
       if (this.btnModeClassic) this.btnModeClassic.classList.add('active');
