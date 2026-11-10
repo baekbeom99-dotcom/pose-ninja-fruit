@@ -32,7 +32,7 @@
         </div>
 
         <div class="lives-container" id="lives-container">
-          <!-- 3 Lives Hearts SVG -->
+          <!-- 5 Lives Hearts SVG -->
           <svg class="life-heart" id="life-1" viewBox="0 0 24 24" fill="#ef4444">
             <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
           </svg>
@@ -42,6 +42,12 @@
           <svg class="life-heart" id="life-3" viewBox="0 0 24 24" fill="#ef4444">
             <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
           </svg>
+          <svg class="life-heart" id="life-4" viewBox="0 0 24 24" fill="#ef4444">
+            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+          </svg>
+          <svg class="life-heart" id="life-5" viewBox="0 0 24 24" fill="#ef4444">
+            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+          </svg>
         </div>
       </div>
 
@@ -49,6 +55,12 @@
       <div id="combo-container">
         <div id="combo-title" class="combo-text">3x COMBO!</div>
         <div id="combo-score" class="combo-points">+30 PTS</div>
+      </div>
+
+      <!-- Heal / Life Recovery Notification -->
+      <div id="heal-container" class="heal-banner">
+        <span class="heal-icon">💖</span>
+        <span class="heal-text">+1 LIFE RECOVERED!</span>
       </div>
 
       <!-- Status Pill -->
@@ -66,8 +78,9 @@
           <div class="instructions-card">
             <div>⚔️ <strong>양손이 칼날</strong>: 왼손(하늘색)과 오른손(분홍색)을 빠르게 휘두르면 베어집니다.</div>
             <div>🍎 <strong>과일 콤보</strong>: 한 번에 여러 과일을 베면 추가 콤보 점수 획득!</div>
-            <div>💣 <strong>폭탄 주의</strong>: 폭탄을 베면 즉시 생명을 잃거나 게임이 종료됩니다.</div>
-            <div>❤️ <strong>생명 관리</strong>: 과일을 놓치면 생명(하트)이 차감됩니다.</div>
+            <div>💖 <strong>하트 보너스</strong>: 반짝이는 핑크 하트를 베면 잃어버린 생명(+1)이 회복됩니다!</div>
+            <div>💣 <strong>폭탄 주의</strong>: 폭탄을 베면 즉시 폭발하여 게임이 종료됩니다.</div>
+            <div>❤️ <strong>생명 관리</strong>: 총 5개의 생명으로 시작하며, 과일을 놓치면 차감됩니다.</div>
           </div>
 
           <button id="start-btn" class="primary-btn">게임 시작하기</button>

@@ -48,7 +48,7 @@ export class SoundManager {
   }
 
   /**
-   * Fast aerodynamic whoosh sound when swinging the blade
+   * Aerodynamic whoosh sound when swinging the blade
    */
   playSwish() {
     if (!this.ctx || this.isMuted) return;
@@ -60,26 +60,26 @@ export class SoundManager {
 
     const filter = this.ctx.createBiquadFilter();
     filter.type = 'bandpass';
-    filter.frequency.setValueAtTime(450, now);
-    filter.frequency.exponentialRampToValueAtTime(1400, now + 0.05);
-    filter.frequency.exponentialRampToValueAtTime(200, now + 0.12);
-    filter.Q.setValueAtTime(3.0, now);
+    filter.frequency.setValueAtTime(500, now);
+    filter.frequency.exponentialRampToValueAtTime(1600, now + 0.05);
+    filter.frequency.exponentialRampToValueAtTime(220, now + 0.14);
+    filter.Q.setValueAtTime(3.5, now);
 
     const gain = this.ctx.createGain();
     gain.gain.setValueAtTime(0.001, now);
-    gain.gain.linearRampToValueAtTime(0.3, now + 0.03);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+    gain.gain.linearRampToValueAtTime(0.35, now + 0.03);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
 
     noise.connect(filter);
     filter.connect(gain);
     gain.connect(this.ctx.destination);
 
     noise.start(now);
-    noise.stop(now + 0.12);
+    noise.stop(now + 0.14);
   }
 
   /**
-   * Crisp, wet squish & slice sound when cutting a fruit
+   * Crisp, wet squish & slice sound with metallic ring
    */
   playSlice() {
     if (!this.ctx || this.isMuted) return;
@@ -91,17 +91,17 @@ export class SoundManager {
     const osc = this.ctx.createOscillator();
     const oscGain = this.ctx.createGain();
 
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(1200, now);
-    osc.frequency.exponentialRampToValueAtTime(280, now + 0.09);
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(1400, now);
+    osc.frequency.exponentialRampToValueAtTime(320, now + 0.1);
 
-    oscGain.gain.setValueAtTime(0.4, now);
-    oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+    oscGain.gain.setValueAtTime(0.45, now);
+    oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
 
     osc.connect(oscGain);
     oscGain.connect(this.ctx.destination);
     osc.start(now);
-    osc.stop(now + 0.09);
+    osc.stop(now + 0.1);
 
     // 2. High frequency noise pop for wet juice squish
     if (this.noiseBuffer) {
@@ -110,19 +110,47 @@ export class SoundManager {
 
       const filter = this.ctx.createBiquadFilter();
       filter.type = 'highpass';
-      filter.frequency.setValueAtTime(1800, now);
+      filter.frequency.setValueAtTime(2200, now);
 
       const noiseGain = this.ctx.createGain();
-      noiseGain.gain.setValueAtTime(0.28, now);
-      noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+      noiseGain.gain.setValueAtTime(0.35, now);
+      noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
 
       noise.connect(filter);
       filter.connect(noiseGain);
       noiseGain.connect(this.ctx.destination);
 
       noise.start(now);
-      noise.stop(now + 0.07);
+      noise.stop(now + 0.08);
     }
+  }
+
+  /**
+   * Magical Celestial Harpeggio when slicing a Heart Bonus (+1 Life)
+   */
+  playHeartRecovery() {
+    if (!this.ctx || this.isMuted) return;
+    this.resume();
+
+    const notes = [659.25, 830.61, 987.77, 1318.51, 1661.22]; // E5, G#5, B5, E6, G#6 (E Major sparkle)
+    notes.forEach((freq, i) => {
+      const start = this.ctx.currentTime + i * 0.055;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, start);
+
+      gain.gain.setValueAtTime(0.001, start);
+      gain.gain.linearRampToValueAtTime(0.4, start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, start + 0.45);
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+
+      osc.start(start);
+      osc.stop(start + 0.45);
+    });
   }
 
   /**
@@ -134,20 +162,20 @@ export class SoundManager {
 
     const now = this.ctx.currentTime;
 
-    // Low sub rumble
+    // Sub rumble
     const osc = this.ctx.createOscillator();
     const oscGain = this.ctx.createGain();
     osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(140, now);
-    osc.frequency.exponentialRampToValueAtTime(25, now + 0.6);
+    osc.frequency.setValueAtTime(160, now);
+    osc.frequency.exponentialRampToValueAtTime(20, now + 0.7);
 
-    oscGain.gain.setValueAtTime(0.6, now);
-    oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+    oscGain.gain.setValueAtTime(0.7, now);
+    oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
 
     osc.connect(oscGain);
     oscGain.connect(this.ctx.destination);
     osc.start(now);
-    osc.stop(now + 0.6);
+    osc.stop(now + 0.7);
 
     // Noise blast
     if (this.noiseBuffer) {
@@ -156,19 +184,19 @@ export class SoundManager {
 
       const filter = this.ctx.createBiquadFilter();
       filter.type = 'lowpass';
-      filter.frequency.setValueAtTime(900, now);
-      filter.frequency.linearRampToValueAtTime(120, now + 0.5);
+      filter.frequency.setValueAtTime(1000, now);
+      filter.frequency.linearRampToValueAtTime(100, now + 0.6);
 
       const noiseGain = this.ctx.createGain();
-      noiseGain.gain.setValueAtTime(0.7, now);
-      noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+      noiseGain.gain.setValueAtTime(0.8, now);
+      noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
 
       noise.connect(filter);
       filter.connect(noiseGain);
       noiseGain.connect(this.ctx.destination);
 
       noise.start(now);
-      noise.stop(now + 0.5);
+      noise.stop(now + 0.6);
     }
   }
 
@@ -180,11 +208,11 @@ export class SoundManager {
     if (!this.ctx || this.isMuted) return;
     this.resume();
 
-    const frequencies = [523.25, 659.25, 783.99, 1046.50, 1318.51]; // C5, E5, G5, C6, E6
+    const frequencies = [523.25, 659.25, 783.99, 1046.50, 1318.51, 1567.98]; // C5 to G6
     const count = Math.min(comboCount, frequencies.length);
 
     frequencies.slice(0, count).forEach((freq, idx) => {
-      const startTime = this.ctx.currentTime + idx * 0.055;
+      const startTime = this.ctx.currentTime + idx * 0.05;
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
 
@@ -192,14 +220,14 @@ export class SoundManager {
       osc.frequency.setValueAtTime(freq, startTime);
 
       gain.gain.setValueAtTime(0.001, startTime);
-      gain.gain.linearRampToValueAtTime(0.35, startTime + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.28);
+      gain.gain.linearRampToValueAtTime(0.4, startTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.35);
 
       osc.connect(gain);
       gain.connect(this.ctx.destination);
 
       osc.start(startTime);
-      osc.stop(startTime + 0.28);
+      osc.stop(startTime + 0.35);
     });
   }
 }

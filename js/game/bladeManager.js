@@ -26,7 +26,6 @@ class Blade {
    */
   update(rawPos, currentTime) {
     if (!rawPos) {
-      // Fade out trail if tracking is lost
       if (this.history.length > 0) {
         this.history.shift();
       }
@@ -56,10 +55,10 @@ class Blade {
       time: currentTime
     });
 
-    // Prune history to max length and expire older points (> 150ms)
+    // Prune history to max length and expire older points (> 180ms)
     while (
       this.history.length > CONFIG.BLADE.TRAIL_LENGTH ||
-      (this.history.length > 2 && currentTime - this.history[0].time > 160)
+      (this.history.length > 2 && currentTime - this.history[0].time > 190)
     ) {
       this.history.shift();
     }
@@ -68,7 +67,7 @@ class Blade {
     if (this.history.length >= 3) {
       const oldest = this.history[0];
       const newest = this.history[this.history.length - 1];
-      const dt = (newest.time - oldest.time) / 1000; // in seconds
+      const dt = (newest.time - oldest.time) / 1000;
 
       if (dt > 0.015) {
         const dx = newest.x - oldest.x;
@@ -83,7 +82,7 @@ class Blade {
     this.isActive = this.velocity >= CONFIG.BLADE.MIN_VELOCITY_TO_SLICE;
 
     // Trigger swish sound on high-speed entry
-    if (this.isActive && !this.wasActive && currentTime - this.lastActiveTime > 280) {
+    if (this.isActive && !this.wasActive && currentTime - this.lastActiveTime > 260) {
       soundManager.playSwish();
       this.lastActiveTime = currentTime;
     }
@@ -103,7 +102,7 @@ class Blade {
   }
 
   /**
-   * Draws smooth neon blade trail using quadratic curves
+   * Draws radiant, multi-layered neon blade trail with glowing halos
    */
   draw(ctx) {
     if (this.history.length < 2) return;
@@ -112,9 +111,9 @@ class Blade {
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
-    // 1. Outer Glow (Screen/Lighter blend)
+    // 1. Wide Atmospheric Glow (Lighter blend)
     ctx.globalCompositeOperation = 'lighter';
-    ctx.shadowBlur = this.isActive ? 20 : 8;
+    ctx.shadowBlur = this.isActive ? 28 : 12;
     ctx.shadowColor = this.colors.GLOW;
     ctx.strokeStyle = this.colors.GLOW;
 
@@ -126,12 +125,29 @@ class Blade {
       ctx.beginPath();
       ctx.moveTo(p1.x, p1.y);
       ctx.lineTo(p2.x, p2.y);
-      ctx.lineWidth = progress * (this.isActive ? 16 : 7);
+      ctx.lineWidth = progress * (this.isActive ? 22 : 9);
       ctx.stroke();
     }
 
-    // 2. Bright Inner Core
-    ctx.shadowBlur = 4;
+    // 2. Focused Intense Neon Stroke
+    ctx.shadowBlur = this.isActive ? 14 : 6;
+    ctx.shadowColor = this.colors.SPARK;
+    ctx.strokeStyle = this.colors.SPARK;
+
+    for (let i = 0; i < this.history.length - 1; i++) {
+      const p1 = this.history[i];
+      const p2 = this.history[i + 1];
+      const progress = (i + 1) / this.history.length;
+
+      ctx.beginPath();
+      ctx.moveTo(p1.x, p1.y);
+      ctx.lineTo(p2.x, p2.y);
+      ctx.lineWidth = progress * (this.isActive ? 12 : 5);
+      ctx.stroke();
+    }
+
+    // 3. Bright White Plasma Core
+    ctx.shadowBlur = 6;
     ctx.shadowColor = '#ffffff';
     ctx.strokeStyle = this.colors.CORE;
 
@@ -143,16 +159,24 @@ class Blade {
       ctx.beginPath();
       ctx.moveTo(p1.x, p1.y);
       ctx.lineTo(p2.x, p2.y);
-      ctx.lineWidth = progress * (this.isActive ? 6 : 2.5);
+      ctx.lineWidth = progress * (this.isActive ? 5 : 2);
       ctx.stroke();
     }
 
-    // 3. Leading blade tip marker
+    // 4. Leading blade tip marker with pulsating halo
     if (this.currentPos) {
       ctx.beginPath();
-      ctx.arc(this.currentPos.x, this.currentPos.y, this.isActive ? 10 : 6, 0, Math.PI * 2);
+      ctx.arc(this.currentPos.x, this.currentPos.y, this.isActive ? 12 : 7, 0, Math.PI * 2);
       ctx.fillStyle = this.colors.CORE;
       ctx.fill();
+
+      if (this.isActive) {
+        ctx.beginPath();
+        ctx.arc(this.currentPos.x, this.currentPos.y, 18, 0, Math.PI * 2);
+        ctx.strokeStyle = this.colors.GLOW;
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+      }
     }
 
     ctx.restore();
@@ -167,15 +191,12 @@ export class BladeManager {
 
   /**
    * Updates blade tracking from MediaPipe landmarks
-   * Left: #19 (Index) or #15 (Wrist)
-   * Right: #20 (Index) or #16 (Wrist)
    */
   update(landmarks, canvasWidth, canvasHeight, currentTime, mirror = true) {
     let leftPt = null;
     let rightPt = null;
 
     if (landmarks && landmarks.length > 20) {
-      // Prefer index finger tip (19/20), fallback to wrist (15/16)
       const lIndex = landmarks[19];
       const lWrist = landmarks[15];
       const lTarget = (lIndex && lIndex.visibility > 0.4) ? lIndex : lWrist;
@@ -203,9 +224,6 @@ export class BladeManager {
     this.rightBlade.update(rightPt, currentTime);
   }
 
-  /**
-   * Gets all active slicing line segments for collision testing
-   */
   getActiveSegments() {
     const segments = [];
     const leftSeg = this.leftBlade.getSegment();

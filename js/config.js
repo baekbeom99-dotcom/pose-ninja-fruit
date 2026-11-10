@@ -11,40 +11,41 @@ export const CONFIG = {
 
   // Blade Tracking & Sensitivity
   BLADE: {
-    MIN_VELOCITY_TO_SLICE: 380, // px per second minimum to activate slicing
-    TRAIL_LENGTH: 12,            // History points for trail rendering
+    MIN_VELOCITY_TO_SLICE: 350, // px per second minimum to activate slicing
+    TRAIL_LENGTH: 16,            // History points for longer luxurious trail rendering
     SMOOTHING_ALPHA: 0.65,       // EMA weight for new frame (0 to 1)
     COLORS: {
       LEFT: {
         CORE: '#ffffff',
         GLOW: '#00e5ff', // Cyan
-        SPARK: '#80f0ff'
+        SPARK: '#38bdf8'
       },
       RIGHT: {
         CORE: '#ffffff',
         GLOW: '#ff007f', // Neon Magenta/Pink
-        SPARK: '#ff80bf'
+        SPARK: '#f43f5e'
       }
     }
   },
 
   // Game Physics
   PHYSICS: {
-    GRAVITY: 980,               // Pixels per second squared
+    GRAVITY: 940,               // Pixels per second squared
     AIR_RESISTANCE: 0.998,
-    HALF_SEPARATION_SPEED: 260, // Speed at which sliced halves push apart
-    HALF_ANGULAR_VELOCITY: 5.0  // Rotation speed of sliced halves
+    HALF_SEPARATION_SPEED: 300, // Speed at which sliced halves push apart
+    HALF_ANGULAR_VELOCITY: 5.5  // Rotation speed of sliced halves
   },
 
   // Gameplay Settings
   GAME: {
-    START_LIVES: 3,
-    MAX_LIVES: 3,
-    COMBO_WINDOW_MS: 320,       // Time window to count multi-fruit combos
-    SPAWN_INTERVAL_MIN: 1.8,    // Seconds
-    SPAWN_INTERVAL_MAX: 3.2,    // Seconds
-    DIFFICULTY_RAMP_INTERVAL: 15,// Seconds to increase difficulty
-    BOMB_PROBABILITY: 0.18      // Chance of spawning a bomb in a wave
+    START_LIVES: 5,
+    MAX_LIVES: 5,
+    COMBO_WINDOW_MS: 340,        // Time window to count multi-fruit combos
+    SPAWN_INTERVAL_MIN: 1.4,     // Seconds (more frequent for active workout)
+    SPAWN_INTERVAL_MAX: 2.6,     // Seconds
+    DIFFICULTY_RAMP_INTERVAL: 12,// Seconds to increase difficulty
+    BOMB_PROBABILITY: 0.16,      // Chance of spawning a bomb in a wave
+    HEART_BONUS_PROBABILITY: 0.12 // Chance of spawning a heart bonus item
   },
 
   // Fruit Types and Visual Palette
@@ -93,6 +94,15 @@ export const CONFIG = {
       fleshColor: '#fde047',  // Vibrant yellow
       juiceColor: '#b45309',
       rindColor: '#65a30d'    // Green crown
+    },
+    HEART_BONUS: {
+      type: 'HEART_BONUS',
+      radius: 44,
+      points: 5,
+      color: '#ec4899',       // Glowing Rose Pink
+      fleshColor: '#f43f5e',  // Radiant Heart Red
+      juiceColor: '#fb7185',  // Sparkle Petals
+      rindColor: '#facc15'    // Golden Halo
     },
     BOMB: {
       type: 'BOMB',

@@ -1,5 +1,5 @@
 /**
- * Fruit, HalfFruit, and Bomb Entities
+ * Fruit, HalfFruit, Bomb, and HeartBonus Entities
  * Procedurally rendered with Canvas 2D, parabolic physics, and slicing split mechanics
  */
 import { CONFIG } from '../config.js';
@@ -26,7 +26,7 @@ export class HalfFruit {
     this.y += this.vy * dt;
     this.rotation += this.angularVelocity * dt;
 
-    if (this.y > CONFIG.CANVAS.HEIGHT + 120) {
+    if (this.y > CONFIG.CANVAS.HEIGHT + 140) {
       this.isDead = true;
     }
   }
@@ -39,17 +39,16 @@ export class HalfFruit {
     // Clip to half circle along the cut line
     ctx.beginPath();
     if (this.isLeftHalf) {
-      ctx.arc(0, 0, this.radius + 2, -Math.PI / 2, Math.PI / 2, true);
+      ctx.arc(0, 0, this.radius + 4, -Math.PI / 2, Math.PI / 2, true);
     } else {
-      ctx.arc(0, 0, this.radius + 2, -Math.PI / 2, Math.PI / 2, false);
+      ctx.arc(0, 0, this.radius + 4, -Math.PI / 2, Math.PI / 2, false);
     }
     ctx.closePath();
     ctx.clip();
 
     // Draw the fruit content
-    FruitRenderer.drawFruitBody(ctx, this.config);
+    FruitRenderer.drawFruitBody(ctx, this.config, 0);
 
-    // Draw slice face cross-section highlight along the cut diameter
     ctx.restore();
 
     // Subtle edge highlight along the cut
@@ -60,7 +59,7 @@ export class HalfFruit {
     ctx.moveTo(0, -this.radius);
     ctx.lineTo(0, this.radius);
     ctx.strokeStyle = this.config.fleshColor || '#ffffff';
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 3.5;
     ctx.stroke();
     ctx.restore();
   }
@@ -79,14 +78,14 @@ export class Fruit {
     this.vy = vy;
 
     this.rotation = Math.random() * Math.PI * 2;
-    this.angularVelocity = (Math.random() - 0.5) * 4;
+    this.angularVelocity = (Math.random() - 0.5) * 4.5;
 
     this.isSliced = false;
     this.isMissed = false;
     this.isDead = false;
 
-    // Bomb fuse animation timer
-    this.fuseTimer = 0;
+    // Animation timer for sparks / pulsing
+    this.animTimer = Math.random() * 10;
   }
 
   update(dt) {
@@ -95,10 +94,10 @@ export class Fruit {
     this.x += this.vx * dt;
     this.y += this.vy * dt;
     this.rotation += this.angularVelocity * dt;
-    this.fuseTimer += dt;
+    this.animTimer += dt;
 
-    // Check if missed falling below screen without being sliced
-    if (!this.isSliced && this.vy > 0 && this.y > CONFIG.CANVAS.HEIGHT + this.radius) {
+    // Missed falling below screen without being sliced
+    if (!this.isSliced && this.vy > 0 && this.y > CONFIG.CANVAS.HEIGHT + this.radius + 10) {
       this.isMissed = true;
       this.isDead = true;
     }
@@ -115,7 +114,7 @@ export class Fruit {
     this.isDead = true;
 
     if (this.type === 'BOMB') {
-      return []; // Bombs detonate rather than producing clean halves
+      return []; // Bombs detonate without halves
     }
 
     const pushSpeed = CONFIG.PHYSICS.HALF_SEPARATION_SPEED;
@@ -126,7 +125,7 @@ export class Fruit {
       this.x,
       this.y,
       this.vx + normal.x * pushSpeed,
-      this.vy + normal.y * pushSpeed - 50,
+      this.vy + normal.y * pushSpeed - 60,
       cutAngle,
       true
     );
@@ -137,7 +136,7 @@ export class Fruit {
       this.x,
       this.y,
       this.vx - normal.x * pushSpeed,
-      this.vy - normal.y * pushSpeed - 50,
+      this.vy - normal.y * pushSpeed - 60,
       cutAngle,
       false
     );
@@ -153,9 +152,11 @@ export class Fruit {
     ctx.rotate(this.rotation);
 
     if (this.type === 'BOMB') {
-      FruitRenderer.drawBomb(ctx, this.config, this.fuseTimer);
+      FruitRenderer.drawBomb(ctx, this.config, this.animTimer);
+    } else if (this.type === 'HEART_BONUS') {
+      FruitRenderer.drawHeartBonus(ctx, this.config, this.animTimer);
     } else {
-      FruitRenderer.drawFruitBody(ctx, this.config);
+      FruitRenderer.drawFruitBody(ctx, this.config, this.animTimer);
     }
 
     ctx.restore();
@@ -166,7 +167,7 @@ export class Fruit {
  * Procedural Vector Graphics Renderer for Canvas 2D
  */
 class FruitRenderer {
-  static drawFruitBody(ctx, config) {
+  static drawFruitBody(ctx, config, animTimer = 0) {
     switch (config.type) {
       case 'WATERMELON':
         this.drawWatermelon(ctx, config);
@@ -183,6 +184,9 @@ class FruitRenderer {
       case 'PINEAPPLE':
         this.drawPineapple(ctx, config);
         break;
+      case 'HEART_BONUS':
+        this.drawHeartBonus(ctx, config, animTimer);
+        break;
       default:
         this.drawGenericFruit(ctx, config);
     }
@@ -198,10 +202,10 @@ class FruitRenderer {
 
     // Dark green rind stripes
     ctx.strokeStyle = '#14532d';
-    ctx.lineWidth = 4;
+    ctx.lineWidth = 4.5;
     for (let i = 0; i < 6; i++) {
       ctx.beginPath();
-      ctx.ellipse(0, 0, r - 2, r * 0.7, (i * Math.PI) / 6, 0, Math.PI * 2);
+      ctx.ellipse(0, 0, r - 2, r * 0.72, (i * Math.PI) / 6, 0, Math.PI * 2);
       ctx.stroke();
     }
 
@@ -231,27 +235,23 @@ class FruitRenderer {
 
   static drawOrange(ctx, config) {
     const r = config.radius;
-    // Orange skin
     ctx.beginPath();
     ctx.arc(0, 0, r, 0, Math.PI * 2);
     ctx.fillStyle = config.color;
     ctx.fill();
 
-    // Inner white pith
     ctx.beginPath();
     ctx.arc(0, 0, r * 0.88, 0, Math.PI * 2);
     ctx.fillStyle = config.rindColor;
     ctx.fill();
 
-    // Orange flesh center
     ctx.beginPath();
     ctx.arc(0, 0, r * 0.82, 0, Math.PI * 2);
     ctx.fillStyle = config.fleshColor;
     ctx.fill();
 
-    // Segment lines
     ctx.strokeStyle = config.rindColor;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2.5;
     for (let i = 0; i < 8; i++) {
       const a = (i * Math.PI) / 4;
       ctx.beginPath();
@@ -263,7 +263,6 @@ class FruitRenderer {
 
   static drawApple(ctx, config) {
     const r = config.radius;
-    // Apple lobes shape
     ctx.beginPath();
     ctx.arc(-r * 0.35, 0, r * 0.7, 0, Math.PI * 2);
     ctx.arc(r * 0.35, 0, r * 0.7, 0, Math.PI * 2);
@@ -271,7 +270,7 @@ class FruitRenderer {
     ctx.fillStyle = config.color;
     ctx.fill();
 
-    // Top stem
+    // Stem
     ctx.beginPath();
     ctx.moveTo(0, -r * 0.7);
     ctx.quadraticCurveTo(6, -r * 1.1, 10, -r * 1.25);
@@ -280,7 +279,7 @@ class FruitRenderer {
     ctx.lineCap = 'round';
     ctx.stroke();
 
-    // Green leaf
+    // Leaf
     ctx.beginPath();
     ctx.ellipse(8, -r * 0.95, 8, 4, Math.PI / 4, 0, Math.PI * 2);
     ctx.fillStyle = '#22c55e';
@@ -297,7 +296,6 @@ class FruitRenderer {
     ctx.fillStyle = config.color;
     ctx.fill();
 
-    // End tips
     ctx.fillStyle = '#713f12';
     ctx.beginPath();
     ctx.arc(-r * 1.05, -r * 0.28, 4, 0, Math.PI * 2);
@@ -308,7 +306,6 @@ class FruitRenderer {
 
   static drawPineapple(ctx, config) {
     const r = config.radius;
-    // Oval body
     ctx.beginPath();
     ctx.ellipse(0, r * 0.15, r * 0.75, r * 0.9, 0, 0, Math.PI * 2);
     ctx.fillStyle = config.color;
@@ -316,7 +313,7 @@ class FruitRenderer {
 
     // Cross-hatch diamond texture
     ctx.strokeStyle = '#78350f';
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2.2;
     for (let i = -2; i <= 2; i++) {
       ctx.beginPath();
       ctx.moveTo(-r * 0.6, i * 15 - 10);
@@ -338,6 +335,58 @@ class FruitRenderer {
       ctx.lineTo((offset + 0.15) * r, -r * 0.6);
       ctx.fill();
     });
+  }
+
+  /**
+   * Glowing Heart Bonus Icon (+1 Life Recovery)
+   */
+  static drawHeartBonus(ctx, config, animTimer) {
+    const r = config.radius;
+    const pulse = 1 + Math.sin(animTimer * 6) * 0.08;
+
+    ctx.save();
+    ctx.scale(pulse, pulse);
+
+    // Glowing golden outer aura
+    ctx.shadowColor = '#f43f5e';
+    ctx.shadowBlur = 24;
+
+    // Heart shape path
+    ctx.beginPath();
+    const topCurveHeight = r * 0.6;
+    ctx.moveTo(0, r * 0.25);
+    // Left curve
+    ctx.bezierCurveTo(-r * 0.9, -r * 0.45, -r * 0.95, topCurveHeight, 0, r * 0.95);
+    // Right curve
+    ctx.bezierCurveTo(r * 0.95, topCurveHeight, r * 0.9, -r * 0.45, 0, r * 0.25);
+    ctx.closePath();
+
+    // Radiant gradient fill
+    const grad = ctx.createRadialGradient(0, 0, 4, 0, 0, r);
+    grad.addColorStop(0, '#fef08a'); // Gold sparkle center
+    grad.addColorStop(0.3, '#ec4899'); // Rose Pink
+    grad.addColorStop(1, '#e11d48'); // Crimson
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // Golden boundary stroke
+    ctx.strokeStyle = '#fef08a';
+    ctx.lineWidth = 4;
+    ctx.stroke();
+
+    // Floating sparkles around heart
+    ctx.fillStyle = '#ffffff';
+    for (let i = 0; i < 4; i++) {
+      const a = animTimer * 3 + (i * Math.PI) / 2;
+      const dist = r * 1.15;
+      const sx = Math.cos(a) * dist;
+      const sy = Math.sin(a) * dist;
+      ctx.beginPath();
+      ctx.arc(sx, sy, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.restore();
   }
 
   static drawBomb(ctx, config, fuseTimer) {
@@ -372,7 +421,7 @@ class FruitRenderer {
     ctx.arc(sparkX, sparkY, 5 + Math.sin(fuseTimer * 30) * 2, 0, Math.PI * 2);
     ctx.fillStyle = '#facc15';
     ctx.shadowColor = '#f97316';
-    ctx.shadowBlur = 12;
+    ctx.shadowBlur = 14;
     ctx.fill();
     ctx.shadowBlur = 0;
   }

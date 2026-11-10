@@ -10,6 +10,7 @@ export class UIManager {
     this.comboContainer = document.getElementById('combo-container');
     this.comboTitle = document.getElementById('combo-title');
     this.comboScore = document.getElementById('combo-score');
+    this.healContainer = document.getElementById('heal-container');
     this.startModal = document.getElementById('start-modal');
     this.gameoverModal = document.getElementById('gameover-modal');
     this.statusPill = document.getElementById('status-pill');
@@ -17,6 +18,7 @@ export class UIManager {
     this.statusText = document.getElementById('status-text');
 
     this.comboTimeout = null;
+    this.healTimeout = null;
     this.highScore = parseInt(localStorage.getItem('pose_ninja_highscore') || '0', 10);
     this.updateHighScoreDisplay();
   }
@@ -38,17 +40,38 @@ export class UIManager {
     }
   }
 
-  updateLives(lives, maxLives = 3) {
+  updateLives(lives, maxLives = 5) {
     for (let i = 1; i <= maxLives; i++) {
       const heart = document.getElementById(`life-${i}`);
       if (heart) {
         if (i > lives) {
           heart.classList.add('lost');
+          heart.classList.remove('recover');
         } else {
+          const wasLost = heart.classList.contains('lost');
           heart.classList.remove('lost');
+          if (wasLost) {
+            heart.classList.add('recover');
+            setTimeout(() => heart.classList.remove('recover'), 600);
+          }
         }
       }
     }
+  }
+
+  showHeal() {
+    if (!this.healContainer) return;
+    if (this.healTimeout) {
+      clearTimeout(this.healTimeout);
+    }
+
+    this.healContainer.classList.remove('active');
+    void this.healContainer.offsetWidth; // Force reflow
+    this.healContainer.classList.add('active');
+
+    this.healTimeout = setTimeout(() => {
+      this.healContainer.classList.remove('active');
+    }, 850);
   }
 
   showCombo(count, bonusPoints) {
@@ -62,7 +85,6 @@ export class UIManager {
     this.comboScore.textContent = `+${bonusPoints} BONUS`;
 
     this.comboContainer.classList.remove('active');
-    // Force DOM reflow to re-trigger animation
     void this.comboContainer.offsetWidth;
     this.comboContainer.classList.add('active');
 

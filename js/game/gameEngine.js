@@ -66,10 +66,22 @@ export class GameEngine {
 
     this.fruitManager.onBomb = (bomb) => {
       if (this.state !== GameState.PLAYING) return;
-      this.triggerScreenShake(0.6, 22);
+      this.triggerScreenShake(0.65, 24);
       this.lives = 0;
       this.ui.updateLives(0, CONFIG.GAME.MAX_LIVES);
       this.triggerGameOver();
+    };
+
+    this.fruitManager.onHeart = (item, hitPoint) => {
+      if (this.state !== GameState.PLAYING) return;
+      // Recover 1 life if not full
+      if (this.lives < CONFIG.GAME.MAX_LIVES) {
+        this.lives++;
+        this.ui.updateLives(this.lives, CONFIG.GAME.MAX_LIVES);
+      }
+      this.score += item.points || 5;
+      this.ui.updateScore(this.score);
+      this.ui.showHeal();
     };
 
     this.fruitManager.onCombo = (count, bonus) => {
@@ -125,7 +137,7 @@ export class GameEngine {
    */
   startLoop() {
     const loop = (currentTime) => {
-      const dt = Math.min((currentTime - this.lastTime) / 1000, 0.1); // clamp max dt to 100ms
+      const dt = Math.min((currentTime - this.lastTime) / 1000, 0.1);
       this.lastTime = currentTime;
 
       this.update(dt, currentTime);
@@ -138,7 +150,6 @@ export class GameEngine {
   }
 
   update(dt, currentTime) {
-    // Screen shake update
     if (this.shakeDuration > 0) {
       this.shakeDuration -= dt;
       if (this.shakeDuration <= 0) {
@@ -158,9 +169,8 @@ export class GameEngine {
     // 3. Update Game & Fruits if currently playing
     if (this.state === GameState.PLAYING) {
       const activeSegments = this.blades.getActiveSegments();
-      this.fruitManager.update(dt, activeSegments, this.width, this.height, currentTime);
+      this.fruitManager.update(dt, activeSegments, this.width, this.height, currentTime, this.lives);
     } else {
-      // Just update particles when not in playing state
       this.particles.update(dt);
     }
 
@@ -171,7 +181,6 @@ export class GameEngine {
     const w = this.width;
     const h = this.height;
 
-    // Apply screen shake to game canvas
     let offsetX = 0;
     let offsetY = 0;
     if (this.shakeIntensity > 0) {
@@ -183,19 +192,17 @@ export class GameEngine {
     this.bgCtx.clearRect(0, 0, w, h);
     if (this.video.readyState >= 2) {
       this.bgCtx.save();
-      // Mirror video horizontally
       this.bgCtx.translate(w, 0);
       this.bgCtx.scale(-1, 1);
       this.bgCtx.drawImage(this.video, 0, 0, w, h);
       this.bgCtx.restore();
     }
 
-    // Draw neon skeleton
     if (this.lastLandmarks) {
       this.poseTracker.drawSkeleton(this.bgCtx, this.lastLandmarks, w, h, CONFIG.CANVAS.MIRROR);
     }
 
-    // --- Layer 2: Game Objects (Fruits, Halves, Splatters, Juice) ---
+    // --- Layer 2: Game Objects (Fruits, Halves, Splatters, Shockwaves) ---
     this.gameCtx.clearRect(0, 0, w, h);
     this.gameCtx.save();
     if (offsetX !== 0 || offsetY !== 0) {
@@ -204,7 +211,7 @@ export class GameEngine {
     this.fruitManager.draw(this.gameCtx);
     this.gameCtx.restore();
 
-    // --- Layer 3: Neon Blade Trails ---
+    // --- Layer 3: Radiant Neon Blade Trails ---
     this.bladeCtx.clearRect(0, 0, w, h);
     this.blades.draw(this.bladeCtx);
   }
