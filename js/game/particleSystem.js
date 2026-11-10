@@ -1,10 +1,9 @@
 /**
- * Particle and Splatter FX System
- * Manages fruit juice drops, shockwaves, magical healing particles, and blade spark emitters
+ * Particle and Splatter FX System with Ultimate Move Visuals
  */
 
 class Particle {
-  constructor(x, y, vx, vy, color, radius, life, gravity = 800) {
+  constructor(x, y, vx, vy, color, radius, life, gravity = 800, isPixel = false) {
     this.x = x;
     this.y = y;
     this.vx = vx;
@@ -14,6 +13,7 @@ class Particle {
     this.initialLife = life;
     this.life = life;
     this.gravity = gravity;
+    this.isPixel = isPixel;
     this.isDead = false;
   }
 
@@ -34,9 +34,14 @@ class Particle {
     ctx.save();
     ctx.globalAlpha = alpha;
     ctx.fillStyle = this.color;
-    ctx.beginPath();
-    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-    ctx.fill();
+    if (this.isPixel) {
+      const size = this.radius * 2;
+      ctx.fillRect(this.x - this.radius, this.y - this.radius, size, size);
+    } else {
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
     ctx.restore();
   }
 }
@@ -65,8 +70,8 @@ class Shockwave {
   draw(ctx) {
     const alpha = Math.max(0, this.life / this.initialLife);
     ctx.save();
-    ctx.globalAlpha = alpha * 0.85;
-    ctx.lineWidth = 5 * alpha;
+    ctx.globalAlpha = alpha * 0.9;
+    ctx.lineWidth = 6 * alpha;
     ctx.strokeStyle = this.color;
     ctx.beginPath();
     ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
@@ -85,7 +90,6 @@ class Splatter {
     this.life = life;
     this.isDead = false;
 
-    // Pre-calculate randomized droplet splash satellites
     this.droplets = [];
     const count = 5 + Math.floor(Math.random() * 6);
     for (let i = 0; i < count; i++) {
@@ -113,12 +117,10 @@ class Splatter {
     ctx.globalAlpha = alpha;
     ctx.fillStyle = this.color;
 
-    // Main splash body
     ctx.beginPath();
     ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
     ctx.fill();
 
-    // Satellite splatter droplets
     this.droplets.forEach(d => {
       ctx.beginPath();
       ctx.arc(this.x + d.dx, this.y + d.dy, d.r, 0, Math.PI * 2);
@@ -129,55 +131,93 @@ class Splatter {
   }
 }
 
+class LightningSlash {
+  constructor(w, h, color = '#facc15') {
+    this.w = w;
+    this.h = h;
+    this.color = color;
+    this.life = 0.4;
+    this.initialLife = 0.4;
+    this.isDead = false;
+
+    // Generate dramatic diagonal slash lines
+    this.slashes = [
+      { x1: 0, y1: h * 0.2, x2: w, y2: h * 0.8 },
+      { x1: 0, y1: h * 0.8, x2: w, y2: h * 0.2 },
+      { x1: w * 0.2, y1: 0, x2: w * 0.8, y2: h }
+    ];
+  }
+
+  update(dt) {
+    this.life -= dt;
+    if (this.life <= 0) {
+      this.isDead = true;
+    }
+  }
+
+  draw(ctx) {
+    const alpha = Math.max(0, this.life / this.initialLife);
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = this.color;
+    ctx.shadowColor = this.color;
+    ctx.shadowBlur = 30;
+    ctx.lineWidth = 14 * alpha;
+    ctx.lineCap = 'round';
+
+    this.slashes.forEach(s => {
+      ctx.beginPath();
+      ctx.moveTo(s.x1, s.y1);
+      ctx.lineTo(s.x2, s.y2);
+      ctx.stroke();
+    });
+
+    // Screen flash overlay
+    ctx.fillStyle = `rgba(255, 255, 255, ${alpha * 0.35})`;
+    ctx.fillRect(0, 0, this.w, this.h);
+
+    ctx.restore();
+  }
+}
+
 export class ParticleSystem {
   constructor() {
     this.particles = [];
     this.splatters = [];
     this.shockwaves = [];
+    this.lightningSlashes = [];
   }
 
-  /**
-   * Spawns juice burst, expanding shockwave, and wall splatters
-   */
-  createFruitSplash(x, y, juiceColor, normal = null) {
-    // 1. Shockwave ring
-    this.shockwaves.push(new Shockwave(x, y, juiceColor, 90, 0.32));
+  createFruitSplash(x, y, juiceColor, normal = null, isPixel = false) {
+    this.shockwaves.push(new Shockwave(x, y, juiceColor, 95, 0.32));
+    this.splatters.push(new Splatter(x, y, juiceColor, 34 + Math.random() * 20, 3.2));
 
-    // 2. Background wall splatter
-    this.splatters.push(new Splatter(x, y, juiceColor, 32 + Math.random() * 20, 3.2));
-
-    // 3. Flying juice droplets
-    const count = 28 + Math.floor(Math.random() * 14);
+    const count = 30 + Math.floor(Math.random() * 15);
     for (let i = 0; i < count; i++) {
       let vx, vy;
       if (normal) {
         const side = Math.random() > 0.5 ? 1 : -1;
-        const spread = (Math.random() - 0.5) * 240;
-        const speed = 180 + Math.random() * 360;
+        const spread = (Math.random() - 0.5) * 260;
+        const speed = 200 + Math.random() * 380;
         vx = normal.x * speed * side + spread;
-        vy = normal.y * speed * side - Math.random() * 200;
+        vy = normal.y * speed * side - Math.random() * 220;
       } else {
         const angle = Math.random() * Math.PI * 2;
-        const speed = 140 + Math.random() * 340;
+        const speed = 150 + Math.random() * 360;
         vx = Math.cos(angle) * speed;
         vy = Math.sin(angle) * speed;
       }
 
-      const radius = 2.5 + Math.random() * 5.0;
+      const radius = 3.0 + Math.random() * 5.0;
       const life = 0.6 + Math.random() * 0.6;
-      this.particles.push(new Particle(x, y, vx, vy, juiceColor, radius, life, 750));
+      this.particles.push(new Particle(x, y, vx, vy, juiceColor, radius, life, 750, isPixel));
     }
   }
 
-  /**
-   * Spawns dazzling golden & rose glitter explosion for Heart Bonus
-   */
   createHeartHealParticles(x, y) {
-    // Double Shockwave
     this.shockwaves.push(new Shockwave(x, y, '#ec4899', 140, 0.45));
     this.shockwaves.push(new Shockwave(x, y, '#facc15', 180, 0.55));
 
-    // Heart sparkle bursts
     for (let i = 0; i < 48; i++) {
       const angle = Math.random() * Math.PI * 2;
       const speed = 120 + Math.random() * 380;
@@ -187,9 +227,9 @@ export class ParticleSystem {
           x,
           y,
           Math.cos(angle) * speed,
-          Math.sin(angle) * speed - 100, // bias upward
+          Math.sin(angle) * speed - 100,
           color,
-          3 + Math.random() * 5.5,
+          3.5 + Math.random() * 5.5,
           0.8 + Math.random() * 0.7,
           300
         )
@@ -197,14 +237,34 @@ export class ParticleSystem {
     }
   }
 
-  /**
-   * Spawns intense fire and smoke explosion for a bomb
-   */
+  createUltimateScreenSlashes(w, h, color = '#facc15') {
+    this.lightningSlashes.push(new LightningSlash(w, h, color));
+
+    // Fill screen with dazzling lightning spark embers
+    for (let i = 0; i < 80; i++) {
+      const x = Math.random() * w;
+      const y = Math.random() * h;
+      const speed = 200 + Math.random() * 400;
+      const angle = Math.random() * Math.PI * 2;
+      this.particles.push(
+        new Particle(
+          x,
+          y,
+          Math.cos(angle) * speed,
+          Math.sin(angle) * speed,
+          color,
+          3 + Math.random() * 6,
+          0.6 + Math.random() * 0.6,
+          200
+        )
+      );
+    }
+  }
+
   createBombExplosion(x, y) {
     this.shockwaves.push(new Shockwave(x, y, '#ff0044', 220, 0.6));
     this.splatters.push(new Splatter(x, y, '#0f172a', 75, 4.5));
 
-    // Fire sparks
     for (let i = 0; i < 55; i++) {
       const angle = Math.random() * Math.PI * 2;
       const speed = 200 + Math.random() * 500;
@@ -223,7 +283,6 @@ export class ParticleSystem {
       );
     }
 
-    // Smoke puffs
     for (let i = 0; i < 25; i++) {
       const angle = Math.random() * Math.PI * 2;
       const speed = 60 + Math.random() * 160;
@@ -242,9 +301,6 @@ export class ParticleSystem {
     }
   }
 
-  /**
-   * Spawns glowing neon blade embers during rapid swing
-   */
   createBladeSparks(x, y, sparkColor) {
     for (let i = 0; i < 4; i++) {
       const vx = (Math.random() - 0.5) * 110;
@@ -256,6 +312,13 @@ export class ParticleSystem {
   }
 
   update(dt) {
+    for (let i = this.lightningSlashes.length - 1; i >= 0; i--) {
+      this.lightningSlashes[i].update(dt);
+      if (this.lightningSlashes[i].isDead) {
+        this.lightningSlashes.splice(i, 1);
+      }
+    }
+
     for (let i = this.shockwaves.length - 1; i >= 0; i--) {
       this.shockwaves[i].update(dt);
       if (this.shockwaves[i].isDead) {
@@ -283,6 +346,7 @@ export class ParticleSystem {
   }
 
   drawParticles(ctx) {
+    this.lightningSlashes.forEach(s => s.draw(ctx));
     this.shockwaves.forEach(w => w.draw(ctx));
     this.particles.forEach(p => p.draw(ctx));
   }
@@ -291,5 +355,6 @@ export class ParticleSystem {
     this.particles = [];
     this.splatters = [];
     this.shockwaves = [];
+    this.lightningSlashes = [];
   }
 }

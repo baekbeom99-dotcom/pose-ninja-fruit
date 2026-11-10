@@ -9,9 +9,6 @@ export class SoundManager {
     this.noiseBuffer = null;
   }
 
-  /**
-   * Initializes AudioContext upon user gesture
-   */
   init() {
     if (this.ctx) return;
     try {
@@ -25,18 +22,12 @@ export class SoundManager {
     }
   }
 
-  /**
-   * Resumes AudioContext if suspended (browser autoplay policy)
-   */
   resume() {
     if (this.ctx && this.ctx.state === 'suspended') {
       this.ctx.resume();
     }
   }
 
-  /**
-   * Pre-computes 1-second white noise buffer for whoosh and explosion sounds
-   */
   _generateNoiseBuffer() {
     if (!this.ctx) return;
     const bufferSize = this.ctx.sampleRate;
@@ -47,9 +38,6 @@ export class SoundManager {
     }
   }
 
-  /**
-   * Aerodynamic whoosh sound when swinging the blade
-   */
   playSwish() {
     if (!this.ctx || this.isMuted) return;
     this.resume();
@@ -78,16 +66,12 @@ export class SoundManager {
     noise.stop(now + 0.14);
   }
 
-  /**
-   * Crisp, wet squish & slice sound with metallic ring
-   */
   playSlice() {
     if (!this.ctx || this.isMuted) return;
     this.resume();
 
     const now = this.ctx.currentTime;
 
-    // 1. Blade metallic ring & downward frequency sweep
     const osc = this.ctx.createOscillator();
     const oscGain = this.ctx.createGain();
 
@@ -103,7 +87,6 @@ export class SoundManager {
     osc.start(now);
     osc.stop(now + 0.1);
 
-    // 2. High frequency noise pop for wet juice squish
     if (this.noiseBuffer) {
       const noise = this.ctx.createBufferSource();
       noise.buffer = this.noiseBuffer;
@@ -125,14 +108,11 @@ export class SoundManager {
     }
   }
 
-  /**
-   * Magical Celestial Harpeggio when slicing a Heart Bonus (+1 Life)
-   */
   playHeartRecovery() {
     if (!this.ctx || this.isMuted) return;
     this.resume();
 
-    const notes = [659.25, 830.61, 987.77, 1318.51, 1661.22]; // E5, G#5, B5, E6, G#6 (E Major sparkle)
+    const notes = [659.25, 830.61, 987.77, 1318.51, 1661.22];
     notes.forEach((freq, i) => {
       const start = this.ctx.currentTime + i * 0.055;
       const osc = this.ctx.createOscillator();
@@ -154,15 +134,79 @@ export class SoundManager {
   }
 
   /**
-   * Heavy boom explosion when a bomb is sliced
+   * Heroic power-up chime when Ultimate Move Gauge reaches 100%
    */
-  playBomb() {
+  playUltimateReady() {
+    if (!this.ctx || this.isMuted) return;
+    this.resume();
+
+    const notes = [440, 554.37, 659.25, 880, 1108.73]; // A Major triumph
+    notes.forEach((freq, i) => {
+      const start = this.ctx.currentTime + i * 0.06;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, start);
+
+      gain.gain.setValueAtTime(0.001, start);
+      gain.gain.linearRampToValueAtTime(0.35, start + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.001, start + 0.4);
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(start);
+      osc.stop(start + 0.4);
+    });
+  }
+
+  /**
+   * Thunderous screen-clearing slash when Ultimate Move is triggered
+   */
+  playUltimateTrigger() {
     if (!this.ctx || this.isMuted) return;
     this.resume();
 
     const now = this.ctx.currentTime;
 
-    // Sub rumble
+    // 1. Dual Sawtooth Lightning Roar
+    [-7, 0, 7].forEach(detune => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = 'sawtooth';
+      osc.detune.setValueAtTime(detune, now);
+      osc.frequency.setValueAtTime(320, now);
+      osc.frequency.exponentialRampToValueAtTime(45, now + 0.8);
+
+      gain.gain.setValueAtTime(0.4, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.8);
+    });
+
+    // 2. High Metallic Shink
+    const shink = this.ctx.createOscillator();
+    const shinkGain = this.ctx.createGain();
+    shink.type = 'sine';
+    shink.frequency.setValueAtTime(2400, now);
+    shink.frequency.exponentialRampToValueAtTime(600, now + 0.25);
+    shinkGain.gain.setValueAtTime(0.6, now);
+    shinkGain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+    shink.connect(shinkGain);
+    shinkGain.connect(this.ctx.destination);
+    shink.start(now);
+    shink.stop(now + 0.25);
+  }
+
+  playBomb() {
+    if (!this.ctx || this.isMuted) return;
+    this.resume();
+
+    const now = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
     const oscGain = this.ctx.createGain();
     osc.type = 'sawtooth';
@@ -177,7 +221,6 @@ export class SoundManager {
     osc.start(now);
     osc.stop(now + 0.7);
 
-    // Noise blast
     if (this.noiseBuffer) {
       const noise = this.ctx.createBufferSource();
       noise.buffer = this.noiseBuffer;
@@ -200,15 +243,11 @@ export class SoundManager {
     }
   }
 
-  /**
-   * Ascending celebratory chime arpeggio for multi-fruit combos
-   * @param {number} comboCount - Number of fruits sliced in combo
-   */
   playCombo(comboCount = 3) {
     if (!this.ctx || this.isMuted) return;
     this.resume();
 
-    const frequencies = [523.25, 659.25, 783.99, 1046.50, 1318.51, 1567.98]; // C5 to G6
+    const frequencies = [523.25, 659.25, 783.99, 1046.50, 1318.51, 1567.98];
     const count = Math.min(comboCount, frequencies.length);
 
     frequencies.slice(0, count).forEach((freq, idx) => {

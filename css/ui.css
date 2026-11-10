@@ -3,13 +3,220 @@
 /* Top HUD */
 .hud-top {
   position: absolute;
-  top: 24px;
-  left: 32px;
-  right: 32px;
+  top: 20px;
+  left: 28px;
+  right: 28px;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   pointer-events: none;
+  gap: 16px;
+}
+
+/* Ultimate Move HUD Panel (Top Right) */
+.ultimate-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  min-width: 200px;
+}
+
+.ultimate-header {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  align-items: center;
+}
+
+.ultimate-badge {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  color: #facc15;
+  text-shadow: 0 0 10px rgba(250, 204, 21, 0.6);
+}
+
+.ultimate-ratio {
+  font-size: 13px;
+  font-weight: 800;
+  color: #94a3b8;
+}
+
+.ultimate-gauge-bg {
+  width: 100%;
+  height: 8px;
+  background: rgba(15, 23, 42, 0.8);
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  overflow: hidden;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.6);
+}
+
+.ultimate-gauge-fill {
+  width: 0%;
+  height: 100%;
+  background: linear-gradient(90deg, #f59e0b, #facc15, #38bdf8);
+  border-radius: 9999px;
+  box-shadow: 0 0 12px rgba(250, 204, 21, 0.8);
+  transition: width 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Pose Target Card */
+.ultimate-pose-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.95));
+  border: 1.5px solid rgba(250, 204, 21, 0.4);
+  border-radius: 16px;
+  padding: 8px 14px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7);
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.ultimate-pose-card.locked {
+  opacity: 0.6;
+  filter: grayscale(0.6);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.ultimate-pose-card.ready {
+  opacity: 1;
+  filter: none;
+  border-color: #facc15;
+  box-shadow: 0 0 20px rgba(250, 204, 21, 0.7), 0 0 40px rgba(244, 63, 94, 0.4);
+  animation: ultimateReadyPulse 1.2s infinite alternate;
+}
+
+@keyframes ultimateReadyPulse {
+  0% { transform: scale(1); filter: drop-shadow(0 0 6px #facc15); }
+  100% { transform: scale(1.05); filter: drop-shadow(0 0 16px #f43f5e); }
+}
+
+.pose-glyph-container {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.pose-glyph-svg {
+  width: 36px;
+  height: 36px;
+  z-index: 2;
+}
+
+.charge-ring-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 48px;
+  height: 48px;
+  transform: rotate(-90deg);
+  z-index: 1;
+}
+
+.charge-ring-bg {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.12);
+  stroke-width: 6;
+}
+
+.charge-ring-bar {
+  fill: none;
+  stroke: #facc15;
+  stroke-width: 6;
+  stroke-linecap: round;
+  stroke-dasharray: 276.46; /* 2 * PI * 44 */
+  stroke-dashoffset: 276.46;
+  transition: stroke-dashoffset 0.08s linear;
+}
+
+.pose-info {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+
+.pose-name {
+  font-size: 14px;
+  font-weight: 800;
+  color: #facc15;
+  letter-spacing: 0.5px;
+}
+
+.pose-desc {
+  font-size: 11px;
+  color: #cbd5e1;
+  max-width: 150px;
+  line-height: 1.3;
+}
+
+/* Theme Badge Pill */
+.theme-badge {
+  position: absolute;
+  top: 100px;
+  left: 28px;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(8px);
+  padding: 6px 16px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #e2e8f0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+/* Ultimate Slashed Banner */
+.ultimate-banner {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.6);
+  pointer-events: none;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  z-index: 50;
+}
+
+.ultimate-banner.active {
+  opacity: 1;
+  animation: popUltimate 1.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.ultimate-banner-title {
+  font-size: 68px;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 4px;
+  background: linear-gradient(135deg, #fef08a 0%, #facc15 30%, #f43f5e 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 35px rgba(250, 204, 21, 0.9));
+  white-space: nowrap;
+}
+
+.ultimate-banner-sub {
+  font-size: 26px;
+  font-weight: 800;
+  color: #ffffff;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.8), 0 0 20px #38bdf8;
+}
+
+@keyframes popUltimate {
+  0% { transform: translate(-50%, -50%) scale(0.3) rotate(-6deg); opacity: 0; }
+  25% { transform: translate(-50%, -50%) scale(1.15) rotate(2deg); opacity: 1; }
+  70% { transform: translate(-50%, -50%) scale(1.0) rotate(0deg); opacity: 1; }
+  100% { transform: translate(-50%, -65%) scale(0.9); opacity: 0; }
 }
 
 .score-panel {

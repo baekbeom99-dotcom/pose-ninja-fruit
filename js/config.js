@@ -11,9 +11,9 @@ export const CONFIG = {
 
   // Blade Tracking & Sensitivity
   BLADE: {
-    MIN_VELOCITY_TO_SLICE: 350, // px per second minimum to activate slicing
-    TRAIL_LENGTH: 16,            // History points for longer luxurious trail rendering
-    SMOOTHING_ALPHA: 0.65,       // EMA weight for new frame (0 to 1)
+    MIN_VELOCITY_TO_SLICE: 350,
+    TRAIL_LENGTH: 16,
+    SMOOTHING_ALPHA: 0.65,
     COLORS: {
       LEFT: {
         CORE: '#ffffff',
@@ -30,23 +30,52 @@ export const CONFIG = {
 
   // Game Physics
   PHYSICS: {
-    GRAVITY: 940,               // Pixels per second squared
+    GRAVITY: 940,
     AIR_RESISTANCE: 0.998,
-    HALF_SEPARATION_SPEED: 300, // Speed at which sliced halves push apart
-    HALF_ANGULAR_VELOCITY: 5.5  // Rotation speed of sliced halves
+    HALF_SEPARATION_SPEED: 320,
+    HALF_ANGULAR_VELOCITY: 5.5
   },
 
   // Gameplay Settings
   GAME: {
     START_LIVES: 5,
     MAX_LIVES: 5,
-    COMBO_WINDOW_MS: 340,        // Time window to count multi-fruit combos
-    SPAWN_INTERVAL_MIN: 1.4,     // Seconds (more frequent for active workout)
-    SPAWN_INTERVAL_MAX: 2.6,     // Seconds
-    DIFFICULTY_RAMP_INTERVAL: 12,// Seconds to increase difficulty
-    BOMB_PROBABILITY: 0.16,      // Chance of spawning a bomb in a wave
-    HEART_BONUS_PROBABILITY: 0.12 // Chance of spawning a heart bonus item
+    COMBO_WINDOW_MS: 340,
+    SPAWN_INTERVAL_MIN: 1.4,
+    SPAWN_INTERVAL_MAX: 2.6,
+    DIFFICULTY_RAMP_INTERVAL: 12,
+    BOMB_PROBABILITY: 0.16,
+    HEART_BONUS_PROBABILITY: 0.12,
+    ULTIMATE_THRESHOLD: 10 // Fruits needed to charge ultimate move
   },
+
+  // Visual Themes randomly chosen on game start
+  THEMES: [
+    {
+      id: 'CLAYMORPHISM',
+      name: '클레이모피즘 (Claymorphism)',
+      desc: '쫀득하고 부드러운 3D 점토 스타일',
+      badgeColor: '#ec4899'
+    },
+    {
+      id: 'PIXEL_ART',
+      name: '레트로 픽셀아트 (8-bit Pixel)',
+      desc: '고전 오락실 도트 픽셀 그래픽',
+      badgeColor: '#38bdf8'
+    },
+    {
+      id: 'PAPER_CUT',
+      name: '페이퍼크래프트 (Paper Cut)',
+      desc: '정교하게 겹쳐진 수제 종이공예 스타일',
+      badgeColor: '#f59e0b'
+    },
+    {
+      id: 'CLASSIC_VECTOR',
+      name: '사이버 네온 (Cyber Neon)',
+      desc: '선명한 벡터 아케이드 스타일',
+      badgeColor: '#22c55e'
+    }
+  ],
 
   // Fruit Types and Visual Palette
   FRUITS: {

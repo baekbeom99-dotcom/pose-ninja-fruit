@@ -49,6 +49,49 @@
             <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
           </svg>
         </div>
+
+        <!-- Top-Right: Ultimate Consonant Move HUD -->
+        <div class="ultimate-panel" id="ultimate-panel">
+          <div class="ultimate-header">
+            <span class="ultimate-badge">ULTIMATE</span>
+            <span id="ultimate-count" class="ultimate-ratio">0/10</span>
+          </div>
+
+          <!-- Gauge Bar -->
+          <div class="ultimate-gauge-bg">
+            <div id="ultimate-gauge-fill" class="ultimate-gauge-fill"></div>
+          </div>
+
+          <!-- Pose Target Card -->
+          <div id="ultimate-pose-card" class="ultimate-pose-card locked">
+            <div class="pose-glyph-container">
+              <svg id="pose-symbol-svg" class="pose-glyph-svg" viewBox="0 0 100 100">
+                <text x="50" y="70" font-size="64" font-weight="900" text-anchor="middle" fill="#38bdf8">ㅅ</text>
+              </svg>
+              <!-- Circular charging ring -->
+              <svg class="charge-ring-svg" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="44" class="charge-ring-bg"></circle>
+                <circle id="charge-ring-circle" cx="50" cy="50" r="44" class="charge-ring-bar"></circle>
+              </svg>
+            </div>
+            <div class="pose-info">
+              <div id="ultimate-move-name" class="pose-name">시옷(ㅅ) 참격</div>
+              <div id="ultimate-move-desc" class="pose-desc">10개 베면 개방!</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Theme Badge Pill -->
+      <div id="theme-badge" class="theme-badge">
+        <span class="theme-icon">🎨</span>
+        <span id="theme-name-text">테마: 클레이모피즘 스타일</span>
+      </div>
+
+      <!-- Ultimate Triggered Fullscreen Banner -->
+      <div id="ultimate-banner" class="ultimate-banner">
+        <div id="ultimate-banner-title" class="ultimate-banner-title">⚡ 시옷 참격 발동! ⚡</div>
+        <div class="ultimate-banner-sub">화면의 모든 과일 일괄 전멸!</div>
       </div>
 
       <!-- Combo Notification -->
@@ -77,7 +120,8 @@
           
           <div class="instructions-card">
             <div>⚔️ <strong>양손이 칼날</strong>: 왼손(하늘색)과 오른손(분홍색)을 빠르게 휘두르면 베어집니다.</div>
-            <div>🍎 <strong>과일 콤보</strong>: 한 번에 여러 과일을 베면 추가 콤보 점수 획득!</div>
+            <div>⚡ <strong>필살기 (10개 절단 시)</strong>: 우측 상단 가이드에 표시된 자음(ㄱ, ㄴ, ㅅ, ㅈ) 포즈를 취하면 화면 전체 베기 발동!</div>
+            <div>🎨 <strong>랜덤 비주얼 테마</strong>: 시작할 때마다 픽셀아트, 클레이모피즘, 페이퍼컷 등 랜덤 스타일로 변신!</div>
             <div>💖 <strong>하트 보너스</strong>: 반짝이는 핑크 하트를 베면 잃어버린 생명(+1)이 회복됩니다!</div>
             <div>💣 <strong>폭탄 주의</strong>: 폭탄을 베면 즉시 폭발하여 게임이 종료됩니다.</div>
             <div>❤️ <strong>생명 관리</strong>: 총 5개의 생명으로 시작하며, 과일을 놓치면 차감됩니다.</div>

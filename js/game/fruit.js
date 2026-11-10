@@ -1,11 +1,11 @@
 /**
- * Fruit, HalfFruit, Bomb, and HeartBonus Entities
- * Procedurally rendered with Canvas 2D, parabolic physics, and slicing split mechanics
+ * Fruit, HalfFruit, Bomb, and HeartBonus Entities with Multi-Theme Support
+ * Supports: CLAYMORPHISM, PIXEL_ART, PAPER_CUT, CLASSIC_VECTOR
  */
 import { CONFIG } from '../config.js';
 
 export class HalfFruit {
-  constructor(fruitConfig, x, y, vx, vy, cutAngle, isLeftHalf) {
+  constructor(fruitConfig, x, y, vx, vy, cutAngle, isLeftHalf, themeId = 'CLAYMORPHISM') {
     this.config = fruitConfig;
     this.x = x;
     this.y = y;
@@ -17,6 +17,7 @@ export class HalfFruit {
     this.rotation = cutAngle;
     this.angularVelocity = isLeftHalf ? -CONFIG.PHYSICS.HALF_ANGULAR_VELOCITY : CONFIG.PHYSICS.HALF_ANGULAR_VELOCITY;
     this.isDead = false;
+    this.themeId = themeId;
   }
 
   update(dt) {
@@ -39,19 +40,19 @@ export class HalfFruit {
     // Clip to half circle along the cut line
     ctx.beginPath();
     if (this.isLeftHalf) {
-      ctx.arc(0, 0, this.radius + 4, -Math.PI / 2, Math.PI / 2, true);
+      ctx.arc(0, 0, this.radius + 6, -Math.PI / 2, Math.PI / 2, true);
     } else {
-      ctx.arc(0, 0, this.radius + 4, -Math.PI / 2, Math.PI / 2, false);
+      ctx.arc(0, 0, this.radius + 6, -Math.PI / 2, Math.PI / 2, false);
     }
     ctx.closePath();
     ctx.clip();
 
-    // Draw the fruit content
-    FruitRenderer.drawFruitBody(ctx, this.config, 0);
+    // Draw the fruit content in current theme
+    FruitRenderer.drawFruitBody(ctx, this.config, 0, this.themeId);
 
     ctx.restore();
 
-    // Subtle edge highlight along the cut
+    // Sliced cut face rim highlight
     ctx.save();
     ctx.translate(this.x, this.y);
     ctx.rotate(this.rotation);
@@ -59,14 +60,14 @@ export class HalfFruit {
     ctx.moveTo(0, -this.radius);
     ctx.lineTo(0, this.radius);
     ctx.strokeStyle = this.config.fleshColor || '#ffffff';
-    ctx.lineWidth = 3.5;
+    ctx.lineWidth = 4;
     ctx.stroke();
     ctx.restore();
   }
 }
 
 export class Fruit {
-  constructor(fruitConfig, startX, startY, vx, vy) {
+  constructor(fruitConfig, startX, startY, vx, vy, themeId = 'CLAYMORPHISM') {
     this.config = fruitConfig;
     this.type = fruitConfig.type;
     this.radius = fruitConfig.radius;
@@ -84,8 +85,8 @@ export class Fruit {
     this.isMissed = false;
     this.isDead = false;
 
-    // Animation timer for sparks / pulsing
     this.animTimer = Math.random() * 10;
+    this.themeId = themeId;
   }
 
   update(dt) {
@@ -96,30 +97,21 @@ export class Fruit {
     this.rotation += this.angularVelocity * dt;
     this.animTimer += dt;
 
-    // Missed falling below screen without being sliced
-    if (!this.isSliced && this.vy > 0 && this.y > CONFIG.CANVAS.HEIGHT + this.radius + 10) {
+    if (!this.isSliced && this.vy > 0 && this.y > CONFIG.CANVAS.HEIGHT + this.radius + 15) {
       this.isMissed = true;
       this.isDead = true;
     }
   }
 
-  /**
-   * Slices the fruit into two halves ejected along the normal vector
-   * @param {number} cutAngle - Angle of cut in radians
-   * @param {{x: number, y: number}} normal - Normal vector perpendicular to cut
-   * @returns {[HalfFruit, HalfFruit]}
-   */
   slice(cutAngle, normal) {
     this.isSliced = true;
     this.isDead = true;
 
     if (this.type === 'BOMB') {
-      return []; // Bombs detonate without halves
+      return [];
     }
 
     const pushSpeed = CONFIG.PHYSICS.HALF_SEPARATION_SPEED;
-    
-    // Half 1 pushed along +normal
     const h1 = new HalfFruit(
       this.config,
       this.x,
@@ -127,10 +119,10 @@ export class Fruit {
       this.vx + normal.x * pushSpeed,
       this.vy + normal.y * pushSpeed - 60,
       cutAngle,
-      true
+      true,
+      this.themeId
     );
 
-    // Half 2 pushed along -normal
     const h2 = new HalfFruit(
       this.config,
       this.x,
@@ -138,7 +130,8 @@ export class Fruit {
       this.vx - normal.x * pushSpeed,
       this.vy - normal.y * pushSpeed - 60,
       cutAngle,
-      false
+      false,
+      this.themeId
     );
 
     return [h1, h2];
@@ -152,11 +145,11 @@ export class Fruit {
     ctx.rotate(this.rotation);
 
     if (this.type === 'BOMB') {
-      FruitRenderer.drawBomb(ctx, this.config, this.animTimer);
+      FruitRenderer.drawBomb(ctx, this.config, this.animTimer, this.themeId);
     } else if (this.type === 'HEART_BONUS') {
-      FruitRenderer.drawHeartBonus(ctx, this.config, this.animTimer);
+      FruitRenderer.drawHeartBonus(ctx, this.config, this.animTimer, this.themeId);
     } else {
-      FruitRenderer.drawFruitBody(ctx, this.config, this.animTimer);
+      FruitRenderer.drawFruitBody(ctx, this.config, this.animTimer, this.themeId);
     }
 
     ctx.restore();
@@ -164,234 +157,255 @@ export class Fruit {
 }
 
 /**
- * Procedural Vector Graphics Renderer for Canvas 2D
+ * Multi-Theme Procedural Graphics Renderer
  */
 class FruitRenderer {
-  static drawFruitBody(ctx, config, animTimer = 0) {
-    switch (config.type) {
-      case 'WATERMELON':
-        this.drawWatermelon(ctx, config);
+  static drawFruitBody(ctx, config, animTimer = 0, theme = 'CLAYMORPHISM') {
+    switch (theme) {
+      case 'PIXEL_ART':
+        this.drawPixelStyle(ctx, config);
         break;
-      case 'ORANGE':
-        this.drawOrange(ctx, config);
+      case 'CLAYMORPHISM':
+        this.drawClayStyle(ctx, config);
         break;
-      case 'APPLE':
-        this.drawApple(ctx, config);
-        break;
-      case 'BANANA':
-        this.drawBanana(ctx, config);
-        break;
-      case 'PINEAPPLE':
-        this.drawPineapple(ctx, config);
-        break;
-      case 'HEART_BONUS':
-        this.drawHeartBonus(ctx, config, animTimer);
+      case 'PAPER_CUT':
+        this.drawPaperStyle(ctx, config);
         break;
       default:
-        this.drawGenericFruit(ctx, config);
+        this.drawClassicStyle(ctx, config);
+        break;
     }
   }
 
-  static drawWatermelon(ctx, config) {
+  /* ---------------- 1. CLAYMORPHISM STYLE ---------------- */
+  static drawClayStyle(ctx, config) {
     const r = config.radius;
-    // Outer dark green rind
-    ctx.beginPath();
-    ctx.arc(0, 0, r, 0, Math.PI * 2);
-    ctx.fillStyle = config.color;
-    ctx.fill();
 
-    // Dark green rind stripes
-    ctx.strokeStyle = '#14532d';
-    ctx.lineWidth = 4.5;
-    for (let i = 0; i < 6; i++) {
-      ctx.beginPath();
-      ctx.ellipse(0, 0, r - 2, r * 0.72, (i * Math.PI) / 6, 0, Math.PI * 2);
-      ctx.stroke();
-    }
-
-    // Pale green inner rind
-    ctx.beginPath();
-    ctx.arc(0, 0, r * 0.88, 0, Math.PI * 2);
-    ctx.fillStyle = config.rindColor;
-    ctx.fill();
-
-    // Red flesh
-    ctx.beginPath();
-    ctx.arc(0, 0, r * 0.8, 0, Math.PI * 2);
-    ctx.fillStyle = config.fleshColor;
-    ctx.fill();
-
-    // Seeds
-    ctx.fillStyle = '#0f172a';
-    const seedAngles = [0, 0.7, 1.4, 2.1, 2.8, 3.5, 4.2, 4.9, 5.6];
-    seedAngles.forEach(a => {
-      const sx = Math.cos(a) * (r * 0.52);
-      const sy = Math.sin(a) * (r * 0.52);
-      ctx.beginPath();
-      ctx.ellipse(sx, sy, 3, 2, a + Math.PI / 2, 0, Math.PI * 2);
-      ctx.fill();
-    });
-  }
-
-  static drawOrange(ctx, config) {
-    const r = config.radius;
-    ctx.beginPath();
-    ctx.arc(0, 0, r, 0, Math.PI * 2);
-    ctx.fillStyle = config.color;
-    ctx.fill();
-
-    ctx.beginPath();
-    ctx.arc(0, 0, r * 0.88, 0, Math.PI * 2);
-    ctx.fillStyle = config.rindColor;
-    ctx.fill();
-
-    ctx.beginPath();
-    ctx.arc(0, 0, r * 0.82, 0, Math.PI * 2);
-    ctx.fillStyle = config.fleshColor;
-    ctx.fill();
-
-    ctx.strokeStyle = config.rindColor;
-    ctx.lineWidth = 2.5;
-    for (let i = 0; i < 8; i++) {
-      const a = (i * Math.PI) / 4;
-      ctx.beginPath();
-      ctx.moveTo(0, 0);
-      ctx.lineTo(Math.cos(a) * r * 0.82, Math.sin(a) * r * 0.82);
-      ctx.stroke();
-    }
-  }
-
-  static drawApple(ctx, config) {
-    const r = config.radius;
-    ctx.beginPath();
-    ctx.arc(-r * 0.35, 0, r * 0.7, 0, Math.PI * 2);
-    ctx.arc(r * 0.35, 0, r * 0.7, 0, Math.PI * 2);
-    ctx.arc(0, r * 0.3, r * 0.75, 0, Math.PI * 2);
-    ctx.fillStyle = config.color;
-    ctx.fill();
-
-    // Stem
-    ctx.beginPath();
-    ctx.moveTo(0, -r * 0.7);
-    ctx.quadraticCurveTo(6, -r * 1.1, 10, -r * 1.25);
-    ctx.strokeStyle = '#78350f';
-    ctx.lineWidth = 4;
-    ctx.lineCap = 'round';
-    ctx.stroke();
-
-    // Leaf
-    ctx.beginPath();
-    ctx.ellipse(8, -r * 0.95, 8, 4, Math.PI / 4, 0, Math.PI * 2);
-    ctx.fillStyle = '#22c55e';
-    ctx.fill();
-  }
-
-  static drawBanana(ctx, config) {
-    const r = config.radius;
+    // Clay drop shadow
     ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(-r * 1.1, -r * 0.3);
-    ctx.quadraticCurveTo(0, r * 0.9, r * 1.1, -r * 0.3);
-    ctx.quadraticCurveTo(0, r * 0.4, -r * 1.1, -r * 0.3);
-    ctx.fillStyle = config.color;
-    ctx.fill();
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
+    ctx.shadowBlur = 16;
+    ctx.shadowOffsetY = 10;
 
-    ctx.fillStyle = '#713f12';
+    // Base Puffy Body
     ctx.beginPath();
-    ctx.arc(-r * 1.05, -r * 0.28, 4, 0, Math.PI * 2);
-    ctx.arc(r * 1.05, -r * 0.28, 4, 0, Math.PI * 2);
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    ctx.fillStyle = config.color;
     ctx.fill();
     ctx.restore();
+
+    // Inner bevel / 3D inflated volume highlight
+    const clayGrad = ctx.createRadialGradient(-r * 0.35, -r * 0.35, 4, 0, 0, r);
+    clayGrad.addColorStop(0, 'rgba(255, 255, 255, 0.65)');
+    clayGrad.addColorStop(0.35, 'rgba(255, 255, 255, 0.15)');
+    clayGrad.addColorStop(0.8, 'rgba(0, 0, 0, 0)');
+    clayGrad.addColorStop(1, 'rgba(0, 0, 0, 0.35)');
+
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    ctx.fillStyle = clayGrad;
+    ctx.fill();
+
+    // Soft Inner Core
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 0.72, 0, Math.PI * 2);
+    ctx.fillStyle = config.fleshColor;
+    ctx.fill();
+
+    // Glossy specular pimple
+    ctx.beginPath();
+    ctx.arc(-r * 0.35, -r * 0.35, r * 0.18, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+    ctx.fill();
   }
 
-  static drawPineapple(ctx, config) {
+  /* ---------------- 2. RETRO PIXEL ART STYLE ---------------- */
+  static drawPixelStyle(ctx, config) {
     const r = config.radius;
+    const px = 6; // 6px pixel block size
+    const steps = Math.floor(r / px);
+
+    // Draw stepped pixel blocks
+    for (let gx = -steps; gx <= steps; gx++) {
+      for (let gy = -steps; gy <= steps; gy++) {
+        const dist = Math.sqrt(gx * gx + gy * gy) * px;
+        if (dist <= r) {
+          const x = gx * px;
+          const y = gy * px;
+
+          // Color zone determination
+          let blockColor = config.color;
+          if (dist > r - px * 1.5) {
+            blockColor = '#0f172a'; // Black pixel outline
+          } else if (dist < r * 0.68) {
+            blockColor = config.fleshColor;
+          }
+
+          // Specular pixel highlight top-left
+          if (gx >= -steps * 0.6 && gx <= -steps * 0.3 && gy >= -steps * 0.6 && gy <= -steps * 0.3) {
+            blockColor = '#ffffff';
+          }
+
+          ctx.fillStyle = blockColor;
+          ctx.fillRect(x, y, px, px);
+        }
+      }
+    }
+  }
+
+  /* ---------------- 3. PAPER-CUT STYLE ---------------- */
+  static drawPaperStyle(ctx, config) {
+    const r = config.radius;
+
+    // Layer 1: Dark Backing Paper
+    ctx.save();
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+    ctx.shadowBlur = 10;
+    ctx.shadowOffsetY = 6;
+
     ctx.beginPath();
-    ctx.ellipse(0, r * 0.15, r * 0.75, r * 0.9, 0, 0, Math.PI * 2);
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    ctx.fillStyle = config.color;
+    ctx.fill();
+    ctx.restore();
+
+    // Layer 2: Middle Rind Paper Sheet with Crease
+    ctx.save();
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.35)';
+    ctx.shadowBlur = 6;
+    ctx.shadowOffsetY = 4;
+
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 0.85, 0, Math.PI * 2);
+    ctx.fillStyle = config.rindColor || '#ffffff';
+    ctx.fill();
+    ctx.restore();
+
+    // Layer 3: Top Flesh Paper Cutout
+    ctx.save();
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.25)';
+    ctx.shadowBlur = 4;
+    ctx.shadowOffsetY = 2;
+
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 0.72, 0, Math.PI * 2);
+    ctx.fillStyle = config.fleshColor;
+    ctx.fill();
+    ctx.restore();
+
+    // Paper fold crease line across middle
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.7, 0);
+    ctx.lineTo(r * 0.7, 0);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+
+  /* ---------------- 4. CLASSIC VECTOR STYLE ---------------- */
+  static drawClassicStyle(ctx, config) {
+    const r = config.radius;
+    // Outer Rind
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
     ctx.fillStyle = config.color;
     ctx.fill();
 
-    // Cross-hatch diamond texture
-    ctx.strokeStyle = '#78350f';
-    ctx.lineWidth = 2.2;
-    for (let i = -2; i <= 2; i++) {
-      ctx.beginPath();
-      ctx.moveTo(-r * 0.6, i * 15 - 10);
-      ctx.lineTo(r * 0.6, i * 15 + 10);
-      ctx.stroke();
-
-      ctx.beginPath();
-      ctx.moveTo(-r * 0.6, i * 15 + 10);
-      ctx.lineTo(r * 0.6, i * 15 - 10);
-      ctx.stroke();
-    }
-
-    // Green spiky crown
+    // Inner Rind
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 0.86, 0, Math.PI * 2);
     ctx.fillStyle = config.rindColor;
-    [-0.3, 0, 0.3].forEach(offset => {
-      ctx.beginPath();
-      ctx.moveTo(offset * r, -r * 0.6);
-      ctx.lineTo(offset * r * 1.4, -r * 1.35);
-      ctx.lineTo((offset + 0.15) * r, -r * 0.6);
-      ctx.fill();
-    });
+    ctx.fill();
+
+    // Center Flesh
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 0.76, 0, Math.PI * 2);
+    ctx.fillStyle = config.fleshColor;
+    ctx.fill();
   }
 
-  /**
-   * Glowing Heart Bonus Icon (+1 Life Recovery)
-   */
-  static drawHeartBonus(ctx, config, animTimer) {
+  /* ---------------- HEART BONUS RENDERER ---------------- */
+  static drawHeartBonus(ctx, config, animTimer, theme) {
     const r = config.radius;
-    const pulse = 1 + Math.sin(animTimer * 6) * 0.08;
+    const pulse = 1 + Math.sin(animTimer * 6.5) * 0.09;
 
     ctx.save();
     ctx.scale(pulse, pulse);
 
-    // Glowing golden outer aura
+    if (theme === 'PIXEL_ART') {
+      const px = 6;
+      ctx.fillStyle = '#ec4899';
+      // 8-bit Pixel Heart Matrix
+      const heartMatrix = [
+        [0, 1, 1, 0, 0, 1, 1, 0],
+        [1, 1, 1, 1, 1, 1, 1, 1],
+        [1, 1, 1, 1, 1, 1, 1, 1],
+        [1, 1, 1, 1, 1, 1, 1, 1],
+        [0, 1, 1, 1, 1, 1, 1, 0],
+        [0, 0, 1, 1, 1, 1, 0, 0],
+        [0, 0, 0, 1, 1, 0, 0, 0]
+      ];
+      const ox = -4 * px;
+      const oy = -3.5 * px;
+      for (let row = 0; row < heartMatrix.length; row++) {
+        for (let col = 0; col < heartMatrix[row].length; col++) {
+          if (heartMatrix[row][col]) {
+            ctx.fillStyle = (row === 1 && col === 1) ? '#ffffff' : '#f43f5e';
+            ctx.fillRect(ox + col * px, oy + row * px, px, px);
+          }
+        }
+      }
+      ctx.restore();
+      return;
+    }
+
+    // Default Glowing Clay/Paper Heart
     ctx.shadowColor = '#f43f5e';
     ctx.shadowBlur = 24;
 
-    // Heart shape path
     ctx.beginPath();
     const topCurveHeight = r * 0.6;
     ctx.moveTo(0, r * 0.25);
-    // Left curve
     ctx.bezierCurveTo(-r * 0.9, -r * 0.45, -r * 0.95, topCurveHeight, 0, r * 0.95);
-    // Right curve
     ctx.bezierCurveTo(r * 0.95, topCurveHeight, r * 0.9, -r * 0.45, 0, r * 0.25);
     ctx.closePath();
 
-    // Radiant gradient fill
     const grad = ctx.createRadialGradient(0, 0, 4, 0, 0, r);
-    grad.addColorStop(0, '#fef08a'); // Gold sparkle center
-    grad.addColorStop(0.3, '#ec4899'); // Rose Pink
-    grad.addColorStop(1, '#e11d48'); // Crimson
+    grad.addColorStop(0, '#fef08a');
+    grad.addColorStop(0.3, '#ec4899');
+    grad.addColorStop(1, '#e11d48');
     ctx.fillStyle = grad;
     ctx.fill();
 
-    // Golden boundary stroke
     ctx.strokeStyle = '#fef08a';
     ctx.lineWidth = 4;
     ctx.stroke();
 
-    // Floating sparkles around heart
-    ctx.fillStyle = '#ffffff';
-    for (let i = 0; i < 4; i++) {
-      const a = animTimer * 3 + (i * Math.PI) / 2;
-      const dist = r * 1.15;
-      const sx = Math.cos(a) * dist;
-      const sy = Math.sin(a) * dist;
-      ctx.beginPath();
-      ctx.arc(sx, sy, 3, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
     ctx.restore();
   }
 
-  static drawBomb(ctx, config, fuseTimer) {
+  /* ---------------- BOMB RENDERER ---------------- */
+  static drawBomb(ctx, config, fuseTimer, theme) {
     const r = config.radius;
-    // Dark sphere
+
+    if (theme === 'PIXEL_ART') {
+      const px = 6;
+      const steps = Math.floor(r / px);
+      for (let gx = -steps; gx <= steps; gx++) {
+        for (let gy = -steps; gy <= steps; gy++) {
+          if (Math.sqrt(gx * gx + gy * gy) * px <= r) {
+            ctx.fillStyle = (gx < -2 && gy < -2) ? '#94a3b8' : '#0f172a';
+            ctx.fillRect(gx * px, gy * px, px, px);
+          }
+        }
+      }
+      // Spark
+      ctx.fillStyle = Math.sin(fuseTimer * 20) > 0 ? '#facc15' : '#ef4444';
+      ctx.fillRect(8, -r - 12, px, px);
+      return;
+    }
+
+    // Sphere Body
     ctx.beginPath();
     ctx.arc(0, 0, r, 0, Math.PI * 2);
     const grad = ctx.createRadialGradient(-r * 0.3, -r * 0.3, 2, 0, 0, r);
@@ -401,11 +415,10 @@ class FruitRenderer {
     ctx.fillStyle = grad;
     ctx.fill();
 
-    // Fuse cap
+    // Fuse cap & line
     ctx.fillStyle = '#94a3b8';
     ctx.fillRect(-6, -r - 5, 12, 6);
 
-    // Fuse rope
     ctx.beginPath();
     ctx.moveTo(0, -r - 5);
     ctx.quadraticCurveTo(10, -r - 18, 16, -r - 22);
@@ -413,23 +426,15 @@ class FruitRenderer {
     ctx.lineWidth = 3;
     ctx.stroke();
 
-    // Animated spark at the tip of the fuse
+    // Animated spark
     const sparkX = 16 + Math.sin(fuseTimer * 25) * 2;
     const sparkY = -r - 22 + Math.cos(fuseTimer * 25) * 2;
-    
     ctx.beginPath();
-    ctx.arc(sparkX, sparkY, 5 + Math.sin(fuseTimer * 30) * 2, 0, Math.PI * 2);
+    ctx.arc(sparkX, sparkY, 6, 0, Math.PI * 2);
     ctx.fillStyle = '#facc15';
     ctx.shadowColor = '#f97316';
-    ctx.shadowBlur = 14;
+    ctx.shadowBlur = 16;
     ctx.fill();
     ctx.shadowBlur = 0;
-  }
-
-  static drawGenericFruit(ctx, config) {
-    ctx.beginPath();
-    ctx.arc(0, 0, config.radius, 0, Math.PI * 2);
-    ctx.fillStyle = config.color;
-    ctx.fill();
   }
 }

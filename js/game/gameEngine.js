@@ -1,11 +1,14 @@
 /**
  * Game Engine - 60 FPS Multi-Layer Canvas Orchestrator
- * Coordinates rendering pipeline, physics delta-time, camera video, and state machine
+ * Coordinates rendering pipeline, physics delta-time, camera video, state machine,
+ * Ultimate Move Consonant Gestures, and Random Visual Themes.
  */
 import { CONFIG } from '../config.js';
 import { BladeManager } from './bladeManager.js';
 import { FruitManager } from './fruitManager.js';
 import { ParticleSystem } from './particleSystem.js';
+import { GestureDetector, CONSONANT_POSES } from './gestureDetector.js';
+import { soundManager } from '../audio/soundManager.js';
 
 export const GameState = {
   READY: 'READY',
@@ -30,16 +33,25 @@ export class GameEngine {
     this.particles = new ParticleSystem();
     this.blades = new BladeManager();
     this.fruitManager = new FruitManager(this.particles);
+    this.gestureDetector = new GestureDetector();
 
     this.state = GameState.READY;
     this.score = 0;
     this.lives = CONFIG.GAME.START_LIVES;
 
+    // Ultimate Move System
+    this.ultimateThreshold = CONFIG.GAME.ULTIMATE_THRESHOLD || 10;
+    this.ultimateCount = 0;
+    this.isUltimateReady = false;
+    this.currentConsonantPose = CONSONANT_POSES[0];
+
+    // Visual Theme
+    this.currentTheme = CONFIG.THEMES[0];
+
     this.lastTime = performance.now();
     this.width = CONFIG.CANVAS.WIDTH;
     this.height = CONFIG.CANVAS.HEIGHT;
 
-    // Screen Shake Effect for Bomb explosions
     this.shakeDuration = 0;
     this.shakeIntensity = 0;
 
@@ -52,6 +64,22 @@ export class GameEngine {
       if (this.state !== GameState.PLAYING) return;
       this.score += points;
       this.ui.updateScore(this.score);
+
+      // Charge Ultimate Move
+      if (!this.isUltimateReady) {
+        this.ultimateCount++;
+        if (this.ultimateCount >= this.ultimateThreshold) {
+          this.isUltimateReady = true;
+          soundManager.playUltimateReady();
+          this.triggerScreenShake(0.2, 8);
+        }
+        this.ui.updateUltimateGauge(
+          this.ultimateCount,
+          this.ultimateThreshold,
+          this.isUltimateReady,
+          this.currentConsonantPose
+        );
+      }
     };
 
     this.fruitManager.onMiss = (fruit) => {
@@ -74,7 +102,6 @@ export class GameEngine {
 
     this.fruitManager.onHeart = (item, hitPoint) => {
       if (this.state !== GameState.PLAYING) return;
-      // Recover 1 life if not full
       if (this.lives < CONFIG.GAME.MAX_LIVES) {
         this.lives++;
         this.ui.updateLives(this.lives, CONFIG.GAME.MAX_LIVES);
@@ -115,11 +142,29 @@ export class GameEngine {
     this.shakeIntensity = intensity;
   }
 
+  /**
+   * Resets and initializes new game with a random visual theme and random target consonant
+   */
   startNewGame() {
     this.score = 0;
     this.lives = CONFIG.GAME.START_LIVES;
     this.ui.updateScore(0);
     this.ui.updateLives(this.lives, CONFIG.GAME.MAX_LIVES);
+
+    // 1. Pick Random Visual Theme
+    const themeIdx = Math.floor(Math.random() * CONFIG.THEMES.length);
+    this.currentTheme = CONFIG.THEMES[themeIdx];
+    this.fruitManager.setTheme(this.currentTheme.id);
+    this.ui.setThemeBadge(this.currentTheme);
+
+    // 2. Reset Ultimate Move & Pick Random Consonant Pose
+    this.ultimateCount = 0;
+    this.isUltimateReady = false;
+    this._pickRandomConsonantPose();
+    this.gestureDetector.reset();
+    this.ui.updateChargingProgress(0);
+    this.ui.updateUltimateGauge(0, this.ultimateThreshold, false, this.currentConsonantPose);
+
     this.fruitManager.reset();
     this.particles.clear();
     this.state = GameState.PLAYING;
@@ -127,14 +172,39 @@ export class GameEngine {
     this.ui.hideGameOverModal();
   }
 
+  _pickRandomConsonantPose() {
+    const randIdx = Math.floor(Math.random() * CONSONANT_POSES.length);
+    this.currentConsonantPose = CONSONANT_POSES[randIdx];
+  }
+
+  /**
+   * Triggers the Ultimate Consonant Fullscreen Slash!
+   */
+  activateUltimateMove() {
+    this.isUltimateReady = false;
+    this.ultimateCount = 0;
+
+    // Visual & Sound Spectacle
+    soundManager.playUltimateTrigger();
+    this.particles.createUltimateScreenSlashes(this.width, this.height, this.currentConsonantPose.color);
+    this.triggerScreenShake(0.8, 30);
+    this.ui.showUltimateBanner(this.currentConsonantPose.name);
+
+    // Wipe out all fruits on screen!
+    this.fruitManager.sliceAllFruits();
+
+    // Select new random consonant pose for next round
+    this._pickRandomConsonantPose();
+    this.gestureDetector.reset();
+    this.ui.updateChargingProgress(0);
+    this.ui.updateUltimateGauge(0, this.ultimateThreshold, false, this.currentConsonantPose);
+  }
+
   triggerGameOver() {
     this.state = GameState.GAMEOVER;
     this.ui.showGameOverModal(this.score);
   }
 
-  /**
-   * Main 60 FPS RequestAnimationFrame Loop
-   */
   startLoop() {
     const loop = (currentTime) => {
       const dt = Math.min((currentTime - this.lastTime) / 1000, 0.1);
@@ -163,10 +233,28 @@ export class GameEngine {
       landmarks = this.poseTracker.detect(this.video, currentTime);
     }
 
-    // 2. Update Blade Tracker
+    // 2. Evaluate Consonant Pose for Ultimate Move if Ready
+    if (this.state === GameState.PLAYING && this.isUltimateReady && landmarks) {
+      const evalResult = this.gestureDetector.evaluate(
+        this.currentConsonantPose.id,
+        landmarks,
+        dt,
+        CONFIG.CANVAS.MIRROR
+      );
+
+      this.ui.updateChargingProgress(evalResult.progress);
+
+      if (evalResult.triggered) {
+        this.activateUltimateMove();
+      }
+    } else {
+      this.ui.updateChargingProgress(0);
+    }
+
+    // 3. Update Blade Tracker
     this.blades.update(landmarks, this.width, this.height, currentTime, CONFIG.CANVAS.MIRROR);
 
-    // 3. Update Game & Fruits if currently playing
+    // 4. Update Game & Fruits
     if (this.state === GameState.PLAYING) {
       const activeSegments = this.blades.getActiveSegments();
       this.fruitManager.update(dt, activeSegments, this.width, this.height, currentTime, this.lives);
@@ -188,7 +276,7 @@ export class GameEngine {
       offsetY = (Math.random() - 0.5) * this.shakeIntensity;
     }
 
-    // --- Layer 1: Background Video & Skeleton ---
+    // Layer 1: Background Video & Skeleton
     this.bgCtx.clearRect(0, 0, w, h);
     if (this.video.readyState >= 2) {
       this.bgCtx.save();
@@ -202,7 +290,7 @@ export class GameEngine {
       this.poseTracker.drawSkeleton(this.bgCtx, this.lastLandmarks, w, h, CONFIG.CANVAS.MIRROR);
     }
 
-    // --- Layer 2: Game Objects (Fruits, Halves, Splatters, Shockwaves) ---
+    // Layer 2: Game Objects (Fruits, Halves, Splatters, Shockwaves, Lightning)
     this.gameCtx.clearRect(0, 0, w, h);
     this.gameCtx.save();
     if (offsetX !== 0 || offsetY !== 0) {
@@ -211,7 +299,7 @@ export class GameEngine {
     this.fruitManager.draw(this.gameCtx);
     this.gameCtx.restore();
 
-    // --- Layer 3: Radiant Neon Blade Trails ---
+    // Layer 3: Radiant Neon Blade Trails
     this.bladeCtx.clearRect(0, 0, w, h);
     this.blades.draw(this.bladeCtx);
   }
