@@ -16,6 +16,7 @@ class App {
 
     this.startBtn = document.getElementById('start-btn');
     this.restartBtn = document.getElementById('restart-btn');
+    this.changeModeBtn = document.getElementById('change-mode-btn');
 
     this.ui = new UIManager();
     this.camera = new CameraManager(this.video);
@@ -84,6 +85,16 @@ class App {
 
     if (this.restartBtn) {
       this.restartBtn.addEventListener('click', unlockAudioAndStart);
+    }
+
+    if (this.changeModeBtn) {
+      this.changeModeBtn.addEventListener('click', () => {
+        soundManager.init();
+        soundManager.resume();
+        soundManager.playSwish();
+        this.gameEngine.stopGameAndReset();
+        this.ui.showStartModal();
+      });
     }
   }
 

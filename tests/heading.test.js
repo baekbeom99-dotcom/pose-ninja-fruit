@@ -90,25 +90,21 @@ function runTests() {
     assert(fm.fruits.length === 0, 'Exploded bomb removed from fruits array');
   }
 
-  // Test 4: Touching a bomb deducts exactly 1 life, triggers game over only when lives reach 0
+  // Test 4: Touching a bomb deducts exactly 2 lives, triggers game over when lives reach 0
   {
     let lives = 3;
     let gameOverTriggered = false;
     const handleBomb = () => {
-      lives = Math.max(0, lives - 1);
+      lives = Math.max(0, lives - 2);
       if (lives <= 0) gameOverTriggered = true;
     };
 
     handleBomb();
-    assert(lives === 2, 'First bomb hit reduces lives from 3 to 2');
-    assert(gameOverTriggered === false, 'Game over not triggered when lives remain (2 > 0)');
-
-    handleBomb();
-    assert(lives === 1, 'Second bomb hit reduces lives from 2 to 1');
+    assert(lives === 1, 'First bomb hit reduces lives from 3 to 1 (-2 lives)');
     assert(gameOverTriggered === false, 'Game over not triggered when lives remain (1 > 0)');
 
     handleBomb();
-    assert(lives === 0, 'Third bomb hit reduces lives to 0');
+    assert(lives === 0, 'Second bomb hit reduces lives from 1 to 0');
     assert(gameOverTriggered === true, 'Game over triggered when lives reach 0');
   }
 

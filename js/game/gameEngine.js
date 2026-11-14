@@ -109,7 +109,7 @@ export class GameEngine {
     this.fruitManager.onBomb = (bomb, owner = 'P1') => {
       if (this.state !== GameState.PLAYING) return;
       this.triggerScreenShake(0.65, 24);
-      this.lives = Math.max(0, this.lives - 1);
+      this.lives = Math.max(0, this.lives - 2);
       this.ui.updateLives(this.lives, CONFIG.GAME.MAX_LIVES);
       if (this.lives <= 0) {
         this.triggerGameOver();
