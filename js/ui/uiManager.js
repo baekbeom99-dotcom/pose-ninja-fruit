@@ -34,6 +34,7 @@ export class UIManager {
 
     // Controls
     this.btnFullscreen = document.getElementById('btn-fullscreen');
+    this.btnStartFullscreen = document.getElementById('btn-start-fullscreen');
     this.btnExit = document.getElementById('btn-exit');
     this.btnGuide = document.getElementById('btn-guide');
     this.closeGuideBtn = document.getElementById('close-guide-btn');
@@ -102,20 +103,46 @@ export class UIManager {
       }
     });
 
-    // Fullscreen Toggle
-    if (this.btnFullscreen) {
-      this.btnFullscreen.addEventListener('click', () => {
-        if (!document.fullscreenElement) {
-          document.documentElement.requestFullscreen().catch((err) => {
-            console.warn('Fullscreen request failed:', err);
+    // Fullscreen Toggle (Synchronized for HUD and Start Screen)
+    const FULLSCREEN_ENTER_SVG = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V5a1 1 0 0 1 1-1h4M20 9V5a1 1 0 0 0-1-1h-4M4 15v4a1 1 0 0 0 1 1h4M20 15v4a1 1 0 0 1-1 1h-4"/></svg>';
+    const FULLSCREEN_EXIT_SVG = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4v4a1 1 0 0 1-1 1H4M15 4v4a1 1 0 0 0 1 1h4M9 20v-4a1 1 0 0 0-1-1H4M15 20v-4a1 1 0 0 1 1-1h4"/></svg>';
+
+    const toggleFullscreen = () => {
+      soundManager.init();
+      soundManager.resume();
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch((err) => {
+          console.warn('Fullscreen request failed:', err);
+        });
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen().catch((err) => {
+            console.warn('Exit fullscreen failed:', err);
           });
-          this.btnFullscreen.textContent = '⛶ 창모드';
-        } else {
-          document.exitFullscreen().catch(() => {});
-          this.btnFullscreen.textContent = '⛶ 전체화면';
         }
-      });
+      }
+    };
+
+    if (this.btnFullscreen) {
+      this.btnFullscreen.addEventListener('click', toggleFullscreen);
     }
+    if (this.btnStartFullscreen) {
+      this.btnStartFullscreen.addEventListener('click', toggleFullscreen);
+    }
+
+    const updateFullscreenUI = () => {
+      const isFs = !!document.fullscreenElement;
+      if (this.btnFullscreen) {
+        this.btnFullscreen.textContent = isFs ? '⛶ 창모드' : '⛶ 전체화면';
+      }
+      if (this.btnStartFullscreen) {
+        this.btnStartFullscreen.title = isFs ? '창모드로 전환 (ESC)' : '전체화면으로 전환';
+        this.btnStartFullscreen.innerHTML = isFs ? FULLSCREEN_EXIT_SVG : FULLSCREEN_ENTER_SVG;
+      }
+    };
+
+    document.addEventListener('fullscreenchange', updateFullscreenUI);
+    document.addEventListener('webkitfullscreenchange', updateFullscreenUI);
 
     // Exit Button
     if (this.btnExit) {
