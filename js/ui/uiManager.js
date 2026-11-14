@@ -173,7 +173,7 @@ export class UIManager {
       }
       if (this.instructionSpecial) {
         this.instructionSpecial.innerHTML =
-          '⚡ <strong>필살기 (12개 절단 시)</strong>: 한글 자음(ㄱ, ㄴ, ㅅ, ㅈ) 포즈를 0.5초 유지하면 전멸기 발동!';
+          '⚡ <strong>필살기 (12개 절단 시)</strong>: 한글 자음(ㄱ, ㄴ, ㅅ, ㅇ) 포즈를 0.5초 유지하면 전멸기 발동!';
       }
     }
   }

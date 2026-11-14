@@ -749,6 +749,154 @@
   width: 90%;
 }
 
+/* Start Modal - Landscape Optimized Layout */
+.start-modal-content {
+  max-width: 860px;
+  width: 92%;
+  padding: 24px 32px;
+  max-height: 94vh;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+.start-modal-header {
+  margin-bottom: 12px;
+}
+
+.start-modal-header .game-title {
+  font-size: 36px;
+  font-weight: 900;
+  letter-spacing: -0.5px;
+  margin-bottom: 4px;
+}
+
+.start-modal-header .modal-desc {
+  font-size: 13.5px;
+  color: #94a3b8;
+  margin-bottom: 0;
+  line-height: 1.4;
+}
+
+.start-modal-body {
+  display: grid;
+  grid-template-columns: 1fr 1.08fr;
+  gap: 20px;
+  align-items: stretch;
+  text-align: left;
+}
+
+.start-modal-col {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+.start-section-label {
+  font-size: 12px;
+  font-weight: 800;
+  color: #38bdf8;
+  letter-spacing: 0.3px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.start-col-modes .game-mode-tabs-container {
+  margin-bottom: 14px;
+}
+
+.start-col-modes .mode-select-container {
+  margin-bottom: 0;
+}
+
+.start-col-guide .instructions-card {
+  flex: 1;
+  margin-bottom: 12px;
+  padding: 12px 14px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  gap: 6px;
+}
+
+.start-action-btn {
+  width: 100%;
+  padding: 13px 24px;
+  font-size: 16px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  border-radius: 14px;
+}
+
+/* Compact landscape adjustments for shorter screen heights (e.g. height <= 650px) */
+@media (max-height: 650px) {
+  .start-modal-content {
+    padding: 14px 22px;
+    max-height: 98vh;
+  }
+  .start-modal-header {
+    margin-bottom: 6px;
+  }
+  .start-modal-header .game-title {
+    font-size: 26px;
+    margin-bottom: 2px;
+  }
+  .start-modal-header .modal-desc {
+    font-size: 12px;
+  }
+  .start-modal-body {
+    gap: 12px;
+  }
+  .start-section-label {
+    font-size: 11px;
+    margin-bottom: 4px;
+  }
+  .game-mode-tabs-container {
+    margin-bottom: 8px;
+    gap: 6px;
+  }
+  .game-mode-tab {
+    padding: 8px 6px;
+    border-radius: 12px;
+    gap: 3px;
+  }
+  .game-mode-tab .tab-emoji {
+    font-size: 18px;
+  }
+  .game-mode-tab .tab-name {
+    font-size: 11px;
+  }
+  .mode-select-btn {
+    padding: 8px 10px;
+    font-size: 12.5px;
+    border-radius: 12px;
+  }
+  .start-col-guide .instructions-card {
+    padding: 8px 10px;
+    font-size: 11px;
+    gap: 4px;
+    margin-bottom: 8px;
+  }
+  .start-action-btn {
+    padding: 10px 16px;
+    font-size: 14.5px;
+  }
+}
+
+/* Mobile portrait fallback */
+@media (max-width: 680px) and (orientation: portrait) {
+  .start-modal-content {
+    max-width: 480px;
+    padding: 24px 20px;
+    overflow-y: auto;
+  }
+  .start-modal-body {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
 .game-title {
   font-size: 48px;
   font-weight: 900;

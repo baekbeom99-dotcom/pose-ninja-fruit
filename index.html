@@ -133,41 +133,52 @@
 
       <!-- Start Screen Modal -->
       <div id="start-modal" class="modal-screen">
-        <div class="modal-content">
-          <h1 class="game-title">POSE NINJA FRUIT</h1>
-          <p class="modal-desc">웹캠 또는 전면 카메라 앞에 서서 양손을 휘둘러 날아오는 과일을 베어보세요!</p>
-          
-          <!-- Special Game Modes Selector Tabs -->
-          <div class="game-mode-tabs-container">
-            <button id="btn-mode-classic" class="game-mode-tab active" data-mode="CLASSIC">
-              <span class="tab-emoji">🗡️</span>
-              <span class="tab-name">클래식 닌자</span>
-            </button>
-            <button id="btn-mode-strange" class="game-mode-tab" data-mode="DOCTOR_STRANGE">
-              <span class="tab-emoji">🔮</span>
-              <span class="tab-name">닥터 스트레인지</span>
-            </button>
-            <button id="btn-mode-ufo" class="game-mode-tab" data-mode="UFO_FISH">
-              <span class="tab-emoji">🛸</span>
-              <span class="tab-name">UFO 과일</span>
-            </button>
+        <div class="modal-content start-modal-content">
+          <div class="start-modal-header">
+            <h1 class="game-title">POSE NINJA FRUIT</h1>
+            <p class="modal-desc">웹캠 또는 전면 카메라 앞에서 온몸과 양손을 휘둘러 날아오는 과일을 베어보세요!</p>
           </div>
 
-          <!-- Player Count Toggle (Solo vs Duo) -->
-          <div class="mode-select-container">
-            <button id="btn-mode-solo" class="mode-select-btn active">👤 1인 플레이 (Solo)</button>
-            <button id="btn-mode-duo" class="mode-select-btn">👥 2인 대결 (Duo)</button>
-          </div>
+          <div class="start-modal-body">
+            <!-- Left Column: Mode Selection -->
+            <div class="start-modal-col start-col-modes">
+              <div class="start-section-label">🎮 게임 모드 선택</div>
+              <div class="game-mode-tabs-container">
+                <button id="btn-mode-classic" class="game-mode-tab active" data-mode="CLASSIC">
+                  <span class="tab-emoji">🗡️</span>
+                  <span class="tab-name">클래식 닌자</span>
+                </button>
+                <button id="btn-mode-strange" class="game-mode-tab" data-mode="DOCTOR_STRANGE">
+                  <span class="tab-emoji">🔮</span>
+                  <span class="tab-name">닥터 스트레인지</span>
+                </button>
+                <button id="btn-mode-ufo" class="game-mode-tab" data-mode="UFO_FISH">
+                  <span class="tab-emoji">🛸</span>
+                  <span class="tab-name">UFO 과일</span>
+                </button>
+              </div>
 
-          <div class="instructions-card">
-            <div id="instruction-mode-desc">⚔️ <strong>클래식 닌자 모드</strong>: 양손 독립 검기로 날아오는 과일을 베어보세요!</div>
-            <div id="instruction-special">⚡ <strong>필살기 (12개 절단 시)</strong>: 한글 자음(ㄱ, ㄴ, ㅅ, ㅇ) 포즈를 0.5초 유지하면 전멸기 발동!</div>
-            <div id="instruction-players">👤 <strong>1인 모드</strong>: 화면의 모든 대상을 홀로 베어 최고 점수에 도전하세요!</div>
-            <div>💖 <strong>하트 보너스</strong>: 반짝이는 하트를 베면 생명(+1)이 회복됩니다!</div>
-            <div>💣 <strong>폭탄 헤딩 격파</strong>: 손으로 베면 폭발하지만, 머리(헤딩 ⚽)로 들이받으면 안전하게 격파 (+10점)!</div>
-          </div>
+              <div class="start-section-label">👥 플레이 인원</div>
+              <div class="mode-select-container">
+                <button id="btn-mode-solo" class="mode-select-btn active">👤 1인 플레이 (Solo)</button>
+                <button id="btn-mode-duo" class="mode-select-btn">👥 2인 대결 (Duo)</button>
+              </div>
+            </div>
 
-          <button id="start-btn" class="primary-btn">게임 시작하기</button>
+            <!-- Right Column: Guide & Start Button -->
+            <div class="start-modal-col start-col-guide">
+              <div class="start-section-label">📜 게임 안내 & 규칙</div>
+              <div class="instructions-card">
+                <div id="instruction-mode-desc">⚔️ <strong>클래식 닌자 모드</strong>: 양손 독립 검기로 날아오는 과일을 베어보세요!</div>
+                <div id="instruction-special">⚡ <strong>필살기 (12개 절단 시)</strong>: 한글 자음(ㄱ, ㄴ, ㅅ, ㅇ) 포즈를 0.5초 유지하면 전멸기 발동!</div>
+                <div id="instruction-players">👤 <strong>1인 모드</strong>: 화면의 모든 대상을 홀로 베어 최고 점수에 도전하세요!</div>
+                <div>💖 <strong>하트 보너스</strong>: 반짝이는 하트를 베면 생명(+1)이 회복됩니다!</div>
+                <div>💣 <strong>폭탄 격파</strong>: 닿으면 하트 1개 차감! 머리(헤딩 ⚽)로 들이받으면 안전하게 격파 (+10점)!</div>
+              </div>
+
+              <button id="start-btn" class="primary-btn start-action-btn">⚔️ 게임 시작하기</button>
+            </div>
+          </div>
         </div>
       </div>
 
