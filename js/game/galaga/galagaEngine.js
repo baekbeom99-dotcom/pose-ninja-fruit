@@ -1,0 +1,362 @@
+/**
+ * Galaga Mode Core Engine
+ * Coordinates starfield, fighter, alien formation AI, bullets, tractor beam, and collision detection.
+ */
+
+import { Starfield } from './starfield.js';
+import { Fighter } from './fighter.js';
+import { AlienFormation, AlienType } from './alien.js';
+import { BulletManager } from './bullet.js';
+import { TractorBeam } from './tractorBeam.js';
+import { soundManager } from '../../audio/soundManager.js';
+
+export class GalagaEngine {
+  constructor(width = 1280, height = 720, ui = null, sound = null) {
+    this.width = width;
+    this.height = height;
+    this.ui = ui;
+    this.sound = sound || soundManager;
+
+    this.starfield = new Starfield(width, height, 90);
+    this.fighter = new Fighter(width / 2, height - 75);
+    this.formation = new AlienFormation(width, height);
+    this.bulletManager = new BulletManager();
+    this.tractorBeam = new TractorBeam();
+
+    this.score = 0;
+    this.lives = 3;
+    this.stage = 1;
+    this.state = 'PLAYING'; // 'PLAYING', 'STAGE_CLEAR', 'GAMEOVER'
+    this.stageClearTimer = 0;
+    this.tractorTimer = 0;
+    this.tractorInterval = 14.0;
+
+    this.particles = [];
+
+    this.onScore = () => {};
+    this.onLivesChanged = () => {};
+    this.onGameOver = () => {};
+  }
+
+  start() {
+    this.reset();
+    this.state = 'PLAYING';
+    if (this.sound && typeof this.sound.init === 'function') {
+      this.sound.init();
+      this.sound.resume();
+    }
+  }
+
+  reset() {
+    this.score = 0;
+    this.lives = 3;
+    this.stage = 1;
+    this.state = 'PLAYING';
+    this.stageClearTimer = 0;
+    this.tractorTimer = 0;
+    this.particles = [];
+
+    this.starfield.setWarp(false);
+    this.fighter = new Fighter(this.width / 2, this.height - 75);
+    this.fighter.setInvulnerable(2.0);
+    this.formation = new AlienFormation(this.width, this.height);
+    this.bulletManager.clear();
+    this.tractorBeam.deactivate();
+
+    if (this.ui) {
+      this.ui.updateScores(0, 0, false);
+      this.ui.updateLives(this.lives, 3);
+    }
+  }
+
+  resize(width, height) {
+    this.width = width;
+    this.height = height;
+    this.starfield.resize(width, height);
+    this.formation.resize(width, height);
+    if (this.fighter) {
+      this.fighter.y = height - 75;
+    }
+  }
+
+  update(dt, currentTime, headPose) {
+    if (this.state === 'GAMEOVER') return;
+
+    // 1. Process head tracking input
+    let targetX = this.fighter.x;
+    if (headPose && typeof headPose.x === 'number') {
+      // Mirror horizontal movement for intuitive webcam experience
+      targetX = (1.0 - headPose.x) * this.width;
+    }
+
+    // 2. Update Starfield
+    this.starfield.update(dt);
+
+    // 3. Stage clear handling
+    if (this.state === 'STAGE_CLEAR') {
+      this.stageClearTimer += dt;
+      if (this.stageClearTimer >= 2.5) {
+        // Advance stage
+        this.stage++;
+        this.state = 'PLAYING';
+        this.stageClearTimer = 0;
+        this.starfield.setWarp(false);
+        this.formation = new AlienFormation(this.width, this.height);
+        this.formation.diveInterval = Math.max(1.4, 3.0 - this.stage * 0.25);
+        this.fighter.setInvulnerable(1.5);
+      }
+      return;
+    }
+
+    // 4. Update Fighter
+    this.fighter.update(dt, targetX, this.width, this.height, this.bulletManager, this.sound);
+
+    // 5. Update Formation AI
+    this.formation.update(dt, this.width, this.height, this.bulletManager, this.fighter.x, this.fighter.y);
+
+    // 6. Tractor beam periodic trigger
+    this.tractorTimer += dt;
+    if (this.tractorTimer >= this.tractorInterval && !this.tractorBeam.isActive) {
+      this.tractorTimer = 0;
+      const bosses = this.formation.aliens.filter(a => !a.isDead && a.type === AlienType.BOSS_GALAGA && !a.isDiving);
+      if (bosses.length > 0) {
+        const chosenBoss = bosses[Math.floor(Math.random() * bosses.length)];
+        this.tractorBeam.activate(chosenBoss);
+        if (this.sound && typeof this.sound.playGalagaTractor === 'function') {
+          this.sound.playGalagaTractor();
+        }
+      }
+    }
+
+    // 7. Update Tractor beam and Bullets
+    this.tractorBeam.update(dt, this.fighter, this.sound);
+    this.tractorBeam.updateRescue(dt, this.fighter, this.sound);
+    this.bulletManager.update(dt, this.width, this.height);
+
+    // 8. Update Explosion Particles
+    this._updateParticles(dt);
+
+    // 9. Check Collisions
+    this.checkCollisions();
+
+    // 10. Check Stage Clear
+    if (this.formation.allDestroyed() && this.state === 'PLAYING') {
+      this.state = 'STAGE_CLEAR';
+      this.stageClearTimer = 0;
+      this.starfield.setWarp(true);
+      if (this.sound && typeof this.sound.playGalagaDock === 'function') {
+        this.sound.playGalagaDock();
+      }
+    }
+  }
+
+  checkCollisions() {
+    // 1. Player Bullets vs Aliens
+    for (let b = this.bulletManager.playerBullets.length - 1; b >= 0; b--) {
+      const bullet = this.bulletManager.playerBullets[b];
+      let bulletHit = false;
+
+      for (let a = 0; a < this.formation.aliens.length; a++) {
+        const alien = this.formation.aliens[a];
+        if (alien.isDead) continue;
+
+        // Collision check
+        const dist = Math.hypot(bullet.x - alien.x, bullet.y - alien.y);
+        if (dist <= alien.radius + bullet.width / 2 + 2) {
+          bulletHit = true;
+          const pointsAwarded = alien.hit();
+
+          if (pointsAwarded > 0) {
+            // Alien destroyed!
+            this.score += pointsAwarded;
+            this.onScore(this.score);
+            if (this.ui) {
+              this.ui.updateScores(this.score, 0, false);
+            }
+            if (this.sound && typeof this.sound.playGalagaExplosion === 'function') {
+              this.sound.playGalagaExplosion();
+            }
+            this._spawnExplosion(alien.x, alien.y, alien.type);
+
+            // Release captured ship if boss holding it was destroyed
+            if (alien.type === AlienType.BOSS_GALAGA) {
+              this.tractorBeam.releaseCapturedShip();
+            }
+          }
+          break;
+        }
+      }
+
+      if (bulletHit) {
+        this.bulletManager.playerBullets.splice(b, 1);
+      }
+    }
+
+    // 2. Tractor Beam vs Fighter
+    if (this.tractorBeam.isActive && !this.fighter.isCaptured && !this.fighter.isInvulnerable) {
+      if (this.tractorBeam.isFighterInside(this.fighter)) {
+        this.tractorBeam.startCapture(this.fighter);
+        // Player loses 1 fighter into capture
+        this.lives = Math.max(0, this.lives - 1);
+        this.onLivesChanged(this.lives);
+        if (this.ui) this.ui.updateLives(this.lives, 3);
+
+        if (this.lives <= 0) {
+          this._triggerGameOver();
+        } else {
+          // Respawn a new single fighter after brief delay
+          setTimeout(() => {
+            if (this.state !== 'GAMEOVER') {
+              this.fighter = new Fighter(this.width / 2, this.height - 75);
+              this.fighter.setInvulnerable(2.0);
+            }
+          }, 1200);
+        }
+      }
+    }
+
+    // 3. Alien Missiles vs Fighter
+    if (!this.fighter.isDead && !this.fighter.isCaptured && !this.fighter.isInvulnerable) {
+      for (let m = this.bulletManager.alienMissiles.length - 1; m >= 0; m--) {
+        const missile = this.bulletManager.alienMissiles[m];
+        const dist = Math.hypot(missile.x - this.fighter.x, missile.y - this.fighter.y);
+
+        if (dist <= this.fighter.width / 2 + missile.radius) {
+          missile.isDead = true;
+          this.bulletManager.alienMissiles.splice(m, 1);
+          this._handleFighterHit();
+          break;
+        }
+      }
+    }
+
+    // 4. Diving Alien Bodies vs Fighter
+    if (!this.fighter.isDead && !this.fighter.isCaptured && !this.fighter.isInvulnerable) {
+      for (let a = 0; a < this.formation.aliens.length; a++) {
+        const alien = this.formation.aliens[a];
+        if (alien.isDead || !alien.isDiving) continue;
+
+        const dist = Math.hypot(alien.x - this.fighter.x, alien.y - this.fighter.y);
+        if (dist <= this.fighter.width / 2 + alien.radius) {
+          alien.isDead = true;
+          this._spawnExplosion(alien.x, alien.y, alien.type);
+          this._handleFighterHit();
+          break;
+        }
+      }
+    }
+  }
+
+  _handleFighterHit() {
+    this._spawnExplosion(this.fighter.x, this.fighter.y, 'FIGHTER');
+    if (this.sound && typeof this.sound.playGalagaExplosion === 'function') {
+      this.sound.playGalagaExplosion();
+    }
+
+    if (this.fighter.isDual) {
+      // Revert to single ship with invulnerability
+      this.fighter.setDual(false);
+      this.fighter.setInvulnerable(2.2);
+    } else {
+      // Deduct 1 life
+      this.lives = Math.max(0, this.lives - 1);
+      this.onLivesChanged(this.lives);
+      if (this.ui) this.ui.updateLives(this.lives, 3);
+
+      if (this.lives <= 0) {
+        this._triggerGameOver();
+      } else {
+        // Respawn single fighter with invulnerability
+        this.fighter.setInvulnerable(2.5);
+      }
+    }
+  }
+
+  _triggerGameOver() {
+    this.state = 'GAMEOVER';
+    this.onGameOver(this.score);
+    if (this.ui) {
+      this.ui.showGameOverModal(this.score, 0, false);
+    }
+  }
+
+  _spawnExplosion(x, y, type) {
+    const color = type === 'FIGHTER' ? '#38bdf8' : (type === AlienType.ZAKO ? '#0284c7' : '#ef4444');
+    const count = 18;
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 60 + Math.random() * 180;
+      this.particles.push({
+        x,
+        y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 0.5 + Math.random() * 0.3,
+        maxLife: 0.8,
+        color,
+        size: 2.5 + Math.random() * 3
+      });
+    }
+  }
+
+  _updateParticles(dt) {
+    for (let i = this.particles.length - 1; i >= 0; i--) {
+      const p = this.particles[i];
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.life -= dt;
+      if (p.life <= 0) {
+        this.particles.splice(i, 1);
+      }
+    }
+  }
+
+  render(ctx) {
+    // 1. Starfield
+    this.starfield.render(ctx);
+
+    // 2. Formation
+    this.formation.render(ctx);
+
+    // 3. Tractor Beam
+    this.tractorBeam.render(ctx, this.height);
+
+    // 4. Bullets
+    this.bulletManager.render(ctx);
+
+    // 5. Particles
+    this._renderParticles(ctx);
+
+    // 6. Fighter
+    this.fighter.render(ctx);
+
+    // 7. Stage Clear Warp Banner
+    if (this.state === 'STAGE_CLEAR') {
+      ctx.save();
+      ctx.fillStyle = '#facc15';
+      ctx.font = '900 36px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.shadowColor = '#facc15';
+      ctx.shadowBlur = 15;
+      ctx.fillText(`STAGE ${this.stage} CLEAR!`, this.width / 2, this.height / 2 - 20);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '700 20px sans-serif';
+      ctx.fillText(`WARPING TO STAGE ${this.stage + 1}...`, this.width / 2, this.height / 2 + 25);
+      ctx.restore();
+    }
+  }
+
+  _renderParticles(ctx) {
+    ctx.save();
+    for (let i = 0; i < this.particles.length; i++) {
+      const p = this.particles[i];
+      const alpha = Math.max(0, p.life / p.maxLife);
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+}

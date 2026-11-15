@@ -3,6 +3,7 @@ import { Bullet, AlienMissile, BulletManager } from '../js/game/galaga/bullet.js
 import { Alien, AlienType, AlienFormation } from '../js/game/galaga/alien.js';
 import { Fighter } from '../js/game/galaga/fighter.js';
 import { TractorBeam } from '../js/game/galaga/tractorBeam.js';
+import { GalagaEngine } from '../js/game/galaga/galagaEngine.js';
 import { soundManager } from '../js/audio/soundManager.js';
 
 let passed = 0;
@@ -178,6 +179,43 @@ function runTests() {
   tb.capturedShip.y = rescuerFighter.y; // Simulate reaching dock level
   tb.updateRescue(0.01, rescuerFighter);
   assert(rescuerFighter.isDual === true, 'Fighter transforms into Dual Fighter on dock completion');
+
+  console.log('\n--- Testing Galaga Engine & Collision ---');
+  const ge = new GalagaEngine(800, 600);
+  assert(ge.score === 0, 'Initial score is 0');
+  assert(ge.lives === 3, 'Initial lives set to 3');
+  assert(ge.stage === 1, 'Initial stage is 1');
+
+  // Test player bullet vs alien collision
+  const targetAlien = ge.formation.aliens[0];
+  targetAlien.x = 400;
+  targetAlien.y = 200;
+  ge.bulletManager.firePlayerBullet(400, 205, false);
+
+  ge.checkCollisions();
+  assert(targetAlien.hp === targetAlien.maxHp - 1, 'Player bullet damages target alien');
+  assert(ge.bulletManager.playerBullets.length === 0, 'Bullet consumed on hit');
+
+  // Test player hit by alien missile
+  ge.fighter.x = 400;
+  ge.fighter.y = 520;
+  ge.fighter.isInvulnerable = false;
+  ge.bulletManager.alienMissiles.push(new AlienMissile(400, 518, 400, 520));
+
+  ge.checkCollisions();
+  assert(ge.lives === 2, 'Player loses 1 life when hit by alien missile (3 -> 2)');
+  assert(ge.fighter.isInvulnerable === true, 'Player gains temporary invulnerability on hit');
+
+  // Test Game Over condition
+  ge.lives = 1;
+  ge.fighter.isInvulnerable = false;
+  let gameOverCalled = false;
+  ge.onGameOver = () => { gameOverCalled = true; };
+  ge.bulletManager.alienMissiles.push(new AlienMissile(400, 518, 400, 520));
+
+  ge.checkCollisions();
+  assert(ge.lives === 0, 'Player lives drop to 0 on fatal hit');
+  assert(gameOverCalled === true, 'onGameOver callback triggered when lives reach 0');
 
   console.log(`\nGalaga Tests: ${passed}/${total} passed.`);
   if (passed !== total) process.exit(1);
