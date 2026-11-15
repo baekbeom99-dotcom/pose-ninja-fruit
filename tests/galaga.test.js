@@ -1,6 +1,7 @@
 import { Starfield } from '../js/game/galaga/starfield.js';
 import { Bullet, AlienMissile, BulletManager } from '../js/game/galaga/bullet.js';
 import { Alien, AlienType, AlienFormation } from '../js/game/galaga/alien.js';
+import { Fighter } from '../js/game/galaga/fighter.js';
 import { soundManager } from '../js/audio/soundManager.js';
 
 let passed = 0;
@@ -109,6 +110,40 @@ function runTests() {
   // Test formation update and breathing
   formation.update(0.1, 800, 600);
   assert(formation.formationTime > 0, 'Formation time advances');
+
+  console.log('\n--- Testing Fighter Ship ---');
+  const fighter = new Fighter(400, 520);
+  assert(fighter.x === 400 && fighter.y === 520, 'Fighter initialized at designated position');
+  assert(fighter.isDual === false, 'Fighter starts in single-ship mode');
+
+  // Test sudden head jump smoothing
+  const suddenHeadX = 700;
+  fighter.update(0.016, suddenHeadX, 800, 600, null, null);
+  assert(fighter.x > 400 && fighter.x < 700, 'Fighter moves smoothly towards target without instantly teleporting');
+
+  // Test screen edge clamping
+  const extremeLeftHeadX = -100;
+  for (let i = 0; i < 40; i++) {
+    fighter.update(0.016, extremeLeftHeadX, 800, 600, null, null);
+  }
+  assert(fighter.x >= fighter.width / 2, 'Fighter clamped to left canvas boundary');
+
+  const extremeRightHeadX = 1000;
+  for (let i = 0; i < 40; i++) {
+    fighter.update(0.016, extremeRightHeadX, 800, 600, null, null);
+  }
+  assert(fighter.x <= 800 - fighter.width / 2, 'Fighter clamped to right canvas boundary');
+
+  // Test auto-fire
+  const testBm = new BulletManager();
+  fighter.update(0.2, 400, 800, 600, testBm, null);
+  assert(testBm.playerBullets.length >= 1, 'Fighter auto-fires bullets');
+
+  // Test dual fighter auto-fire produces 2 bullets per shot
+  fighter.isDual = true;
+  testBm.clear();
+  fighter.update(0.2, 400, 800, 600, testBm, null);
+  assert(testBm.playerBullets.length === 2, 'Dual fighter auto-fires 2 parallel bullets');
 
   console.log(`\nGalaga Tests: ${passed}/${total} passed.`);
   if (passed !== total) process.exit(1);
