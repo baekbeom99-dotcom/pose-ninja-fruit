@@ -163,12 +163,34 @@ function runTests() {
   const distantFighter = new Fighter(100, 500);
   assert(tb.isFighterInside(distantFighter) === false, 'Distant fighter outside cone');
 
-  // Test exposure requirement (1.0 second)
-  const exposedFighter = new Fighter(400, 500);
-  const exp1 = tb.updateExposure(0.5, exposedFighter);
-  assert(exp1.isExposed === true && exp1.triggerCapture === false, '0.5s exposure does not trigger capture yet');
-  const exp2 = tb.updateExposure(0.6, exposedFighter); // Total 1.1s >= 1.0s
-  assert(exp2.triggerCapture === true, '1.1s exposure (>=1.0s) triggers capture');
+  // Test exposure requirement (1.0 second) & movement behavior
+  const movingFighter = new Fighter(400, 500);
+  const step1 = tb.updateExposure(0.4, movingFighter);
+  assert(step1.isExposed === true && step1.triggerCapture === false, '0.4s exposure accumulating');
+
+  // Move within beam (400 -> 420)
+  movingFighter.x = 420;
+  const step2 = tb.updateExposure(0.4, movingFighter);
+  assert(step2.isExposed === true && step2.triggerCapture === false, 'Moving within beam does not break capture progress');
+  assert(Math.abs(step2.timer - 0.8) < 0.001, 'Timer accumulated to 0.8s while moving inside beam');
+
+  // Move outside beam before 1.0s (420 -> 100) -> timer resets immediately to 0
+  movingFighter.x = 100;
+  const exitStep = tb.updateExposure(0.1, movingFighter);
+  assert(exitStep.isExposed === false, 'Exited beam before 1.0s');
+  assert(exitStep.timer === 0, 'Exiting beam within 1.0s resets timer to 0 immediately');
+
+  // Re-enter beam and hold for >= 1.0s
+  movingFighter.x = 400;
+  tb.updateExposure(0.5, movingFighter);
+  const captureStep = tb.updateExposure(0.6, movingFighter);
+  assert(captureStep.triggerCapture === true, '1.1s exposure (>=1.0s) triggers capture');
+
+  // Once captured / pulling, escape is impossible even if moving outside coordinates
+  tb.startCapture(movingFighter);
+  movingFighter.x = 50; // Try to escape
+  const lockedStep = tb.updateExposure(0.1, movingFighter);
+  assert(lockedStep.isExposed === true && lockedStep.progress === 1.0, 'Capture locked after 1.0s');
 
   // Test boss descent before tractor beam
   const descentBoss = new Alien(AlienType.BOSS_GALAGA, 0, 0, 400, 80);

@@ -30,7 +30,7 @@ export class GalagaEngine {
     this.state = 'PLAYING'; // 'PLAYING', 'STAGE_CLEAR', 'GAMEOVER'
     this.stageClearTimer = 0;
     this.tractorTimer = 0;
-    this.tractorInterval = 14.0;
+    this.tractorInterval = 8.0;
 
     this.particles = [];
 
@@ -197,7 +197,20 @@ export class GalagaEngine {
 
             // Release captured ship if boss holding it was destroyed
             if (alien.type === AlienType.BOSS_GALAGA) {
-              this.tractorBeam.releaseCapturedShip();
+              if (this.tractorBeam.isPulling && this.tractorBeam.boss === alien) {
+                // Free pulling ship immediately!
+                if (this.tractorBeam.pullingShip) {
+                  this.tractorBeam.pullingShip.isCaptured = false;
+                  this.tractorBeam.pullingShip.angle = 0;
+                  this.tractorBeam.pullingShip.y = this.height - 75;
+                }
+                this.tractorBeam.deactivate();
+                this.lives = Math.min(5, this.lives + 1);
+                this.onLivesChanged(this.lives);
+                if (this.ui) this.ui.updateLives(this.lives, 5);
+              } else {
+                this.tractorBeam.releaseCapturedShip();
+              }
             }
           }
           break;
@@ -209,27 +222,32 @@ export class GalagaEngine {
       }
     }
 
-    // 2. Tractor Beam vs Fighter (Requires 1.5s exposure!)
+    // 2. Tractor Beam vs Fighter (Requires 1.0s exposure!)
     if (this.tractorBeam.isActive && !this.fighter.isCaptured && !this.fighter.isInvulnerable) {
       const exposure = this.tractorBeam.updateExposure(dt, this.fighter);
 
-      if (exposure.triggerCapture) {
-        this.tractorBeam.startCapture(this.fighter);
+      if (exposure.triggerCapture && !this.tractorBeam.isPulling) {
+        const capturedFighter = this.fighter;
+        this.tractorBeam.startCapture(capturedFighter);
+
         // Player loses 1 fighter into capture
         this.lives = Math.max(0, this.lives - 1);
         this.onLivesChanged(this.lives);
         if (this.ui) this.ui.updateLives(this.lives, 5);
 
         if (this.lives <= 0) {
-          this._triggerGameOver();
+          // If no lives remain, trigger game over after capture animation finishes
+          this.tractorBeam.onCaptureComplete = () => {
+            this._triggerGameOver();
+          };
         } else {
-          // Respawn a new single fighter after brief delay
-          setTimeout(() => {
+          // When ship finishes docking on boss, spawn reserve fighter!
+          this.tractorBeam.onCaptureComplete = () => {
             if (this.state !== 'GAMEOVER') {
               this.fighter = new Fighter(this.width / 2, this.height - 75);
               this.fighter.setInvulnerable(2.0);
             }
-          }, 1200);
+          };
         }
       }
     } else {

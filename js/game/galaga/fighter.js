@@ -91,7 +91,15 @@ export class Fighter {
       ctx.fillStyle = '#94a3b8';
       ctx.fillRect(this.x - 4, this.y - 6, 8, 4);
     } else {
-      this._renderSingleHull(ctx, this.x, this.y);
+      if (this.isCaptured && this.angle) {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.angle);
+        this._renderSingleHull(ctx, 0, 0);
+        ctx.restore();
+      } else {
+        this._renderSingleHull(ctx, this.x, this.y);
+      }
     }
 
     ctx.restore();
@@ -101,11 +109,12 @@ export class Fighter {
     ctx.save();
     ctx.translate(cx, cy);
 
-    ctx.shadowColor = '#38bdf8';
+    const isCapt = this.isCaptured;
+    ctx.shadowColor = isCapt ? '#f59e0b' : '#38bdf8';
     ctx.shadowBlur = 8;
 
-    // Main white arrow hull
-    ctx.fillStyle = '#f8fafc';
+    // Main arrow hull (turns amber/reddish when captured)
+    ctx.fillStyle = isCapt ? '#fed7aa' : '#f8fafc';
     ctx.beginPath();
     ctx.moveTo(0, -18);
     ctx.lineTo(8, -4);

@@ -6,9 +6,9 @@ export class TractorBeam {
   constructor() {
     this.isActive = false;
     this.boss = null;
-    this.beamTopWidth = 24;
-    this.beamBottomWidth = 180;
-    this.maxDuration = 4.5;
+    this.beamTopWidth = 28;
+    this.beamBottomWidth = 240;
+    this.maxDuration = 6.0;
     this.timer = 0;
     this.animTime = 0;
 
@@ -17,8 +17,10 @@ export class TractorBeam {
     this.requiredExposure = 1.0;
 
     this.capturedShip = null;
+    this.pullingShip = null;
     this.isPulling = false;
     this.pullSpeed = 160;
+    this.onCaptureComplete = null;
   }
 
   activate(boss) {
@@ -27,41 +29,59 @@ export class TractorBeam {
     this.timer = 0;
     this.animTime = 0;
     this.exposureTimer = 0;
+    this.isPulling = false;
+    this.pullingShip = null;
   }
 
   deactivate() {
     this.isActive = false;
     this.boss = null;
     this.isPulling = false;
+    this.pullingShip = null;
     this.exposureTimer = 0;
   }
 
   updateExposure(dt, fighter) {
-    if (!this.isActive || !this.boss || !fighter || fighter.isCaptured || fighter.isInvulnerable) {
-      this.exposureTimer = Math.max(0, this.exposureTimer - dt * 2.0);
+    if (!this.isActive || !this.boss || !fighter || fighter.isInvulnerable) {
+      if (!this.isPulling) {
+        this.exposureTimer = 0;
+      }
       return {
         isExposed: false,
         timer: this.exposureTimer,
-        progress: this.exposureTimer / this.requiredExposure,
+        progress: 0,
+        triggerCapture: false
+      };
+    }
+
+    // 1초 이후 또는 포획 진행 중에는 포획이 풀리지 않음
+    if (this.isPulling || fighter.isCaptured) {
+      return {
+        isExposed: true,
+        timer: this.requiredExposure,
+        progress: 1.0,
         triggerCapture: false
       };
     }
 
     const inside = this.isFighterInside(fighter);
     if (inside) {
+      // 빔 내에서는 움직여도 포획 풀리지 않고 계속 타이머 누적
       this.exposureTimer += dt;
+      const reached = this.exposureTimer >= this.requiredExposure;
       return {
         isExposed: true,
         timer: this.exposureTimer,
         progress: Math.min(1.0, this.exposureTimer / this.requiredExposure),
-        triggerCapture: this.exposureTimer >= this.requiredExposure
+        triggerCapture: reached
       };
     } else {
-      this.exposureTimer = Math.max(0, this.exposureTimer - dt * 2.0);
+      // 단 1초 이내에 빔 밖으로 나가면 타이머 즉시 초기화
+      this.exposureTimer = 0;
       return {
         isExposed: false,
-        timer: this.exposureTimer,
-        progress: Math.min(1.0, this.exposureTimer / this.requiredExposure),
+        timer: 0,
+        progress: 0,
         triggerCapture: false
       };
     }
@@ -70,54 +90,81 @@ export class TractorBeam {
   isFighterInside(fighter) {
     if (!this.isActive || !this.boss || !fighter) return false;
 
-    const topY = this.boss.y + 10;
-    const bottomY = fighter.y;
+    const topY = this.boss.y + 12;
+    const bottomY = 720;
     if (fighter.y < topY) return false;
 
     // Linear expansion of cone width from top to bottom
-    const progress = Math.min(1.0, (fighter.y - topY) / Math.max(1, bottomY - topY));
+    const progress = Math.min(1.0, Math.max(0, (fighter.y - topY) / Math.max(1, bottomY - topY)));
     const currentHalfWidth = (this.beamTopWidth + (this.beamBottomWidth - this.beamTopWidth) * progress) / 2;
 
-    return Math.abs(fighter.x - this.boss.x) <= currentHalfWidth;
+    // Generous boundary (+45% fighter width) so moving within the beam remains firmly inside
+    const tolerance = fighter.width * 0.45;
+    return Math.abs(fighter.x - this.boss.x) <= (currentHalfWidth + tolerance);
   }
 
   startCapture(fighter) {
     if (!fighter) return;
     this.isPulling = true;
+    this.pullingShip = fighter;
     fighter.isCaptured = true;
+    fighter.angle = 0;
   }
 
   releaseCapturedShip() {
-    if (this.capturedShip) {
+    if (this.capturedShip && !this.capturedShip.isRescued) {
       this.capturedShip.isRescued = true;
+      this.capturedShip.boss = null;
     }
   }
 
-  update(dt, fighter, soundManager) {
+  update(dt, activeFighter, soundManager) {
     this.animTime += dt * 6;
 
     if (this.isActive) {
-      this.timer += dt;
-      if (this.timer >= this.maxDuration) {
-        this.deactivate();
+      // 포획 중(pulling)일 때는 빔 타이머로 인한 강제 중단 금지!
+      if (!this.isPulling) {
+        this.timer += dt;
+        if (this.timer >= this.maxDuration) {
+          this.deactivate();
+        }
       }
     }
 
     // Pulling fighter upwards
-    if (this.isPulling && fighter && this.boss) {
-      fighter.y -= this.pullSpeed * dt;
-      fighter.x += (this.boss.x - fighter.x) * 0.1;
+    const shipToPull = this.pullingShip || (this.isPulling ? activeFighter : null);
+    if (this.isPulling && shipToPull && this.boss) {
+      shipToPull.y -= this.pullSpeed * dt;
+      shipToPull.x += (this.boss.x - shipToPull.x) * 0.12;
+      shipToPull.angle = (shipToPull.angle || 0) + dt * 10; // Classic spinning capture!
 
       // Check if pulled to boss level
-      if (fighter.y <= this.boss.y + 20) {
+      if (shipToPull.y <= this.boss.y + 16) {
         this.isPulling = false;
-        this.deactivate();
         this.capturedShip = {
+          boss: this.boss,
           x: this.boss.x,
           y: this.boss.y - 18,
           isRescued: false,
           angle: 0
         };
+        const finishedShip = shipToPull;
+        this.pullingShip = null;
+        this.deactivate();
+
+        if (this.onCaptureComplete) {
+          this.onCaptureComplete(finishedShip);
+        }
+      }
+    }
+
+    // Keep captured ship attached to boss if held
+    if (this.capturedShip && !this.capturedShip.isRescued) {
+      if (this.capturedShip.boss && !this.capturedShip.boss.isDead) {
+        this.capturedShip.x = this.capturedShip.boss.x;
+        this.capturedShip.y = this.capturedShip.boss.y - 18;
+      } else {
+        this.capturedShip.isRescued = true;
       }
     }
   }
@@ -186,7 +233,7 @@ export class TractorBeam {
       }
 
       // If fighter is exposed inside the beam, render an energetic warning capture progress ring!
-      if (fighter && exposureProgress > 0) {
+      if (fighter && exposureProgress > 0 && !fighter.isCaptured) {
         ctx.globalAlpha = 1.0;
         ctx.strokeStyle = '#facc15';
         ctx.lineWidth = 3;
@@ -206,6 +253,11 @@ export class TractorBeam {
       }
 
       ctx.restore();
+    }
+
+    // Render pulling ship if spinning upwards
+    if (this.pullingShip) {
+      this.pullingShip.render(ctx);
     }
 
     // Render captured ship if held by boss or descending for rescue
