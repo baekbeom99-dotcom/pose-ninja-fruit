@@ -225,6 +225,7 @@ export const CONFIG = {
     CLASSIC: 'CLASSIC',
     DOCTOR_STRANGE: 'DOCTOR_STRANGE',
     UFO_FISH: 'UFO_FISH',
-    GALAGA: 'GALAGA'
+    GALAGA: 'GALAGA',
+    RHYTHM: 'RHYTHM'
   }
 };

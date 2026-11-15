@@ -206,21 +206,22 @@
 /* Special Game Modes Tabs (Classic, Doctor Strange, UFO Fish) */
 .game-mode-tabs-container {
   display: flex;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 8px;
   margin-bottom: 14px;
   justify-content: center;
   width: 100%;
 }
 
 .game-mode-tab {
-  flex: 1;
+  flex: 1 1 92px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 6px;
   background: rgba(15, 23, 42, 0.75);
   border: 1.5px solid rgba(255, 255, 255, 0.16);
-  padding: 12px 10px;
+  padding: 12px 8px;
   border-radius: 16px;
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -269,6 +270,73 @@
   background: linear-gradient(135deg, rgba(88, 28, 135, 0.9) 0%, rgba(126, 34, 206, 0.9) 100%);
   border-color: #c084fc;
   box-shadow: 0 0 22px rgba(192, 132, 252, 0.6);
+}
+
+.game-mode-tab[data-mode="RHYTHM"].active {
+  background: linear-gradient(135deg, rgba(190, 24, 93, 0.92) 0%, rgba(6, 182, 212, 0.92) 100%);
+  border-color: #f472b6;
+  box-shadow: 0 0 22px rgba(244, 114, 182, 0.6);
+}
+
+/* Rhythm Track Selector */
+.rhythm-track-selector {
+  margin-top: 8px;
+  padding: 10px;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(244, 114, 182, 0.35);
+  border-radius: 14px;
+}
+
+.rhythm-track-selector.hidden {
+  display: none;
+}
+
+.rhythm-track-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rhythm-track-btn {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 8px 12px;
+  background: rgba(30, 41, 59, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  color: #cbd5e1;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.rhythm-track-btn:hover {
+  background: rgba(51, 65, 85, 0.9);
+  color: #ffffff;
+}
+
+.rhythm-track-btn.active {
+  background: linear-gradient(90deg, rgba(236, 72, 153, 0.35) 0%, rgba(34, 211, 238, 0.35) 100%);
+  border-color: #22d3ee;
+  color: #ffffff;
+  box-shadow: 0 0 12px rgba(34, 211, 238, 0.3);
+}
+
+.rhythm-track-btn .track-title {
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.rhythm-track-btn .track-meta {
+  font-size: 11px;
+  font-weight: 700;
+  color: #94a3b8;
+}
+
+.rhythm-track-btn.active .track-meta {
+  color: #67e8f9;
 }
 
 /* Mode Selection on Start Screen */

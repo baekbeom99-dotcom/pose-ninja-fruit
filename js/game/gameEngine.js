@@ -9,6 +9,7 @@ import { FruitManager } from './fruitManager.js';
 import { ParticleSystem } from './particleSystem.js';
 import { GestureDetector, CONSONANT_POSES } from './gestureDetector.js';
 import { GalagaEngine } from './galaga/galagaEngine.js';
+import { RhythmEngine } from './rhythm/rhythmEngine.js';
 import { soundManager } from '../audio/soundManager.js';
 
 export const GameState = {
@@ -67,6 +68,18 @@ export class GameEngine {
       this.p1Score = score;
     };
     this.galagaEngine.onLivesChanged = (lives) => {
+      this.lives = lives;
+    };
+
+    // Rhythm Mode Subsystem
+    this.rhythmEngine = new RhythmEngine(this.width, this.height, this.ui, soundManager);
+    this.rhythmEngine.onGameOver = () => {
+      this.triggerGameOver();
+    };
+    this.rhythmEngine.onScore = (score) => {
+      this.p1Score = score;
+    };
+    this.rhythmEngine.onLivesChanged = (lives) => {
       this.lives = lives;
     };
 
@@ -176,6 +189,9 @@ export class GameEngine {
       if (this.galagaEngine) {
         this.galagaEngine.resize(w, h);
       }
+      if (this.rhythmEngine) {
+        this.rhythmEngine.resize(w, h);
+      }
     };
 
     window.addEventListener('resize', resize);
@@ -196,6 +212,10 @@ export class GameEngine {
       this.galagaEngine.stop();
       this.galagaEngine.reset();
     }
+    if (this.rhythmEngine) {
+      this.rhythmEngine.stop();
+      this.rhythmEngine.reset();
+    }
     this.fruitManager.reset();
     this.particles.clear();
     this.ui.updateScores(0, 0, this.isTwoPlayerMode);
@@ -211,6 +231,7 @@ export class GameEngine {
     this.lives = CONFIG.GAME.START_LIVES;
 
     if (this.gameMode === CONFIG.MODES.GALAGA) {
+      this.rhythmEngine.stop();
       this.state = GameState.PLAYING;
       this.galagaEngine.start();
       this.ui.updateHUDMode(false, this.gameMode);
@@ -221,7 +242,24 @@ export class GameEngine {
       return;
     }
 
+    if (this.gameMode === CONFIG.MODES.RHYTHM) {
+      soundManager.stopGalagaBGM();
+      this.galagaEngine.stop();
+      this.blades.setMode(false);
+      this.blades.setDoctorStrangeMode(false);
+      this.state = GameState.PLAYING;
+      const trackId = (this.ui && this.ui.selectedRhythmTrack) || 'neon_cruise';
+      this.rhythmEngine.start(trackId);
+      this.ui.updateHUDMode(false, this.gameMode);
+      this.ui.updateScores(0, 0, false);
+      this.ui.updateLives(this.lives, CONFIG.GAME.MAX_LIVES);
+      this.ui.hideStartModal();
+      this.ui.hideGameOverModal();
+      return;
+    }
+
     soundManager.stopGalagaBGM();
+    this.rhythmEngine.stop();
 
     const isDocStrange = this.gameMode === CONFIG.MODES.DOCTOR_STRANGE;
     this.blades.setMode(this.isTwoPlayerMode);
@@ -333,6 +371,16 @@ export class GameEngine {
     // 2. Update Blade Tracker with filtered poses first
     this.blades.update(poses, this.width, this.height, currentTime, CONFIG.CANVAS.MIRROR);
 
+    // Rhythm Mode Update Loop
+    if (this.gameMode === CONFIG.MODES.RHYTHM) {
+      if (this.state === GameState.PLAYING) {
+        const activeSegments = this.blades.getActiveSegments();
+        this.rhythmEngine.update(dt, currentTime, this.lastHeadPose, poses, activeSegments);
+      }
+      this.lastPoses = poses;
+      return;
+    }
+
     // 3. Evaluate Consonant Pose for Ultimate Move if Ready
     if (this.state === GameState.PLAYING && this.isUltimateReady && poses && poses.length > 0) {
       let triggered = false;
@@ -429,6 +477,16 @@ export class GameEngine {
 
     if (this.lastPoses) {
       this.poseTracker.drawSkeletons(this.bgCtx, this.lastPoses, w, h, CONFIG.CANVAS.MIRROR);
+    }
+
+    // Rhythm Mode Render Pipeline
+    if (this.gameMode === CONFIG.MODES.RHYTHM) {
+      this.gameCtx.clearRect(0, 0, w, h);
+      this.rhythmEngine.render(this.gameCtx);
+
+      this.bladeCtx.clearRect(0, 0, w, h);
+      this.blades.draw(this.bladeCtx);
+      return;
     }
 
     // Layer 2: Game Objects (Fruits, Halves, Splatters, Shockwaves, Lightning)
