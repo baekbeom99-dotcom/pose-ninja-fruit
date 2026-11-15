@@ -155,7 +155,7 @@ export class GalagaEngine {
       this.isChallengingStage = false;
       this.formation = new AlienFormation(this.width, this.height, this.stage);
       this.formation.startFlyIn();
-      this.tractorInterval = Math.max(5.5, 8.5 - (this.stage - 1) * 0.7);
+      this.tractorInterval = Math.max(6.0, 10.5 - (this.stage - 1) * 0.65);
     }
   }
 
@@ -326,8 +326,9 @@ export class GalagaEngine {
 
     // 6. Update Asteroids (Stage 2+)
     if (!this.isChallengingStage && this.stage >= 2) {
+      const astInterval = Math.max(6.5, 11.0 - (this.stage - 2) * 0.65);
       this.asteroidTimer += dt;
-      if (this.asteroidTimer >= 8.5) {
+      if (this.asteroidTimer >= astInterval) {
         this.asteroidTimer = 0;
         const startX = Math.random() * (this.width - 160) + 80;
         this.asteroids.push(new Asteroid(startX, -30, 'LARGE'));
@@ -530,8 +531,9 @@ export class GalagaEngine {
             }
             this._spawnExplosion(alien.x, alien.y, alien.type);
 
-            // 급강하 중인 적 격추 시 25% 확률로 파워업 아이템 드랍!
-            if (alien.isDiving && Math.random() < 0.25) {
+            // 급강하 중인 적 격추 시 파워업 아이템 드랍! (신규 적 PHANTOM은 55%, 일반 적은 25%)
+            const dropChance = alien.type === AlienType.PHANTOM ? 0.55 : 0.25;
+            if (alien.isDiving && Math.random() < dropChance) {
               const types = ['TRIPLE', 'PIERCER', 'SHIELD', 'HEART'];
               const chosenType = types[Math.floor(Math.random() * types.length)];
               this.bulletManager.spawnPowerUp(alien.x, alien.y, chosenType);
@@ -726,6 +728,7 @@ export class GalagaEngine {
     else if (type === AlienType.ZAKO) color = '#0284c7';
     else if (type === AlienType.GOEI) color = '#ef4444';
     else if (type === AlienType.BOSS_GALAGA) color = '#10b981';
+    else if (type === AlienType.PHANTOM) color = '#d946ef';
 
     const count = type === 'EMP_SPARK' ? 8 : 18;
     for (let i = 0; i < count; i++) {
@@ -840,7 +843,20 @@ export class GalagaEngine {
     }
     ctx.restore();
 
-    // 8. Stage Clear Warp Banner
+    // 8. Stage 7+ New Enemy Alert Banner
+    if (this.stage === 7 && this.state === 'PLAYING' && this.formation && this.formation.formationTime < 3.5) {
+      ctx.save();
+      const blink = Math.floor(this.formation.formationTime * 6) % 2 === 0;
+      ctx.fillStyle = blink ? '#e879f9' : '#facc15';
+      ctx.font = '900 22px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.shadowColor = '#d946ef';
+      ctx.shadowBlur = 12;
+      ctx.fillText(`⚠ NEW ENEMY: PHANTOM SQUADRON DETECTED! ⚠`, this.width / 2, this.height * 0.48);
+      ctx.restore();
+    }
+
+    // 9. Stage Clear Warp Banner
     if (this.state === 'STAGE_CLEAR') {
       ctx.save();
       ctx.fillStyle = '#facc15';

@@ -6,7 +6,8 @@
 export const AlienType = {
   ZAKO: 'ZAKO',
   GOEI: 'GOEI',
-  BOSS_GALAGA: 'BOSS_GALAGA'
+  BOSS_GALAGA: 'BOSS_GALAGA',
+  PHANTOM: 'PHANTOM' // Stage 7+ Elite Stealth Viper
 };
 
 export class Alien {
@@ -20,9 +21,9 @@ export class Alien {
     this.y = homeY;
     this.stage = stage;
     this.angle = 0;
-    this.radius = 16;
+    this.radius = type === AlienType.PHANTOM ? 17 : 16;
 
-    this.maxHp = type === AlienType.BOSS_GALAGA ? 2 : 1;
+    this.maxHp = (type === AlienType.BOSS_GALAGA || type === AlienType.PHANTOM) ? 2 : 1;
     this.hp = this.maxHp;
     this.isInjured = false;
     this.isDead = false;
@@ -30,6 +31,8 @@ export class Alien {
     this.diveT = 0;
     this.diveDuration = 3.2;
     this.diveCurve = null;
+    this.diveMissilesFired = 0;
+    this.diveMaxMissiles = 1;
 
     // Tractor beam run states (Boss Galaga descends before firing)
     this.isTractorRun = false;
@@ -38,8 +41,8 @@ export class Alien {
 
     this.animTime = Math.random() * 10;
 
-    // Boss Galaga energy shield on stage 4+
-    this.isShielded = type === AlienType.BOSS_GALAGA && stage >= 4;
+    // Boss Galaga energy shield on stage 4+; Phantom always shielded
+    this.isShielded = (type === AlienType.BOSS_GALAGA && stage >= 4) || type === AlienType.PHANTOM;
 
     // Formation fly-in animation states
     this.isFlyIn = false;
@@ -76,11 +79,12 @@ export class Alien {
       this.isDead = true;
       const wasDiving = this.isDiving;
       this.isFlyIn = false;
-      this.isDiving = false;
       if (this.type === AlienType.ZAKO) {
         return wasDiving ? 200 : 100;
       } else if (this.type === AlienType.GOEI) {
         return wasDiving ? 320 : 160;
+      } else if (this.type === AlienType.PHANTOM) {
+        return wasDiving ? 800 : 500;
       } else {
         // BOSS_GALAGA
         return wasDiving ? 400 : 200;
@@ -94,10 +98,22 @@ export class Alien {
   startDive(startX, startY, targetX, targetY, canvasWidth, canvasHeight, stage = this.stage) {
     this.isDiving = true;
     this.diveT = 0;
-    this.diveFired = false;
-    // Higher stages swoop down faster
-    const speedUp = Math.min(1.3, (stage - 1) * 0.25);
-    this.diveDuration = Math.max(1.4, (2.6 - speedUp) + Math.random() * 0.4);
+    this.diveMissilesFired = 0;
+
+    // Stage 1: calm & readable pace (~3.1s), progressively faster on higher stages
+    const speedUp = Math.min(1.5, (stage - 1) * 0.22);
+    this.diveDuration = Math.max(1.6, (3.1 - speedUp) + Math.random() * 0.3);
+
+    // Stage-by-stage missile quota per dive
+    if (stage <= 1) {
+      this.diveMaxMissiles = 1; // Classic Stage 1: max 1 missile per dive
+    } else if (stage <= 3) {
+      this.diveMaxMissiles = this.type === AlienType.BOSS_GALAGA ? 2 : 1;
+    } else if (stage <= 6) {
+      this.diveMaxMissiles = 2;
+    } else {
+      this.diveMaxMissiles = (this.type === AlienType.BOSS_GALAGA || this.type === AlienType.PHANTOM) ? 3 : 2;
+    }
 
     // Generate cubic Bezier dive path: start -> sweep across center -> target area -> loop back up
     const dir = Math.random() > 0.5 ? 1 : -1;
@@ -199,19 +215,32 @@ export class Alien {
         const uuu = uu * u;
         const ttt = tt * t;
 
-        this.x = uuu * c.p0.x + 3 * uu * t * c.p1.x + 3 * u * tt * c.p2.x + ttt * c.p3.x;
-        this.y = uuu * c.p0.y + 3 * uu * t * c.p1.y + 3 * u * tt * c.p2.y + ttt * c.p3.y;
+        let diveX = uuu * c.p0.x + 3 * uu * t * c.p1.x + 3 * u * tt * c.p2.x + ttt * c.p3.x;
+        const diveY = uuu * c.p0.y + 3 * uu * t * c.p1.y + 3 * u * tt * c.p2.y + ttt * c.p3.y;
+
+        // Phantom weaves side-to-side during its dive attack
+        if (this.type === AlienType.PHANTOM) {
+          diveX += Math.sin(t * Math.PI * 5) * 60 * Math.sin(t * Math.PI);
+        }
+
+        this.x = diveX;
+        this.y = diveY;
 
         // Face dive direction
         this.angle = Math.atan2(this.y - prevY, this.x - prevX) - Math.PI / 2;
 
-        // Guaranteed missile drop during mid-dive + chance for second shot!
-        const missileSpeed = 360 + Math.min(220, (this.stage - 1) * 40);
-        if (bulletManager && !this.diveFired && t >= 0.30 && this.y < fighterY - 60) {
-          this.diveFired = true;
-          bulletManager.fireAlienMissile(this.x, this.y, fighterX, fighterY, missileSpeed);
-        } else if (bulletManager && Math.random() < 0.035 && this.y < fighterY - 80) {
-          bulletManager.fireAlienMissile(this.x, this.y, fighterX, fighterY, missileSpeed);
+        // Stage-scaled deterministic missile firing quota
+        const missileSpeed = Math.min(450, 230 + (this.stage - 1) * 28);
+        const fireStep = 0.65 / (this.diveMaxMissiles + 0.5);
+        const nextTriggerT = 0.22 + this.diveMissilesFired * fireStep;
+        if (bulletManager && this.diveMissilesFired < this.diveMaxMissiles && t >= nextTriggerT && this.y < fighterY - 60) {
+          this.diveMissilesFired++;
+          if (this.type === AlienType.PHANTOM) {
+            bulletManager.fireAlienMissile(this.x, this.y, fighterX, fighterY, missileSpeed, -0.16, '#e879f9');
+            bulletManager.fireAlienMissile(this.x, this.y, fighterX, fighterY, missileSpeed, 0.16, '#e879f9');
+          } else {
+            bulletManager.fireAlienMissile(this.x, this.y, fighterX, fighterY, missileSpeed);
+          }
         }
       } else {
         // Return to formation
@@ -234,6 +263,8 @@ export class Alien {
       this._renderZako(ctx, flap);
     } else if (this.type === AlienType.GOEI) {
       this._renderGoei(ctx, flap);
+    } else if (this.type === AlienType.PHANTOM) {
+      this._renderPhantom(ctx, flap);
     } else {
       this._renderBoss(ctx, flap);
     }
@@ -361,6 +392,73 @@ export class Alien {
       ctx.restore();
     }
   }
+
+  _renderPhantom(ctx, flap) {
+    // Stage 7+ Elite Cyber Phantom (Magenta/Violet stealth viper, turns Gold/Crimson when injured)
+    const hullColor = this.isInjured ? '#f59e0b' : '#d946ef';
+    const wingColor = this.isInjured ? '#fde047' : '#a855f7';
+    ctx.shadowColor = hullColor;
+    ctx.shadowBlur = 12;
+
+    // Swept stealth wings
+    ctx.fillStyle = wingColor;
+    ctx.beginPath();
+    ctx.moveTo(-4, -6);
+    ctx.lineTo(-20 - flap * 4, 4 + flap * 3);
+    ctx.lineTo(-10, 12);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(4, -6);
+    ctx.lineTo(20 + flap * 4, 4 + flap * 3);
+    ctx.lineTo(10, 12);
+    ctx.closePath();
+    ctx.fill();
+
+    // Central armored fuselage
+    ctx.fillStyle = hullColor;
+    ctx.beginPath();
+    ctx.moveTo(0, 15);
+    ctx.lineTo(-9, -4);
+    ctx.lineTo(0, -14);
+    ctx.lineTo(9, -4);
+    ctx.closePath();
+    ctx.fill();
+
+    // Twin golden mandibles & core eye
+    ctx.fillStyle = '#facc15';
+    ctx.fillRect(-7, -15, 3, 7);
+    ctx.fillRect(4, -15, 3, 7);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(0, 0, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Violet energy barrier
+    if (this.isShielded) {
+      ctx.save();
+      ctx.strokeStyle = '#e879f9';
+      ctx.lineWidth = 2.5;
+      ctx.shadowColor = '#e879f9';
+      ctx.shadowBlur = 12;
+      ctx.beginPath();
+      const shieldR = 22 + Math.sin(this.animTime * 0.9) * 2;
+      for (let i = 0; i < 6; i++) {
+        const a = (i * Math.PI / 3) - this.animTime * 0.25;
+        const sx = Math.cos(a) * shieldR;
+        const sy = Math.sin(a) * shieldR;
+        if (i === 0) ctx.moveTo(sx, sy);
+        else ctx.lineTo(sx, sy);
+      }
+      ctx.closePath();
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(232, 121, 249, 0.18)';
+      ctx.fill();
+      ctx.restore();
+    }
+  }
 }
 
 export class AlienFormation {
@@ -370,15 +468,15 @@ export class AlienFormation {
     this.stage = stage;
     this.aliens = [];
     this.formationTime = 0;
+    this.diveTimer = 2.0; // Start ready soon after fly-in completes
     this.centerX = canvasWidth / 2;
     this.centerY = 180;
-    this.diveTimer = 1.0;
     this.isFlyIn = false;
     this.flyInTimer = 0;
-    // Higher stages dive and shoot more frequently
-    this.diveInterval = Math.max(0.75, 1.8 - (stage - 1) * 0.25);
+    // Stage 1 starts at calm 3.4s interval, progressively tightening per stage
+    this.diveInterval = Math.max(1.1, 3.4 - (stage - 1) * 0.28);
     this.formationFireTimer = 0;
-    this.formationFireInterval = Math.max(1.2, 2.4 - (stage - 1) * 0.3);
+    this.formationFireInterval = stage <= 1 ? Infinity : Math.max(1.6, 5.2 - (stage - 2) * 0.55);
 
     this._buildGrid();
   }
@@ -420,6 +518,16 @@ export class AlienFormation {
       const hy = this.centerY - rowSpacing * 2.0;
       this.aliens.push(new Alien(AlienType.BOSS_GALAGA, 0, idx, hx, hy, this.stage));
     });
+
+    // Stage 7+: 4 Elite Cyber Phantoms flanking the top Boss row
+    if (this.stage >= 7) {
+      const phantomCols = [-3.9, -3.2, 3.2, 3.9];
+      phantomCols.forEach((colOffset, idx) => {
+        const hx = this.centerX + colOffset * colSpacing * 1.15;
+        const hy = this.centerY - rowSpacing * 2.0;
+        this.aliens.push(new Alien(AlienType.PHANTOM, 0, idx + 10, hx, hy, this.stage));
+      });
+    }
 
     // Row 1: 10 Goeis (Wide escort formation)
     const goeiCols = [-4.5, -3.5, -2.5, -1.5, -0.5, 0.5, 1.5, 2.5, 3.5, 4.5];
@@ -486,10 +594,12 @@ export class AlienFormation {
         this._launchDiveAttack(fighterX, fighterY, canvasWidth, canvasHeight);
       }
 
-      this.formationFireTimer += dt;
-      if (this.formationFireTimer >= this.formationFireInterval) {
-        this.formationFireTimer = 0;
-        this._launchFormationMissile(bulletManager, fighterX, fighterY);
+      if (this.stage >= 2) {
+        this.formationFireTimer += dt;
+        if (this.formationFireTimer >= this.formationFireInterval) {
+          this.formationFireTimer = 0;
+          this._launchFormationMissile(bulletManager, fighterX, fighterY);
+        }
       }
     }
 
@@ -509,7 +619,7 @@ export class AlienFormation {
     const pool = candidates.slice(0, Math.min(candidates.length, 14));
     const shooter = pool[Math.floor(Math.random() * pool.length)];
 
-    const missileSpeed = 340 + Math.min(220, (this.stage - 1) * 35);
+    const missileSpeed = Math.min(440, 220 + (this.stage - 1) * 28);
     bulletManager.fireAlienMissile(shooter.x, shooter.y, fighterX, fighterY, missileSpeed);
   }
 
@@ -517,9 +627,20 @@ export class AlienFormation {
     const candidates = this.aliens.filter(a => !a.isDead && !a.isDiving && !a.isTractorRun && !a.isFlyIn);
     if (candidates.length === 0) return;
 
-    // Simultaneous squad diving attackers: 2 to 4 enemies swoop down together!
-    const maxDiveBatch = Math.min(4, 2 + Math.floor((this.stage - 1) * 0.5));
-    const count = Math.min(candidates.length, Math.floor(Math.random() * (maxDiveBatch - 1)) + 2);
+    // Stage-scaled simultaneous diving squad size:
+    // Stage 1: classic 1~2 enemies; progressively climbs to 2~4 squads in later stages
+    let count = 1;
+    if (this.stage <= 1) {
+      count = Math.random() < 0.35 ? 2 : 1;
+    } else if (this.stage <= 3) {
+      count = 1 + Math.floor(Math.random() * 2); // 1 ~ 2
+    } else if (this.stage <= 6) {
+      count = 2 + Math.floor(Math.random() * 2); // 2 ~ 3
+    } else {
+      count = 2 + Math.floor(Math.random() * 3); // 2 ~ 4
+    }
+    count = Math.min(candidates.length, count);
+
     for (let i = 0; i < count; i++) {
       if (candidates.length === 0) break;
       const idx = Math.floor(Math.random() * candidates.length);

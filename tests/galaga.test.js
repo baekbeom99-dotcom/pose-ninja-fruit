@@ -401,6 +401,59 @@ function runTests() {
   assert(firstAlien.isDead === true, 'Bonus alien shot down');
   assert(geChal.challengingHits === 1, 'Challenging hits incremented');
 
+  console.log('\n--- Testing Stage Difficulty Curve & Stage 7+ New Enemy (PHANTOM) ---');
+  const f1 = new AlienFormation(800, 600, 1);
+  const f2 = new AlienFormation(800, 600, 2);
+  const f4 = new AlienFormation(800, 600, 4);
+  const f6 = new AlienFormation(800, 600, 6);
+  const f7 = new AlienFormation(800, 600, 7);
+
+  assert(f1.diveInterval >= 3.2, 'Stage 1 starts with calm original Galaga dive interval (>= 3.2s)');
+  assert(f1.formationFireInterval === Infinity, 'Stage 1 has NO formation sniper missiles (matches original Galaga)');
+  assert(f2.formationFireInterval < Infinity && f2.diveInterval < f1.diveInterval, 'Stage 2 unlocks formation fire and tightens dive interval');
+  assert(f4.diveInterval < f2.diveInterval && f7.diveInterval < f4.diveInterval, 'Dive interval tightens progressively across stages');
+
+  // Verify Stage 1 Zako fires strictly 1 missile across full dive
+  const bmDive1 = new BulletManager();
+  const s1Zako = new Alien(AlienType.ZAKO, 2, 0, 400, 180, 1);
+  s1Zako.startDive(400, 180, 400, 520, 800, 600, 1);
+  assert(s1Zako.diveMaxMissiles === 1, 'Stage 1 diving alien quota is strictly 1 missile');
+  for (let step = 0; step < 80; step++) {
+    s1Zako.update(0.05, 400, 180, 1.0, bmDive1, 400, 520);
+  }
+  assert(bmDive1.alienMissiles.length === 1, 'Stage 1 diving alien fires exactly 1 missile over entire dive');
+
+  // Verify Stage 4 diving alien fires 2 missiles
+  const bmDive4 = new BulletManager();
+  const s4Goei = new Alien(AlienType.GOEI, 1, 0, 400, 140, 4);
+  s4Goei.startDive(400, 140, 400, 520, 800, 600, 4);
+  assert(s4Goei.diveMaxMissiles === 2, 'Stage 4 diving alien quota increases to 2 missiles');
+  for (let step = 0; step < 80; step++) {
+    s4Goei.update(0.05, 400, 140, 1.0, bmDive4, 400, 520);
+  }
+  assert(bmDive4.alienMissiles.length === 2, 'Stage 4 diving alien fires 2 missiles');
+
+  // Verify Stage 7+ New Enemy PHANTOM
+  assert(f6.aliens.filter(a => a.type === AlienType.PHANTOM).length === 0, 'Stage 6 does NOT spawn PHANTOM units');
+  const phantoms = f7.aliens.filter(a => a.type === AlienType.PHANTOM);
+  assert(phantoms.length === 4, 'Stage 7 spawns 4 elite PHANTOM units');
+  assert(phantoms[0].isShielded === true && phantoms[0].maxHp === 2, 'PHANTOM spawns shielded with 2 base HP');
+
+  // Verify PHANTOM twin-spread missiles during dive
+  const bmPhantom = new BulletManager();
+  const phantomDive = new Alien(AlienType.PHANTOM, 0, 10, 400, 100, 7);
+  phantomDive.startDive(400, 100, 400, 520, 800, 600, 7);
+  for (let step = 0; step < 80; step++) {
+    phantomDive.update(0.05, 400, 100, 1.0, bmPhantom, 400, 520);
+  }
+  assert(bmPhantom.alienMissiles.length === 6, 'Stage 7 PHANTOM fires 3 volleys x twin spread = 6 plasma missiles');
+
+  // Verify PHANTOM points & destruction
+  assert(phantomDive.hit() === 50, '1st hit breaks PHANTOM shield for 50 pts');
+  assert(phantomDive.hit() === 0, '2nd hit injures PHANTOM');
+  assert(phantomDive.hit() === 500, '3rd hit kills PHANTOM in formation for 500 pts');
+  assert(phantomDive.isDead === true, 'PHANTOM marked dead after 3 hits');
+
   console.log(`\nGalaga Tests: ${passed}/${total} passed.`);
   if (passed !== total) process.exit(1);
 }

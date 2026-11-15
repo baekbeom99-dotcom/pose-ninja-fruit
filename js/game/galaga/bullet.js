@@ -99,17 +99,18 @@ export class PowerUp {
 }
 
 export class AlienMissile {
-  constructor(x, y, targetX, targetY, speed = 380) {
+  constructor(x, y, targetX, targetY, speed = 380, angleOffset = 0, color = '#ef4444') {
     this.x = x;
     this.y = y;
     this.radius = 5;
     this.isDead = false;
+    this.color = color;
 
     const dx = targetX - x;
     const dy = targetY - y;
-    const dist = Math.hypot(dx, dy) || 1;
-    this.vx = (dx / dist) * speed;
-    this.vy = (dy / dist) * speed;
+    const baseAngle = Math.atan2(dy, dx) + angleOffset;
+    this.vx = Math.cos(baseAngle) * speed;
+    this.vy = Math.sin(baseAngle) * speed;
   }
 
   update(dt, canvasWidth, canvasHeight) {
@@ -123,9 +124,9 @@ export class AlienMissile {
 
   render(ctx) {
     ctx.save();
-    ctx.shadowColor = '#ef4444';
+    ctx.shadowColor = this.color;
     ctx.shadowBlur = 10;
-    ctx.fillStyle = '#ef4444';
+    ctx.fillStyle = this.color;
     ctx.beginPath();
     ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
     ctx.fill();
@@ -181,8 +182,8 @@ export class BulletManager {
     this.powerups.push(new PowerUp(x, y, type));
   }
 
-  fireAlienMissile(x, y, targetX, targetY, speed = 380) {
-    this.alienMissiles.push(new AlienMissile(x, y, targetX, targetY, speed));
+  fireAlienMissile(x, y, targetX, targetY, speed = 380, angleOffset = 0, color = '#ef4444') {
+    this.alienMissiles.push(new AlienMissile(x, y, targetX, targetY, speed, angleOffset, color));
   }
 
   update(dt, canvasWidth, canvasHeight) {
