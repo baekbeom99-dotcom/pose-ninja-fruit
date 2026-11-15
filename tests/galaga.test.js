@@ -219,6 +219,21 @@ function runTests() {
   tb.updateRescue(0.01, rescuerFighter);
   assert(rescuerFighter.isDual === true, 'Fighter transforms into Dual Fighter on dock completion');
 
+  // Test tractor beam deactivates immediately when beaming boss dies
+  const beamBoss = new Alien(AlienType.BOSS_GALAGA, 0, 0, 400, 300);
+  tb.activate(beamBoss);
+  assert(tb.isActive === true, 'Tractor beam active for test boss');
+  beamBoss.isDead = true;
+  tb.update(0.016, insideFighter);
+  assert(tb.isActive === false, 'Tractor beam deactivates immediately when beaming boss dies');
+
+  // Test stage difficulty scaling
+  const fStage1 = new AlienFormation(800, 600, 1);
+  const fStage3 = new AlienFormation(800, 600, 3);
+  assert(fStage3.diveInterval < fStage1.diveInterval, 'Higher stage has shorter diveInterval (faster attack pace)');
+  assert(fStage3.stage === 3, 'AlienFormation tracks stage number');
+  assert(fStage3.aliens[0].stage === 3, 'Aliens track stage number');
+
   console.log('\n--- Testing Galaga Engine & Collision ---');
   const ge = new GalagaEngine(800, 600);
   assert(ge.score === 0, 'Initial score is 0');

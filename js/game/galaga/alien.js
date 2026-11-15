@@ -10,7 +10,7 @@ export const AlienType = {
 };
 
 export class Alien {
-  constructor(type, row, col, homeX, homeY) {
+  constructor(type, row, col, homeX, homeY, stage = 1) {
     this.type = type;
     this.row = row;
     this.col = col;
@@ -18,6 +18,7 @@ export class Alien {
     this.homeY = homeY;
     this.x = homeX;
     this.y = homeY;
+    this.stage = stage;
     this.angle = 0;
     this.radius = 16;
 
@@ -69,10 +70,12 @@ export class Alien {
     }
   }
 
-  startDive(startX, startY, targetX, targetY, canvasWidth, canvasHeight) {
+  startDive(startX, startY, targetX, targetY, canvasWidth, canvasHeight, stage = this.stage) {
     this.isDiving = true;
     this.diveT = 0;
-    this.diveDuration = 2.8 + Math.random() * 0.8;
+    // Higher stages swoop down faster
+    const speedUp = Math.min(1.3, (stage - 1) * 0.25);
+    this.diveDuration = Math.max(1.4, (2.8 - speedUp) + Math.random() * 0.5);
 
     // Generate cubic Bezier dive path: start -> sweep across center -> target area -> loop back up
     const dir = Math.random() > 0.5 ? 1 : -1;
@@ -143,9 +146,11 @@ export class Alien {
         // Face dive direction
         this.angle = Math.atan2(this.y - prevY, this.x - prevX) - Math.PI / 2;
 
-        // Chance to fire missile mid-dive
-        if (bulletManager && Math.random() < 0.015 && this.y < fighterY - 120) {
-          bulletManager.fireAlienMissile(this.x, this.y, fighterX, fighterY);
+        // Chance to fire missile mid-dive - scales with stage!
+        const fireChance = Math.min(0.045, 0.012 + (this.stage - 1) * 0.007);
+        const missileSpeed = 360 + Math.min(220, (this.stage - 1) * 40);
+        if (bulletManager && Math.random() < fireChance && this.y < fighterY - 80) {
+          bulletManager.fireAlienMissile(this.x, this.y, fighterX, fighterY, missileSpeed);
         }
       } else {
         // Return to formation
@@ -275,15 +280,17 @@ export class Alien {
 }
 
 export class AlienFormation {
-  constructor(canvasWidth = 1280, canvasHeight = 720) {
+  constructor(canvasWidth = 1280, canvasHeight = 720, stage = 1) {
     this.canvasWidth = canvasWidth;
     this.canvasHeight = canvasHeight;
+    this.stage = stage;
     this.aliens = [];
     this.formationTime = 0;
     this.centerX = canvasWidth / 2;
     this.centerY = 180;
     this.diveTimer = 0;
-    this.diveInterval = 3.0;
+    // Higher stages dive more frequently
+    this.diveInterval = Math.max(0.85, 2.8 - (stage - 1) * 0.42);
 
     this._buildGrid();
   }
@@ -298,7 +305,7 @@ export class AlienFormation {
     bossCols.forEach((colOffset, idx) => {
       const hx = this.centerX + colOffset * colSpacing * 1.15;
       const hy = this.centerY - rowSpacing * 2.0;
-      this.aliens.push(new Alien(AlienType.BOSS_GALAGA, 0, idx, hx, hy));
+      this.aliens.push(new Alien(AlienType.BOSS_GALAGA, 0, idx, hx, hy, this.stage));
     });
 
     // Row 1: 10 Goeis (Wide escort formation)
@@ -306,7 +313,7 @@ export class AlienFormation {
     goeiCols.forEach((colOffset, idx) => {
       const hx = this.centerX + colOffset * colSpacing;
       const hy = this.centerY - rowSpacing * 0.9;
-      this.aliens.push(new Alien(AlienType.GOEI, 1, idx, hx, hy));
+      this.aliens.push(new Alien(AlienType.GOEI, 1, idx, hx, hy, this.stage));
     });
 
     // Rows 2, 3 & 4: 12 Zakos each (36 Zakos total, spanning wide across screen)
@@ -315,7 +322,7 @@ export class AlienFormation {
       zakoCols.forEach((colOffset, idx) => {
         const hx = this.centerX + colOffset * colSpacing;
         const hy = this.centerY + (r + 0.2) * rowSpacing;
-        this.aliens.push(new Alien(AlienType.ZAKO, r + 2, idx, hx, hy));
+        this.aliens.push(new Alien(AlienType.ZAKO, r + 2, idx, hx, hy, this.stage));
       });
     }
   }
@@ -340,10 +347,12 @@ export class AlienFormation {
   update(dt, canvasWidth, canvasHeight, bulletManager, fighterX, fighterY) {
     this.formationTime += dt;
 
-    // Horizontal breathing and sway
-    const swayX = this.centerX + Math.sin(this.formationTime * 1.3) * 55;
+    // Horizontal breathing and sway - scales with stage speed
+    const swayFreq = 1.3 + Math.min(1.2, (this.stage - 1) * 0.2);
+    const swayAmp = 55 + Math.min(25, (this.stage - 1) * 5);
+    const swayX = this.centerX + Math.sin(this.formationTime * swayFreq) * swayAmp;
     const swayY = this.centerY + Math.cos(this.formationTime * 0.8) * 12;
-    const scale = 1.0 + Math.sin(this.formationTime * 2.2) * 0.05;
+    const scale = 1.0 + Math.sin(this.formationTime * (2.2 + Math.min(1.0, (this.stage - 1) * 0.2))) * 0.05;
 
     // Periodic dive attacks
     this.diveTimer += dt;
@@ -359,15 +368,17 @@ export class AlienFormation {
   }
 
   _launchDiveAttack(fighterX, fighterY, canvasWidth, canvasHeight) {
-    const candidates = this.aliens.filter(a => !a.isDead && !a.isDiving);
+    const candidates = this.aliens.filter(a => !a.isDead && !a.isDiving && !a.isTractorRun);
     if (candidates.length === 0) return;
 
-    // Select 1 to 2 random aliens to dive
-    const count = Math.min(candidates.length, Math.random() < 0.6 ? 1 : 2);
+    // Simultaneous diving attackers scale with stage
+    const maxDiveBatch = Math.min(4, 1 + Math.floor((this.stage - 1) / 2));
+    const count = Math.min(candidates.length, Math.floor(Math.random() * maxDiveBatch) + 1);
     for (let i = 0; i < count; i++) {
+      if (candidates.length === 0) break;
       const idx = Math.floor(Math.random() * candidates.length);
       const chosen = candidates.splice(idx, 1)[0];
-      chosen.startDive(chosen.x, chosen.y, fighterX || canvasWidth / 2, fighterY || canvasHeight - 80, canvasWidth, canvasHeight);
+      chosen.startDive(chosen.x, chosen.y, fighterX || canvasWidth / 2, fighterY || canvasHeight - 80, canvasWidth, canvasHeight, this.stage);
     }
   }
 

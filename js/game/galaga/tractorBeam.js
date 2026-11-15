@@ -42,7 +42,7 @@ export class TractorBeam {
   }
 
   updateExposure(dt, fighter) {
-    if (!this.isActive || !this.boss || !fighter || fighter.isInvulnerable) {
+    if (!this.isActive || !this.boss || this.boss.isDead || !fighter || fighter.isInvulnerable) {
       if (!this.isPulling) {
         this.exposureTimer = 0;
       }
@@ -121,6 +121,16 @@ export class TractorBeam {
   update(dt, activeFighter, soundManager) {
     this.animTime += dt * 6;
 
+    // 트랙터 빔을 쏘던 보스가 사망하면 즉시 트랙터 빔 소멸
+    if (this.isActive && (!this.boss || this.boss.isDead)) {
+      if (this.isPulling && this.pullingShip) {
+        this.pullingShip.isCaptured = false;
+        this.pullingShip.angle = 0;
+      }
+      this.deactivate();
+      return;
+    }
+
     if (this.isActive) {
       // 포획 중(pulling)일 때는 빔 타이머로 인한 강제 중단 금지!
       if (!this.isPulling) {
@@ -187,7 +197,7 @@ export class TractorBeam {
   }
 
   render(ctx, canvasHeight = 720, fighter = null) {
-    if (this.isActive && this.boss) {
+    if (this.isActive && this.boss && !this.boss.isDead) {
       ctx.save();
       const topY = this.boss.y + 12;
       const bottomY = canvasHeight;

@@ -30,7 +30,7 @@ export class GalagaEngine {
     this.state = 'PLAYING'; // 'PLAYING', 'STAGE_CLEAR', 'GAMEOVER'
     this.stageClearTimer = 0;
     this.tractorTimer = 0;
-    this.tractorInterval = 8.0;
+    this.tractorInterval = 8.5;
 
     this.particles = [];
 
@@ -102,8 +102,8 @@ export class GalagaEngine {
         this.state = 'PLAYING';
         this.stageClearTimer = 0;
         this.starfield.setWarp(false);
-        this.formation = new AlienFormation(this.width, this.height);
-        this.formation.diveInterval = Math.max(1.4, 3.0 - this.stage * 0.25);
+        this.formation = new AlienFormation(this.width, this.height, this.stage);
+        this.tractorInterval = Math.max(5.5, 8.5 - (this.stage - 1) * 0.7);
         this.fighter.setInvulnerable(1.5);
       }
       return;
@@ -195,20 +195,23 @@ export class GalagaEngine {
             }
             this._spawnExplosion(alien.x, alien.y, alien.type);
 
-            // Release captured ship if boss holding it was destroyed
-            if (alien.type === AlienType.BOSS_GALAGA) {
-              if (this.tractorBeam.isPulling && this.tractorBeam.boss === alien) {
-                // Free pulling ship immediately!
-                if (this.tractorBeam.pullingShip) {
-                  this.tractorBeam.pullingShip.isCaptured = false;
-                  this.tractorBeam.pullingShip.angle = 0;
-                  this.tractorBeam.pullingShip.y = this.height - 75;
-                }
-                this.tractorBeam.deactivate();
-                this.lives = Math.min(5, this.lives + 1);
+            // 트랙터 빔을 쏘는 개체가 죽으면 즉시 트랙터 빔 소멸!
+            if (this.tractorBeam.isActive && this.tractorBeam.boss === alien) {
+              if (this.tractorBeam.isPulling && this.tractorBeam.pullingShip) {
+                // 당겨지던 기체 원복 및 하트 복구
+                this.tractorBeam.pullingShip.isCaptured = false;
+                this.tractorBeam.pullingShip.angle = 0;
+                this.tractorBeam.pullingShip.y = this.height - 75;
+                this.lives = Math.min(this.maxLives, this.lives + 1);
                 this.onLivesChanged(this.lives);
-                if (this.ui) this.ui.updateLives(this.lives, 5);
-              } else {
+                if (this.ui) this.ui.updateLives(this.lives, this.maxLives);
+              }
+              this.tractorBeam.deactivate();
+            }
+
+            // 보스가 기체를 이미 포획해 머리에 얹고 비행 중 격추된 경우 구출 및 듀얼 파이터 전개!
+            if (alien.type === AlienType.BOSS_GALAGA) {
+              if (this.tractorBeam.capturedShip && this.tractorBeam.capturedShip.boss === alien) {
                 this.tractorBeam.releaseCapturedShip();
               }
             }
@@ -369,7 +372,17 @@ export class GalagaEngine {
     // 6. Fighter
     this.fighter.render(ctx);
 
-    // 7. Stage Clear Warp Banner
+    // 7. Stage Indicator (Classic arcade style badge at bottom right)
+    ctx.save();
+    ctx.fillStyle = '#38bdf8';
+    ctx.font = '900 16px sans-serif';
+    ctx.textAlign = 'right';
+    ctx.shadowColor = '#0284c7';
+    ctx.shadowBlur = 8;
+    ctx.fillText(`STAGE ${this.stage}`, this.width - 24, this.height - 24);
+    ctx.restore();
+
+    // 8. Stage Clear Warp Banner
     if (this.state === 'STAGE_CLEAR') {
       ctx.save();
       ctx.fillStyle = '#facc15';

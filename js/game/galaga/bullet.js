@@ -88,8 +88,8 @@ export class BulletManager {
     }
   }
 
-  fireAlienMissile(x, y, targetX, targetY) {
-    this.alienMissiles.push(new AlienMissile(x, y, targetX, targetY));
+  fireAlienMissile(x, y, targetX, targetY, speed = 380) {
+    this.alienMissiles.push(new AlienMissile(x, y, targetX, targetY, speed));
   }
 
   update(dt, canvasWidth, canvasHeight) {
