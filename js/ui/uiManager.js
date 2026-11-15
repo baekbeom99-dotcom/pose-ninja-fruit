@@ -1,6 +1,8 @@
+import { soundManager } from '../audio/soundManager.js';
+
 /**
  * UI Manager - Handles HUD, Hearts, Combo Popups, High Scores, Ultimate Gauge,
- * 1-Player vs 2-Player Duo Mode, Fullscreen, Exit, and Visual Posture Guide Modal.
+ * Fullscreen, Exit, and Visual Posture Guide Modal.
  */
 export class UIManager {
   constructor() {
@@ -126,6 +128,7 @@ export class UIManager {
     // Exit Button
     if (this.btnExit) {
       this.btnExit.addEventListener('click', () => {
+        soundManager.stopGalagaBGM();
         this.onExitRequested();
         this.showStartModal();
       });

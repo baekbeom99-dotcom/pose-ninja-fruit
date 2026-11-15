@@ -191,7 +191,9 @@ export class GameEngine {
     this.state = GameState.READY;
     this.p1Score = 0;
     this.p2Score = 0;
+    soundManager.stopGalagaBGM();
     if (this.galagaEngine) {
+      this.galagaEngine.stop();
       this.galagaEngine.reset();
     }
     this.fruitManager.reset();
@@ -218,6 +220,8 @@ export class GameEngine {
       this.ui.hideGameOverModal();
       return;
     }
+
+    soundManager.stopGalagaBGM();
 
     const isDocStrange = this.gameMode === CONFIG.MODES.DOCTOR_STRANGE;
     this.blades.setMode(this.isTwoPlayerMode);

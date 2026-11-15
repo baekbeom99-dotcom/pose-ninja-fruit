@@ -42,13 +42,33 @@ export class GalagaEngine {
   start() {
     this.reset();
     this.state = 'PLAYING';
-    if (this.sound && typeof this.sound.init === 'function') {
-      this.sound.init();
-      this.sound.resume();
+    if (this.sound) {
+      if (typeof this.sound.init === 'function') this.sound.init();
+      if (typeof this.sound.resume === 'function') this.sound.resume();
+      if (typeof this.sound.playGalagaIntro === 'function') {
+        this.sound.playGalagaIntro(() => {
+          if (this.state === 'PLAYING' && typeof this.sound.startGalagaBGM === 'function') {
+            this.sound.startGalagaBGM();
+          }
+        });
+      } else if (typeof this.sound.startGalagaBGM === 'function') {
+        this.sound.startGalagaBGM();
+      }
+    }
+  }
+
+  stop() {
+    this.state = 'GAMEOVER';
+    if (this.sound && typeof this.sound.stopGalagaBGM === 'function') {
+      this.sound.stopGalagaBGM();
     }
   }
 
   reset() {
+    if (this.sound && typeof this.sound.stopGalagaBGM === 'function') {
+      this.sound.stopGalagaBGM();
+    }
+
     this.score = 0;
     this.lives = 5;
     this.stage = 1;
@@ -316,6 +336,9 @@ export class GalagaEngine {
 
   _triggerGameOver() {
     this.state = 'GAMEOVER';
+    if (this.sound && typeof this.sound.stopGalagaBGM === 'function') {
+      this.sound.stopGalagaBGM();
+    }
     this.onGameOver(this.score);
     if (this.ui) {
       this.ui.showGameOverModal(this.score, 0, false);

@@ -78,6 +78,13 @@ function runTests() {
   assert(typeof soundManager.playGalagaExplosion === 'function', 'soundManager.playGalagaExplosion exists');
   assert(typeof soundManager.playGalagaTractor === 'function', 'soundManager.playGalagaTractor exists');
   assert(typeof soundManager.playGalagaDock === 'function', 'soundManager.playGalagaDock exists');
+  assert(typeof soundManager.playGalagaIntro === 'function', 'soundManager.playGalagaIntro exists');
+  assert(typeof soundManager.startGalagaBGM === 'function', 'soundManager.startGalagaBGM exists');
+  assert(typeof soundManager.stopGalagaBGM === 'function', 'soundManager.stopGalagaBGM exists');
+
+  // Test Galaga BGM toggle
+  soundManager.stopGalagaBGM();
+  assert(soundManager.galagaBgmActive === false, 'Galaga BGM stops cleanly');
 
   console.log('\n--- Testing Aliens & Formation ---');
   // Test Zako
