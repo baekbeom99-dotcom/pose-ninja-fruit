@@ -2,6 +2,7 @@ import { Starfield } from '../js/game/galaga/starfield.js';
 import { Bullet, AlienMissile, BulletManager } from '../js/game/galaga/bullet.js';
 import { Alien, AlienType, AlienFormation } from '../js/game/galaga/alien.js';
 import { Fighter } from '../js/game/galaga/fighter.js';
+import { TractorBeam } from '../js/game/galaga/tractorBeam.js';
 import { soundManager } from '../js/audio/soundManager.js';
 
 let passed = 0;
@@ -144,6 +145,39 @@ function runTests() {
   testBm.clear();
   fighter.update(0.2, 400, 800, 600, testBm, null);
   assert(testBm.playerBullets.length === 2, 'Dual fighter auto-fires 2 parallel bullets');
+
+  console.log('\n--- Testing Tractor Beam & Dual Fighter ---');
+  const tb = new TractorBeam();
+  assert(tb.isActive === false, 'Tractor beam initially inactive');
+
+  // Activate tractor beam from boss
+  const bossTest = new Alien(AlienType.BOSS_GALAGA, 0, 1, 400, 250);
+  tb.activate(bossTest);
+  assert(tb.isActive === true, 'Tractor beam activated');
+
+  // Test beam cone collision check
+  const insideFighter = new Fighter(400, 500);
+  assert(tb.isFighterInside(insideFighter) === true, 'Fighter directly below boss is inside beam cone');
+
+  const distantFighter = new Fighter(100, 500);
+  assert(tb.isFighterInside(distantFighter) === false, 'Distant fighter outside cone');
+
+  // Test capture pull
+  tb.startCapture(insideFighter);
+  assert(insideFighter.isCaptured === true, 'Fighter marked as captured');
+  tb.update(0.1, insideFighter, null);
+  assert(insideFighter.y < 500, 'Captured fighter pulled upwards toward boss');
+
+  // Test rescue and dual docking
+  tb.capturedShip = { x: 400, y: 300, isRescued: false };
+  tb.releaseCapturedShip();
+  assert(tb.capturedShip.isRescued === true, 'Captured ship marked rescued upon boss destruction');
+
+  const rescuerFighter = new Fighter(400, 520);
+  tb.updateRescue(0.1, rescuerFighter);
+  tb.capturedShip.y = rescuerFighter.y; // Simulate reaching dock level
+  tb.updateRescue(0.01, rescuerFighter);
+  assert(rescuerFighter.isDual === true, 'Fighter transforms into Dual Fighter on dock completion');
 
   console.log(`\nGalaga Tests: ${passed}/${total} passed.`);
   if (passed !== total) process.exit(1);
