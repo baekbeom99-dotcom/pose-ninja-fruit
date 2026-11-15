@@ -8,9 +8,13 @@ export class TractorBeam {
     this.boss = null;
     this.beamTopWidth = 24;
     this.beamBottomWidth = 180;
-    this.maxDuration = 4.2;
+    this.maxDuration = 4.5;
     this.timer = 0;
     this.animTime = 0;
+
+    // 1.5 seconds exposure requirement before capture
+    this.exposureTimer = 0;
+    this.requiredExposure = 1.5;
 
     this.capturedShip = null;
     this.isPulling = false;
@@ -22,12 +26,45 @@ export class TractorBeam {
     this.boss = boss;
     this.timer = 0;
     this.animTime = 0;
+    this.exposureTimer = 0;
   }
 
   deactivate() {
     this.isActive = false;
     this.boss = null;
     this.isPulling = false;
+    this.exposureTimer = 0;
+  }
+
+  updateExposure(dt, fighter) {
+    if (!this.isActive || !this.boss || !fighter || fighter.isCaptured || fighter.isInvulnerable) {
+      this.exposureTimer = Math.max(0, this.exposureTimer - dt * 2.0);
+      return {
+        isExposed: false,
+        timer: this.exposureTimer,
+        progress: this.exposureTimer / this.requiredExposure,
+        triggerCapture: false
+      };
+    }
+
+    const inside = this.isFighterInside(fighter);
+    if (inside) {
+      this.exposureTimer += dt;
+      return {
+        isExposed: true,
+        timer: this.exposureTimer,
+        progress: Math.min(1.0, this.exposureTimer / this.requiredExposure),
+        triggerCapture: this.exposureTimer >= this.requiredExposure
+      };
+    } else {
+      this.exposureTimer = Math.max(0, this.exposureTimer - dt * 2.0);
+      return {
+        isExposed: false,
+        timer: this.exposureTimer,
+        progress: Math.min(1.0, this.exposureTimer / this.requiredExposure),
+        triggerCapture: false
+      };
+    }
   }
 
   isFighterInside(fighter) {
@@ -102,7 +139,7 @@ export class TractorBeam {
     }
   }
 
-  render(ctx, canvasHeight = 720) {
+  render(ctx, canvasHeight = 720, fighter = null) {
     if (this.isActive && this.boss) {
       ctx.save();
       const topY = this.boss.y + 12;
@@ -111,11 +148,18 @@ export class TractorBeam {
       const botHalfW = this.beamBottomWidth / 2;
       const bx = this.boss.x;
 
-      // Cone gradient
+      // Color shifts towards amber/red warning as exposure progresses
+      const exposureProgress = Math.min(1.0, this.exposureTimer / this.requiredExposure);
       const grad = ctx.createLinearGradient(0, topY, 0, bottomY);
-      grad.addColorStop(0, 'rgba(56, 189, 248, 0.45)');
-      grad.addColorStop(0.5, 'rgba(6, 182, 212, 0.3)');
-      grad.addColorStop(1, 'rgba(37, 99, 235, 0.1)');
+      if (exposureProgress > 0) {
+        grad.addColorStop(0, `rgba(250, 204, 21, ${0.45 + exposureProgress * 0.3})`);
+        grad.addColorStop(0.5, `rgba(249, 115, 22, ${0.35 + exposureProgress * 0.3})`);
+        grad.addColorStop(1, `rgba(239, 68, 68, ${0.2 + exposureProgress * 0.25})`);
+      } else {
+        grad.addColorStop(0, 'rgba(56, 189, 248, 0.45)');
+        grad.addColorStop(0.5, 'rgba(6, 182, 212, 0.3)');
+        grad.addColorStop(1, 'rgba(37, 99, 235, 0.1)');
+      }
 
       ctx.fillStyle = grad;
       ctx.beginPath();
@@ -128,8 +172,8 @@ export class TractorBeam {
 
       // Spiraling / pulsing rings
       const numRings = 7;
-      ctx.strokeStyle = '#38bdf8';
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = exposureProgress > 0 ? '#facc15' : '#38bdf8';
+      ctx.lineWidth = exposureProgress > 0 ? 3 : 2;
       for (let i = 0; i < numRings; i++) {
         const ringProgress = ((this.animTime + i / numRings) % 1.0);
         const ry = topY + (bottomY - topY) * ringProgress;
@@ -140,6 +184,27 @@ export class TractorBeam {
         ctx.ellipse(bx, ry, rw, 8, 0, 0, Math.PI * 2);
         ctx.stroke();
       }
+
+      // If fighter is exposed inside the beam, render an energetic warning capture progress ring!
+      if (fighter && exposureProgress > 0) {
+        ctx.globalAlpha = 1.0;
+        ctx.strokeStyle = '#facc15';
+        ctx.lineWidth = 3;
+        ctx.shadowColor = '#f97316';
+        ctx.shadowBlur = 12;
+
+        // Progress arc around fighter
+        ctx.beginPath();
+        ctx.arc(fighter.x, fighter.y, 28, -Math.PI / 2, -Math.PI / 2 + exposureProgress * Math.PI * 2);
+        ctx.stroke();
+
+        // Warning text
+        ctx.fillStyle = '#facc15';
+        ctx.font = '900 13px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(`CAPTURE: ${Math.round(exposureProgress * 100)}%`, fighter.x, fighter.y + 38);
+      }
+
       ctx.restore();
     }
 

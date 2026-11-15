@@ -163,6 +163,23 @@ function runTests() {
   const distantFighter = new Fighter(100, 500);
   assert(tb.isFighterInside(distantFighter) === false, 'Distant fighter outside cone');
 
+  // Test exposure requirement (1.5 seconds)
+  const exposedFighter = new Fighter(400, 500);
+  const exp1 = tb.updateExposure(0.8, exposedFighter);
+  assert(exp1.isExposed === true && exp1.triggerCapture === false, '0.8s exposure does not trigger capture yet');
+  const exp2 = tb.updateExposure(0.8, exposedFighter); // Total 1.6s >= 1.5s
+  assert(exp2.triggerCapture === true, '1.6s exposure (>=1.5s) triggers capture');
+
+  // Test boss descent before tractor beam
+  const descentBoss = new Alien(AlienType.BOSS_GALAGA, 0, 0, 400, 80);
+  descentBoss.startTractorDescent(250);
+  assert(descentBoss.isTractorRun === true, 'Boss starts tractor descent run');
+  assert(descentBoss.tractorState === 'DESCENDING', 'Boss state is DESCENDING');
+  descentBoss.update(1.5, 400, 80, 1.0, null, 400, 550);
+  assert(descentBoss.y > 80, 'Boss moves downward towards target');
+  descentBoss.update(1.0, 400, 80, 1.0, null, 400, 550);
+  assert(descentBoss.tractorState === 'BEAMING', 'Boss enters BEAMING state upon reaching target Y');
+
   // Test capture pull
   tb.startCapture(insideFighter);
   assert(insideFighter.isCaptured === true, 'Fighter marked as captured');

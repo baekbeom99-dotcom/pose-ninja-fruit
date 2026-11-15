@@ -114,30 +114,46 @@ export class GalagaEngine {
     // 5. Update Formation AI
     this.formation.update(dt, this.width, this.height, this.bulletManager, this.fighter.x, this.fighter.y);
 
-    // 6. Tractor beam periodic trigger
+    // 6. Tractor beam periodic trigger: Boss Galaga descends first before firing beam
     this.tractorTimer += dt;
     if (this.tractorTimer >= this.tractorInterval && !this.tractorBeam.isActive) {
-      this.tractorTimer = 0;
-      const bosses = this.formation.aliens.filter(a => !a.isDead && a.type === AlienType.BOSS_GALAGA && !a.isDiving);
-      if (bosses.length > 0) {
-        const chosenBoss = bosses[Math.floor(Math.random() * bosses.length)];
-        this.tractorBeam.activate(chosenBoss);
-        if (this.sound && typeof this.sound.playGalagaTractor === 'function') {
-          this.sound.playGalagaTractor();
+      const activeTractorBoss = this.formation.aliens.find(a => !a.isDead && a.isTractorRun);
+      if (!activeTractorBoss) {
+        this.tractorTimer = 0;
+        const bosses = this.formation.aliens.filter(a => !a.isDead && a.type === AlienType.BOSS_GALAGA && !a.isDiving && !a.isTractorRun);
+        if (bosses.length > 0) {
+          const chosenBoss = bosses[Math.floor(Math.random() * bosses.length)];
+          // Descend to mid-screen (around 38% ~ 42% screen height) before firing beam!
+          chosenBoss.startTractorDescent(Math.min(320, this.height * 0.4));
         }
       }
     }
 
+    // Check if descending boss reached target Y and should activate tractor beam
+    const beamingBoss = this.formation.aliens.find(a => !a.isDead && a.isTractorRun && a.tractorState === 'BEAMING');
+    if (beamingBoss && !this.tractorBeam.isActive && !this.tractorBeam.capturedShip) {
+      this.tractorBeam.activate(beamingBoss);
+      if (this.sound && typeof this.sound.playGalagaTractor === 'function') {
+        this.sound.playGalagaTractor();
+      }
+    }
+
     // 7. Update Tractor beam and Bullets
+    const prevBeamActive = this.tractorBeam.isActive;
     this.tractorBeam.update(dt, this.fighter, this.sound);
     this.tractorBeam.updateRescue(dt, this.fighter, this.sound);
     this.bulletManager.update(dt, this.width, this.height);
+
+    // If beam just finished, tell boss to finish tractor run and return to formation
+    if (prevBeamActive && !this.tractorBeam.isActive && beamingBoss) {
+      beamingBoss.finishTractorRun();
+    }
 
     // 8. Update Explosion Particles
     this._updateParticles(dt);
 
     // 9. Check Collisions
-    this.checkCollisions();
+    this.checkCollisions(dt);
 
     // 10. Check Stage Clear
     if (this.formation.allDestroyed() && this.state === 'PLAYING') {
@@ -150,7 +166,7 @@ export class GalagaEngine {
     }
   }
 
-  checkCollisions() {
+  checkCollisions(dt = 0.016) {
     // 1. Player Bullets vs Aliens
     for (let b = this.bulletManager.playerBullets.length - 1; b >= 0; b--) {
       const bullet = this.bulletManager.playerBullets[b];
@@ -192,9 +208,11 @@ export class GalagaEngine {
       }
     }
 
-    // 2. Tractor Beam vs Fighter
+    // 2. Tractor Beam vs Fighter (Requires 1.5s exposure!)
     if (this.tractorBeam.isActive && !this.fighter.isCaptured && !this.fighter.isInvulnerable) {
-      if (this.tractorBeam.isFighterInside(this.fighter)) {
+      const exposure = this.tractorBeam.updateExposure(dt, this.fighter);
+
+      if (exposure.triggerCapture) {
         this.tractorBeam.startCapture(this.fighter);
         // Player loses 1 fighter into capture
         this.lives = Math.max(0, this.lives - 1);
@@ -213,6 +231,8 @@ export class GalagaEngine {
           }, 1200);
         }
       }
+    } else {
+      this.tractorBeam.updateExposure(dt, this.fighter);
     }
 
     // 3. Alien Missiles vs Fighter
@@ -319,7 +339,7 @@ export class GalagaEngine {
     this.formation.render(ctx);
 
     // 3. Tractor Beam
-    this.tractorBeam.render(ctx, this.height);
+    this.tractorBeam.render(ctx, this.height, this.fighter);
 
     // 4. Bullets
     this.bulletManager.render(ctx);

@@ -30,8 +30,23 @@ export class Alien {
     this.diveDuration = 3.2;
     this.diveCurve = null;
 
+    // Tractor beam run states (Boss Galaga descends before firing)
+    this.isTractorRun = false;
+    this.tractorState = 'IDLE'; // 'DESCENDING', 'BEAMING', 'RETURNING'
+    this.targetTractorY = 0;
+
     // Wing flapping animation
     this.animTime = Math.random() * 10;
+  }
+
+  startTractorDescent(targetY) {
+    this.isTractorRun = true;
+    this.tractorState = 'DESCENDING';
+    this.targetTractorY = targetY;
+  }
+
+  finishTractorRun() {
+    this.tractorState = 'RETURNING';
   }
 
   hit() {
@@ -75,7 +90,32 @@ export class Alien {
     if (this.isDead) return;
     this.animTime += dt * 8;
 
-    if (!this.isDiving) {
+    if (this.isTractorRun) {
+      if (this.tractorState === 'DESCENDING') {
+        this.y += 140 * dt;
+        this.x += (formationX - this.x) * 0.05;
+        this.angle = 0;
+        if (this.y >= this.targetTractorY) {
+          this.y = this.targetTractorY;
+          this.tractorState = 'BEAMING';
+        }
+      } else if (this.tractorState === 'BEAMING') {
+        // Hover at targetTractorY with subtle oscillation
+        this.angle = Math.sin(this.animTime * 0.6) * 0.06;
+      } else if (this.tractorState === 'RETURNING') {
+        // Return back to formation slot
+        this.y -= 130 * dt;
+        const targetHomeX = formationX + (this.homeX - formationX) * formationScale;
+        const targetHomeY = formationY + (this.homeY - formationY) * formationScale;
+        this.x += (targetHomeX - this.x) * 0.08;
+
+        if (this.y <= targetHomeY + 10) {
+          this.isTractorRun = false;
+          this.tractorState = 'IDLE';
+          this.angle = 0;
+        }
+      }
+    } else if (!this.isDiving) {
       // In formation
       this.x = formationX + (this.homeX - formationX) * formationScale;
       this.y = formationY + (this.homeY - formationY) * formationScale;
