@@ -1,5 +1,6 @@
 import { Starfield } from '../js/game/galaga/starfield.js';
 import { Bullet, AlienMissile, BulletManager } from '../js/game/galaga/bullet.js';
+import { Alien, AlienType, AlienFormation } from '../js/game/galaga/alien.js';
 import { soundManager } from '../js/audio/soundManager.js';
 
 let passed = 0;
@@ -74,6 +75,40 @@ function runTests() {
   assert(typeof soundManager.playGalagaExplosion === 'function', 'soundManager.playGalagaExplosion exists');
   assert(typeof soundManager.playGalagaTractor === 'function', 'soundManager.playGalagaTractor exists');
   assert(typeof soundManager.playGalagaDock === 'function', 'soundManager.playGalagaDock exists');
+
+  console.log('\n--- Testing Aliens & Formation ---');
+  // Test Zako
+  const zako = new Alien(AlienType.ZAKO, 2, 3, 200, 150);
+  assert(zako.hp === 1, 'Zako has 1 HP');
+  assert(zako.hit() === 100, 'Zako hit in formation yields 100 pts');
+  assert(zako.isDead === true, 'Zako marked dead after hit');
+
+  // Test diving Zako points
+  const divingZako = new Alien(AlienType.ZAKO, 2, 3, 200, 150);
+  divingZako.isDiving = true;
+  assert(divingZako.hit() === 200, 'Diving Zako yields 200 pts');
+
+  // Test Goei
+  const goei = new Alien(AlienType.GOEI, 1, 2, 180, 120);
+  assert(goei.hit() === 160, 'Goei hit yields 160 pts');
+
+  // Test Boss Galaga 2-hit requirement
+  const boss = new Alien(AlienType.BOSS_GALAGA, 0, 1, 250, 80);
+  assert(boss.hp === 2, 'Boss Galaga has 2 HP');
+  const firstHitPts = boss.hit();
+  assert(firstHitPts === 0, 'First hit on Boss Galaga does not kill it');
+  assert(boss.hp === 1 && boss.isInjured === true, 'Boss Galaga is injured after 1st hit');
+  assert(boss.hit() === 200, 'Second hit on Boss Galaga in formation kills it and yields 200 pts');
+  assert(boss.isDead === true, 'Boss Galaga marked dead after 2 hits');
+
+  // Test Formation
+  const formation = new AlienFormation(800, 600);
+  assert(formation.aliens.length > 20, 'Formation spawns aliens grid');
+  assert(formation.getAliveCount() === formation.aliens.length, 'All spawned aliens initially alive');
+
+  // Test formation update and breathing
+  formation.update(0.1, 800, 600);
+  assert(formation.formationTime > 0, 'Formation time advances');
 
   console.log(`\nGalaga Tests: ${passed}/${total} passed.`);
   if (passed !== total) process.exit(1);
