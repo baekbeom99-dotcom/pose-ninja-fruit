@@ -36,8 +36,17 @@ export class Alien {
     this.tractorState = 'IDLE'; // 'DESCENDING', 'BEAMING', 'RETURNING'
     this.targetTractorY = 0;
 
-    // Wing flapping animation
     this.animTime = Math.random() * 10;
+
+    // Boss Galaga energy shield on stage 4+
+    this.isShielded = type === AlienType.BOSS_GALAGA && stage >= 4;
+
+    // Formation fly-in animation states
+    this.isFlyIn = false;
+    this.flyInDelay = 0;
+    this.flyInTime = 0;
+    this.flyInDuration = 2.0;
+    this.flyInCurve = null;
   }
 
   startTractorDescent(targetY) {
@@ -54,6 +63,13 @@ export class Alien {
 
   hit() {
     if (this.isDead) return 0;
+
+    // Shield absorbs 1st hit
+    if (this.isShielded) {
+      this.isShielded = false;
+      return 50;
+    }
+
     this.hp--;
 
     if (this.hp <= 0) {
@@ -94,6 +110,29 @@ export class Alien {
   update(dt, formationX, formationY, formationScale, bulletManager, fighterX, fighterY) {
     if (this.isDead) return;
     this.animTime += dt * 8;
+
+    // Fly-in entrance animation
+    if (this.isFlyIn && this.flyInCurve) {
+      this.flyInTime += dt;
+      if (this.flyInTime < this.flyInDelay) {
+        this.x = -200;
+        this.y = -200;
+        return;
+      }
+      const t = Math.min(1.0, (this.flyInTime - this.flyInDelay) / this.flyInDuration);
+      const u = 1 - t;
+      const c = this.flyInCurve;
+      this.x = u * u * c.p0.x + 2 * u * t * c.p1.x + t * t * this.homeX;
+      this.y = u * u * c.p0.y + 2 * u * t * c.p1.y + t * t * this.homeY;
+      this.angle = (1 - t) * Math.PI * 2;
+      if (t >= 1.0) {
+        this.isFlyIn = false;
+        this.angle = 0;
+        this.x = this.homeX;
+        this.y = this.homeY;
+      }
+      return;
+    }
 
     if (this.isTractorRun) {
       if (this.tractorState === 'DESCENDING') {
@@ -292,6 +331,29 @@ export class Alien {
     ctx.fillStyle = baseColor;
     ctx.fillRect(-17 - flap * 3, -4, 5, 10);
     ctx.fillRect(12 + flap * 3, -4, 5, 10);
+
+    // Rotating Energy Shield Barrier (Stage 4+)
+    if (this.isShielded) {
+      ctx.save();
+      ctx.strokeStyle = '#00f0ff';
+      ctx.lineWidth = 2.5;
+      ctx.shadowColor = '#00f0ff';
+      ctx.shadowBlur = 12;
+      ctx.beginPath();
+      const shieldR = 21 + Math.sin(this.animTime * 0.8) * 2;
+      for (let i = 0; i < 6; i++) {
+        const a = (i * Math.PI / 3) + this.animTime * 0.2;
+        const sx = Math.cos(a) * shieldR;
+        const sy = Math.sin(a) * shieldR;
+        if (i === 0) ctx.moveTo(sx, sy);
+        else ctx.lineTo(sx, sy);
+      }
+      ctx.closePath();
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(0, 240, 255, 0.22)';
+      ctx.fill();
+      ctx.restore();
+    }
   }
 }
 
@@ -305,10 +367,35 @@ export class AlienFormation {
     this.centerX = canvasWidth / 2;
     this.centerY = 180;
     this.diveTimer = 0;
+    this.isFlyIn = false;
     // Higher stages dive more frequently
     this.diveInterval = Math.max(0.85, 2.8 - (stage - 1) * 0.42);
 
     this._buildGrid();
+  }
+
+  startFlyIn() {
+    this.isFlyIn = true;
+    for (let i = 0; i < this.aliens.length; i++) {
+      const a = this.aliens[i];
+      a.isFlyIn = true;
+      a.flyInTime = 0;
+      a.flyInDuration = 1.9;
+
+      const fromLeft = a.col % 2 === 0;
+      const startX = fromLeft ? -50 : this.canvasWidth + 50;
+      const startY = 60 + (a.row % 3) * 60;
+      const midX = fromLeft ? this.canvasWidth * 0.35 : this.canvasWidth * 0.65;
+      const midY = this.canvasHeight * 0.40;
+
+      a.flyInDelay = a.row * 0.35 + (a.col % 6) * 0.08;
+      a.flyInCurve = {
+        p0: { x: startX, y: startY },
+        p1: { x: midX, y: midY }
+      };
+      a.x = -300;
+      a.y = -300;
+    }
   }
 
   _buildGrid() {
@@ -370,11 +457,14 @@ export class AlienFormation {
     const swayY = this.centerY + Math.cos(this.formationTime * 0.8) * 12;
     const scale = 1.0 + Math.sin(this.formationTime * (2.2 + Math.min(1.0, (this.stage - 1) * 0.2))) * 0.05;
 
-    // Periodic dive attacks
-    this.diveTimer += dt;
-    if (this.diveTimer >= this.diveInterval) {
-      this.diveTimer = 0;
-      this._launchDiveAttack(fighterX, fighterY, canvasWidth, canvasHeight);
+    // Periodic dive attacks (only after fly-in intro completes)
+    const isAnyFlyingIn = this.aliens.some(a => a.isFlyIn);
+    if (!isAnyFlyingIn) {
+      this.diveTimer += dt;
+      if (this.diveTimer >= this.diveInterval) {
+        this.diveTimer = 0;
+        this._launchDiveAttack(fighterX, fighterY, canvasWidth, canvasHeight);
+      }
     }
 
     // Update each alien
@@ -401,6 +491,51 @@ export class AlienFormation {
   render(ctx) {
     for (let i = 0; i < this.aliens.length; i++) {
       this.aliens[i].render(ctx);
+    }
+  }
+}
+
+export class BonusAlien extends Alien {
+  constructor(type, curve, delay = 0, duration = 4.2) {
+    super(type, 0, 0, -200, -200, 1);
+    this.curve = curve;
+    this.delay = delay;
+    this.duration = duration;
+    this.flightTime = 0;
+    this.isBonus = true;
+  }
+
+  updateBonus(dt) {
+    if (this.isDead) return;
+    this.animTime += dt * 8;
+    this.flightTime += dt;
+
+    if (this.flightTime < this.delay) {
+      this.x = -200;
+      this.y = -200;
+      return;
+    }
+
+    const t = Math.min(1.0, (this.flightTime - this.delay) / this.duration);
+    if (t >= 1.0) {
+      this.isDead = true; // Escaped off-screen
+      return;
+    }
+
+    const prevX = this.x;
+    const prevY = this.y;
+    const u = 1 - t;
+    const tt = t * t;
+    const uu = u * u;
+    const uuu = uu * u;
+    const ttt = tt * t;
+    const c = this.curve;
+
+    this.x = uuu * c.p0.x + 3 * uu * t * c.p1.x + 3 * u * tt * c.p2.x + ttt * c.p3.x;
+    this.y = uuu * c.p0.y + 3 * uu * t * c.p1.y + 3 * u * tt * c.p2.y + ttt * c.p3.y;
+
+    if (Math.hypot(this.x - prevX, this.y - prevY) > 0.1) {
+      this.angle = Math.atan2(this.y - prevY, this.x - prevX) - Math.PI / 2;
     }
   }
 }

@@ -10,6 +10,8 @@ export class Starfield {
     this.stars = [];
     this.warpMultiplier = 1;
     this.targetWarp = 1;
+    this.stage = 1;
+    this.nebulaTime = 0;
 
     this.palette = [
       '#ffffff',
@@ -21,6 +23,10 @@ export class Starfield {
     ];
 
     this._initStars();
+  }
+
+  setStage(stage = 1) {
+    this.stage = stage;
   }
 
   _initStars() {
@@ -69,6 +75,7 @@ export class Starfield {
   }
 
   update(dt, speedMultiplier = 1.0) {
+    this.nebulaTime += dt * 0.4;
     const effectiveSpeed = speedMultiplier * this.warpMultiplier;
 
     for (let i = 0; i < this.stars.length; i++) {
@@ -91,6 +98,43 @@ export class Starfield {
 
   render(ctx) {
     ctx.save();
+
+    // Stage Nebula Atmosphere (Deep ambient color wash per stage)
+    const stageTheme = (this.stage - 1) % 5;
+    if (stageTheme === 1) {
+      // Stage 2: Violet Nebula
+      const g = ctx.createRadialGradient(this.width * 0.7, this.height * 0.35, 80, this.width * 0.7, this.height * 0.35, 520);
+      g.addColorStop(0, 'rgba(147, 51, 234, 0.18)');
+      g.addColorStop(0.6, 'rgba(88, 28, 135, 0.08)');
+      g.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, this.width, this.height);
+    } else if (stageTheme === 2) {
+      // Stage 3: Challenging Stage (Electric Blue / Golden Cosmos)
+      const g = ctx.createRadialGradient(this.width * 0.5, this.height * 0.45, 60, this.width * 0.5, this.height * 0.45, 600);
+      g.addColorStop(0, 'rgba(14, 165, 233, 0.22)');
+      g.addColorStop(0.5, 'rgba(234, 179, 8, 0.09)');
+      g.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, this.width, this.height);
+    } else if (stageTheme === 3) {
+      // Stage 4: Solar Crimson
+      const g = ctx.createRadialGradient(this.width * 0.3, this.height * 0.3, 100, this.width * 0.3, this.height * 0.3, 560);
+      g.addColorStop(0, 'rgba(225, 29, 72, 0.20)');
+      g.addColorStop(0.5, 'rgba(234, 88, 12, 0.09)');
+      g.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, this.width, this.height);
+    } else if (stageTheme === 4) {
+      // Stage 5+: Cyber Matrix Emerald
+      const g = ctx.createRadialGradient(this.width * 0.6, this.height * 0.4, 90, this.width * 0.6, this.height * 0.4, 540);
+      g.addColorStop(0, 'rgba(16, 185, 129, 0.20)');
+      g.addColorStop(0.6, 'rgba(6, 95, 70, 0.08)');
+      g.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, this.width, this.height);
+    }
+
     for (let i = 0; i < this.stars.length; i++) {
       const s = this.stars[i];
       ctx.globalAlpha = Math.min(1.0, s.alpha);

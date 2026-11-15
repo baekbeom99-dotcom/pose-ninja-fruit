@@ -472,6 +472,94 @@ export class SoundManager {
     }
   }
 
+  playEmpBlast() {
+    if (!this.ctx || this.isMuted) return;
+    try {
+      this.resume();
+      const now = this.ctx.currentTime;
+
+      // Heavy low frequency rumble + sub drop
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(320, now);
+      osc.frequency.exponentialRampToValueAtTime(35, now + 0.45);
+      gain.gain.setValueAtTime(0.45, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.5);
+
+      // Electric high sizzle burst
+      if (this.noiseBuffer) {
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = this.noiseBuffer;
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.setValueAtTime(2800, now);
+        filter.frequency.exponentialRampToValueAtTime(600, now + 0.35);
+        filter.Q.setValueAtTime(4.0, now);
+
+        const nGain = this.ctx.createGain();
+        nGain.gain.setValueAtTime(0.35, now);
+        nGain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+
+        noise.connect(filter);
+        filter.connect(nGain);
+        nGain.connect(this.ctx.destination);
+        noise.start(now);
+        noise.stop(now + 0.35);
+      }
+    } catch (e) {
+      console.warn('EMP sound error:', e);
+    }
+  }
+
+  playPowerUp() {
+    if (!this.ctx || this.isMuted) return;
+    try {
+      this.resume();
+      const now = this.ctx.currentTime;
+      const notes = [440, 554.37, 659.25, 880]; // A4, C#5, E5, A5
+      notes.forEach((freq, idx) => {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        const t = now + idx * 0.055;
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, t);
+        gain.gain.setValueAtTime(0.24, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(t);
+        osc.stop(t + 0.12);
+      });
+    } catch (e) {
+      console.warn('PowerUp sound error:', e);
+    }
+  }
+
+  playAsteroidHit() {
+    if (!this.ctx || this.isMuted) return;
+    try {
+      this.resume();
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(140, now);
+      osc.frequency.exponentialRampToValueAtTime(30, now + 0.18);
+      gain.gain.setValueAtTime(0.3, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.18);
+    } catch (e) {}
+  }
+
   // --- Galaga Original Arcade BGM & Intro Theme ---
 
   _playSquareNote(freq, startTime, duration, volume = 0.08) {

@@ -324,7 +324,7 @@ export class GameEngine {
     // Galaga Mode Update Loop
     if (this.gameMode === CONFIG.MODES.GALAGA) {
       if (this.state === GameState.PLAYING) {
-        this.galagaEngine.update(dt, currentTime, this.lastHeadPose);
+        this.galagaEngine.update(dt, currentTime, this.lastHeadPose, poses);
       }
       this.lastPoses = poses;
       return;

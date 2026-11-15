@@ -22,6 +22,11 @@ export class Fighter {
     this.autoFireInterval = 0.18;
     this.autoFireTimer = 0;
 
+    // Power-up weapon states
+    this.weaponType = 'NORMAL'; // 'NORMAL', 'TRIPLE', 'PIERCER'
+    this.weaponTimer = 0;
+    this.hasShield = false;
+
     // Engine pulse animation
     this.animTime = 0;
   }
@@ -29,6 +34,15 @@ export class Fighter {
   setDual(active) {
     this.isDual = active;
     this.width = active ? 72 : 36;
+  }
+
+  setWeapon(type = 'NORMAL', duration = 10) {
+    this.weaponType = type;
+    this.weaponTimer = duration;
+  }
+
+  setShield(active = true) {
+    this.hasShield = active;
   }
 
   setInvulnerable(seconds = 2.0) {
@@ -60,13 +74,21 @@ export class Fighter {
       }
     }
 
-    // 4. Continuous auto-fire
+    // 4. Power-up weapon duration timer
+    if (this.weaponTimer > 0) {
+      this.weaponTimer -= dt;
+      if (this.weaponTimer <= 0) {
+        this.weaponType = 'NORMAL';
+      }
+    }
+
+    // 5. Continuous auto-fire
     this.autoFireTimer -= dt;
     if (this.autoFireTimer <= 0) {
       this.autoFireTimer = this.autoFireInterval;
 
       if (bulletManager) {
-        bulletManager.firePlayerBullet(this.x, this.y - 18, this.isDual);
+        bulletManager.firePlayerBullet(this.x, this.y - 18, this.isDual, this.weaponType);
       }
       if (soundManager && typeof soundManager.playGalagaShoot === 'function') {
         soundManager.playGalagaShoot();
@@ -78,6 +100,24 @@ export class Fighter {
     if (this.isDead) return;
 
     ctx.save();
+
+    // Render Energy Shield Bubble if active
+    if (this.hasShield) {
+      ctx.save();
+      const shieldPulse = 1.0 + Math.sin(this.animTime * 0.8) * 0.08;
+      const shieldR = (this.width / 2 + 10) * shieldPulse;
+      ctx.strokeStyle = '#10b981';
+      ctx.lineWidth = 3;
+      ctx.shadowColor = '#34d399';
+      ctx.shadowBlur = 15;
+      ctx.fillStyle = 'rgba(16, 185, 129, 0.15)';
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, shieldR, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    }
+
     // Flash when invulnerable
     if (this.isInvulnerable && Math.floor(this.animTime * 2) % 2 === 0) {
       ctx.globalAlpha = 0.4;

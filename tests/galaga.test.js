@@ -3,6 +3,7 @@ import { Bullet, AlienMissile, BulletManager } from '../js/game/galaga/bullet.js
 import { Alien, AlienType, AlienFormation } from '../js/game/galaga/alien.js';
 import { Fighter } from '../js/game/galaga/fighter.js';
 import { TractorBeam } from '../js/game/galaga/tractorBeam.js';
+import { Asteroid } from '../js/game/galaga/asteroid.js';
 import { GalagaEngine } from '../js/game/galaga/galagaEngine.js';
 import { soundManager } from '../js/audio/soundManager.js';
 
@@ -280,6 +281,125 @@ function runTests() {
   ge.checkCollisions();
   assert(ge.lives === 0, 'Player lives drop to 0 on fatal hit');
   assert(gameOverCalled === true, 'onGameOver callback triggered when lives reach 0');
+
+  console.log('\n--- Testing Manse Gesture & EMP Shockwave ---');
+  const geEmp = new GalagaEngine(800, 600);
+  assert(geEmp.empStock === 2, 'EMP stocks initialized to 2');
+
+  // Spawn 5 alien missiles
+  for (let i = 0; i < 5; i++) {
+    geEmp.bulletManager.fireAlienMissile(100 * i, 100, 100 * i, 500);
+  }
+  assert(geEmp.bulletManager.alienMissiles.length === 5, '5 alien missiles spawned on screen');
+
+  // Trigger EMP shockwave
+  const empFired = geEmp.triggerEmpShockwave();
+  assert(empFired === true, 'EMP shockwave triggered successfully');
+  assert(geEmp.empStock === 1, 'EMP stock decremented to 1');
+  assert(geEmp.bulletManager.alienMissiles.length === 0, 'All alien missiles destroyed by EMP blast');
+  assert(geEmp.shockwaves.length === 1, 'Expanding shockwave VFX created');
+
+  // Second EMP trigger
+  geEmp.triggerEmpShockwave();
+  assert(geEmp.empStock === 0, 'Second EMP consumed, stock at 0');
+
+  // Third trigger fails due to depleted stock
+  const empFailed = geEmp.triggerEmpShockwave();
+  assert(empFailed === false, 'EMP cannot trigger when stock is 0');
+
+  // Test Manse gesture detection
+  const dummyNose = { x: 0.5, y: 0.35 };
+  const dummyLSh = { x: 0.42, y: 0.45 };
+  const dummyRSh = { x: 0.58, y: 0.45 };
+  // Both wrists held high above head and spaced apart
+  const manseLW = { x: 0.35, y: 0.15 };
+  const manseRW = { x: 0.65, y: 0.15 };
+  const dummyPose = [dummyNose, null, null, null, null, null, null, null, null, null, null, dummyLSh, dummyRSh, null, null, manseLW, manseRW];
+  assert(geEmp.isMansePose(dummyPose) === true, 'Manse gesture recognized when both wrists are high above shoulders and nose');
+
+  // Hands down posture should not match
+  const handsDownLW = { x: 0.40, y: 0.65 };
+  const handsDownRW = { x: 0.60, y: 0.65 };
+  const handsDownPose = [dummyNose, null, null, null, null, null, null, null, null, null, null, dummyLSh, dummyRSh, null, null, handsDownLW, handsDownRW];
+  assert(geEmp.isMansePose(handsDownPose) === false, 'Hands down pose does not trigger Manse gesture');
+
+  console.log('\n--- Testing Boss Energy Shield (Stage 4+) ---');
+  const stage1Boss = new Alien(AlienType.BOSS_GALAGA, 0, 0, 400, 100, 1);
+  assert(stage1Boss.isShielded === false, 'Stage 1 Boss Galaga has no shield');
+
+  const stage4Boss = new Alien(AlienType.BOSS_GALAGA, 0, 0, 400, 100, 4);
+  assert(stage4Boss.isShielded === true, 'Stage 4 Boss Galaga spawns with energy shield');
+  assert(stage4Boss.hp === 2, 'Boss starts with 2 HP');
+
+  // First hit breaks shield without damaging HP
+  const shieldPts = stage4Boss.hit();
+  assert(shieldPts === 50, 'Breaking shield awards 50 pts');
+  assert(stage4Boss.isShielded === false, 'Shield is broken after 1st hit');
+  assert(stage4Boss.hp === 2, 'Boss HP is intact after shield absorbs hit');
+  assert(stage4Boss.isDead === false, 'Boss remains alive');
+
+  // Second hit injures boss
+  stage4Boss.hit();
+  assert(stage4Boss.hp === 1, 'Boss HP drops to 1 on second hit');
+  assert(stage4Boss.isInjured === true, 'Boss marked injured');
+
+  // Third hit destroys boss
+  const bossKillPts = stage4Boss.hit();
+  assert(bossKillPts === 200, 'Destroying Boss awards 200 pts');
+  assert(stage4Boss.isDead === true, 'Boss marked dead after 3 total hits');
+
+  console.log('\n--- Testing Splitting Asteroids & PowerUps ---');
+  const geAst = new GalagaEngine(800, 600);
+  geAst.stage = 2;
+  geAst._initStage();
+  assert(geAst.empStock === 2, 'EMP stock refreshed to 2 on stage init');
+
+  // Add a large asteroid
+  const largeAst = new Asteroid(400, 200, 'LARGE');
+  geAst.asteroids.push(largeAst);
+  assert(geAst.asteroids.length === 1, 'Large asteroid added');
+
+  // Fire bullet at asteroid
+  geAst.bulletManager.playerBullets.push(new Bullet(400, 205));
+  geAst.checkCollisions();
+  assert(largeAst.isDead === true, 'Large asteroid destroyed on hit');
+  assert(geAst.asteroids.length === 2, 'Large asteroid split into 2 small asteroid fragments');
+  assert(geAst.asteroids.every(a => a.size === 'SMALL'), 'Both fragments are SMALL size');
+
+  // Test PowerUp collection & Shield protection
+  geAst.bulletManager.spawnPowerUp(400, 520, 'SHIELD');
+  geAst.fighter.x = 400;
+  geAst.fighter.y = 520;
+  geAst.checkCollisions();
+  assert(geAst.fighter.hasShield === true, 'Fighter collected SHIELD powerup and activated barrier');
+
+  // Lethal asteroid collision absorbed by shield!
+  geAst.asteroids.push(new Asteroid(400, 520, 'SMALL'));
+  geAst.fighter.isInvulnerable = false;
+  const initialLives = geAst.lives;
+  geAst.checkCollisions();
+  assert(geAst.fighter.hasShield === false, 'Shield popped and absorbed fatal collision');
+  assert(geAst.lives === initialLives, 'Player lives untouched thanks to shield barrier');
+  assert(geAst.fighter.isInvulnerable === true, 'Player gains invulnerability after shield breaks');
+
+  console.log('\n--- Testing Challenging Stage (Bonus Round) ---');
+  const geChal = new GalagaEngine(800, 600);
+  geChal.stage = 3; // Every 3rd stage is a Challenging Stage!
+  geChal._initStage();
+  assert(geChal.isChallengingStage === true, 'Stage 3 initiates Challenging Stage mode');
+  assert(geChal.challengingTotal === 40, 'Challenging Stage features 40 total bonus aliens');
+  assert(geChal.challengingAliens.length === 40, '5 waves of 8 aliens = 40 bonus aliens queued');
+  assert(geChal.challengingHits === 0, 'Challenging hits initialized to 0');
+
+  // Shoot first bonus alien
+  const firstAlien = geChal.challengingAliens[0];
+  firstAlien.time = 1.0; // Simulate flight active
+  firstAlien.x = 400;
+  firstAlien.y = 200;
+  geChal.bulletManager.playerBullets.push(new Bullet(400, 205));
+  geChal.checkCollisions();
+  assert(firstAlien.isDead === true, 'Bonus alien shot down');
+  assert(geChal.challengingHits === 1, 'Challenging hits incremented');
 
   console.log(`\nGalaga Tests: ${passed}/${total} passed.`);
   if (passed !== total) process.exit(1);

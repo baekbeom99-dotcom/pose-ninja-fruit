@@ -3,31 +3,97 @@
  */
 
 export class Bullet {
-  constructor(x, y, vy = -900) {
+  constructor(x, y, vy = -900, vx = 0, isPiercing = false, color = '#facc15') {
     this.x = x;
     this.y = y;
+    this.vx = vx;
     this.vy = vy;
-    this.width = 4;
-    this.height = 18;
+    this.width = isPiercing ? 8 : 4;
+    this.height = isPiercing ? 24 : 18;
+    this.isPiercing = isPiercing;
+    this.color = color;
     this.isDead = false;
   }
 
   update(dt) {
+    this.x += this.vx * dt;
     this.y += this.vy * dt;
-    if (this.y < -20) {
+    if (this.y < -25 || this.x < -30 || this.x > 1400) {
       this.isDead = true;
     }
   }
 
   render(ctx) {
     ctx.save();
-    ctx.shadowColor = '#facc15';
-    ctx.shadowBlur = 8;
+    ctx.shadowColor = this.color;
+    ctx.shadowBlur = this.isPiercing ? 14 : 8;
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(this.x - this.width / 2, this.y - this.height / 2, this.width, this.height);
-    // Outer yellow glow core
-    ctx.fillStyle = '#facc15';
+    // Outer glow core
+    ctx.fillStyle = this.color;
     ctx.fillRect(this.x - 1, this.y - this.height / 2 + 2, 2, this.height - 4);
+    ctx.restore();
+  }
+}
+
+export class PowerUp {
+  constructor(x, y, type = 'TRIPLE') {
+    this.x = x;
+    this.y = y;
+    this.type = type; // 'TRIPLE', 'PIERCER', 'SHIELD', 'HEART'
+    this.vy = 110;
+    this.radius = 16;
+    this.isDead = false;
+    this.animTime = Math.random() * 5;
+  }
+
+  update(dt, canvasHeight = 720) {
+    this.animTime += dt * 6;
+    this.y += this.vy * dt;
+    if (this.y > canvasHeight + 30) {
+      this.isDead = true;
+    }
+  }
+
+  render(ctx) {
+    ctx.save();
+    ctx.translate(this.x, this.y);
+
+    const colors = {
+      TRIPLE: '#38bdf8', // Neon Sky Blue
+      PIERCER: '#a855f7', // Electric Violet
+      SHIELD: '#10b981', // Emerald Shield
+      HEART: '#f43f5e'   // Rose Pink
+    };
+    const c = colors[this.type] || '#facc15';
+
+    ctx.shadowColor = c;
+    ctx.shadowBlur = 12;
+
+    // Glowing capsule base
+    ctx.fillStyle = '#0f172a';
+    ctx.strokeStyle = c;
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.roundRect(-14, -14, 28, 28, 8);
+    ctx.fill();
+    ctx.stroke();
+
+    // Pulse inner ring
+    const pulse = 1.0 + Math.sin(this.animTime) * 0.15;
+    ctx.fillStyle = c;
+    ctx.font = '900 13px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    const icons = {
+      TRIPLE: '3X',
+      PIERCER: '⚡',
+      SHIELD: '🛡️',
+      HEART: '💖'
+    };
+    ctx.fillText(icons[this.type] || '★', 0, 1);
+
     ctx.restore();
   }
 }
@@ -76,16 +142,43 @@ export class BulletManager {
   constructor() {
     this.playerBullets = [];
     this.alienMissiles = [];
+    this.powerups = [];
   }
 
-  firePlayerBullet(x, y, isDual = false) {
-    if (isDual) {
-      // Two parallel lasers 18px offset from center
-      this.playerBullets.push(new Bullet(x - 18, y));
-      this.playerBullets.push(new Bullet(x + 18, y));
+  firePlayerBullet(x, y, isDual = false, weaponType = 'NORMAL') {
+    if (weaponType === 'PIERCER') {
+      // Thick penetrating rail laser
+      if (isDual) {
+        this.playerBullets.push(new Bullet(x - 18, y, -1100, 0, true, '#c084fc'));
+        this.playerBullets.push(new Bullet(x + 18, y, -1100, 0, true, '#c084fc'));
+      } else {
+        this.playerBullets.push(new Bullet(x, y, -1100, 0, true, '#c084fc'));
+      }
+    } else if (weaponType === 'TRIPLE') {
+      // 3-way spread volley
+      if (isDual) {
+        [-32, -18, 0, 18, 32].forEach((offset, idx) => {
+          const vx = (idx - 2) * 120;
+          this.playerBullets.push(new Bullet(x + offset, y, -900, vx, false, '#38bdf8'));
+        });
+      } else {
+        this.playerBullets.push(new Bullet(x, y, -900, 0, false, '#38bdf8'));
+        this.playerBullets.push(new Bullet(x - 12, y, -880, -140, false, '#38bdf8'));
+        this.playerBullets.push(new Bullet(x + 12, y, -880, 140, false, '#38bdf8'));
+      }
     } else {
-      this.playerBullets.push(new Bullet(x, y));
+      // Standard Galaga lasers
+      if (isDual) {
+        this.playerBullets.push(new Bullet(x - 18, y));
+        this.playerBullets.push(new Bullet(x + 18, y));
+      } else {
+        this.playerBullets.push(new Bullet(x, y));
+      }
     }
+  }
+
+  spawnPowerUp(x, y, type) {
+    this.powerups.push(new PowerUp(x, y, type));
   }
 
   fireAlienMissile(x, y, targetX, targetY, speed = 380) {
@@ -108,9 +201,20 @@ export class BulletManager {
         this.alienMissiles.splice(i, 1);
       }
     }
+
+    for (let i = this.powerups.length - 1; i >= 0; i--) {
+      const p = this.powerups[i];
+      p.update(dt, canvasHeight);
+      if (p.isDead) {
+        this.powerups.splice(i, 1);
+      }
+    }
   }
 
   render(ctx) {
+    for (let i = 0; i < this.powerups.length; i++) {
+      this.powerups[i].render(ctx);
+    }
     for (let i = 0; i < this.playerBullets.length; i++) {
       this.playerBullets[i].render(ctx);
     }
@@ -122,5 +226,6 @@ export class BulletManager {
   clear() {
     this.playerBullets = [];
     this.alienMissiles = [];
+    this.powerups = [];
   }
 }
