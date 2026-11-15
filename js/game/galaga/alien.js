@@ -7,7 +7,9 @@ export const AlienType = {
   ZAKO: 'ZAKO',
   GOEI: 'GOEI',
   BOSS_GALAGA: 'BOSS_GALAGA',
-  PHANTOM: 'PHANTOM' // Stage 7+ Elite Stealth Viper
+  PHANTOM: 'PHANTOM',   // Stage 7+ Elite Stealth Viper
+  VORTEX: 'VORTEX',     // Stage 13+ Solar Crimson Cruiser
+  OVERLORD: 'OVERLORD'  // Stage 19+ Apex Nova Dreadnought
 };
 
 export class Alien {
@@ -21,9 +23,24 @@ export class Alien {
     this.y = homeY;
     this.stage = stage;
     this.angle = 0;
-    this.radius = type === AlienType.PHANTOM ? 17 : 16;
 
-    this.maxHp = (type === AlienType.BOSS_GALAGA || type === AlienType.PHANTOM) ? 2 : 1;
+    if (type === AlienType.OVERLORD) {
+      this.radius = 22;
+      this.maxHp = 4;
+    } else if (type === AlienType.VORTEX) {
+      this.radius = 18;
+      this.maxHp = 3;
+    } else if (type === AlienType.PHANTOM) {
+      this.radius = 17;
+      this.maxHp = 2;
+    } else if (type === AlienType.BOSS_GALAGA) {
+      this.radius = 16;
+      this.maxHp = 2;
+    } else {
+      this.radius = 16;
+      this.maxHp = 1;
+    }
+
     this.hp = this.maxHp;
     this.isInjured = false;
     this.isDead = false;
@@ -41,8 +58,12 @@ export class Alien {
 
     this.animTime = Math.random() * 10;
 
-    // Boss Galaga energy shield on stage 4+; Phantom always shielded
-    this.isShielded = (type === AlienType.BOSS_GALAGA && stage >= 4) || type === AlienType.PHANTOM;
+    // Boss Galaga energy shield on stage 4+; Phantom, Vortex & Overlord always shielded
+    this.isShielded =
+      (type === AlienType.BOSS_GALAGA && stage >= 4) ||
+      type === AlienType.PHANTOM ||
+      type === AlienType.VORTEX ||
+      type === AlienType.OVERLORD;
 
     // Formation fly-in animation states
     this.isFlyIn = false;
@@ -85,6 +106,10 @@ export class Alien {
         return wasDiving ? 320 : 160;
       } else if (this.type === AlienType.PHANTOM) {
         return wasDiving ? 800 : 500;
+      } else if (this.type === AlienType.VORTEX) {
+        return wasDiving ? 1200 : 800;
+      } else if (this.type === AlienType.OVERLORD) {
+        return wasDiving ? 2500 : 1500;
       } else {
         // BOSS_GALAGA
         return wasDiving ? 400 : 200;
@@ -103,6 +128,9 @@ export class Alien {
     // Stage 1: calm & readable pace (~3.1s), progressively faster on higher stages
     const speedUp = Math.min(1.5, (stage - 1) * 0.22);
     this.diveDuration = Math.max(1.6, (3.1 - speedUp) + Math.random() * 0.3);
+    if (this.type === AlienType.OVERLORD) {
+      this.diveDuration += 0.5; // Dreadnought sweeps slower to command the screen
+    }
 
     // Stage-by-stage missile quota per dive
     if (stage <= 1) {
@@ -111,6 +139,8 @@ export class Alien {
       this.diveMaxMissiles = this.type === AlienType.BOSS_GALAGA ? 2 : 1;
     } else if (stage <= 6) {
       this.diveMaxMissiles = 2;
+    } else if (this.type === AlienType.VORTEX || this.type === AlienType.OVERLORD) {
+      this.diveMaxMissiles = 2; // 2 volleys of multi-beam barrages (3-way or 5-way)
     } else {
       this.diveMaxMissiles = (this.type === AlienType.BOSS_GALAGA || this.type === AlienType.PHANTOM) ? 3 : 2;
     }
@@ -216,11 +246,16 @@ export class Alien {
         const ttt = tt * t;
 
         let diveX = uuu * c.p0.x + 3 * uu * t * c.p1.x + 3 * u * tt * c.p2.x + ttt * c.p3.x;
-        const diveY = uuu * c.p0.y + 3 * uu * t * c.p1.y + 3 * u * tt * c.p2.y + ttt * c.p3.y;
+        let diveY = uuu * c.p0.y + 3 * uu * t * c.p1.y + 3 * u * tt * c.p2.y + ttt * c.p3.y;
 
-        // Phantom weaves side-to-side during its dive attack
+        // Specialized elite dive trajectories
         if (this.type === AlienType.PHANTOM) {
           diveX += Math.sin(t * Math.PI * 5) * 60 * Math.sin(t * Math.PI);
+        } else if (this.type === AlienType.VORTEX) {
+          // Corkscrew loop spiral during dive
+          const env = Math.sin(t * Math.PI);
+          diveX += Math.cos(t * Math.PI * 4) * 55 * env;
+          diveY += Math.sin(t * Math.PI * 4) * 28 * env;
         }
 
         this.x = diveX;
@@ -238,6 +273,16 @@ export class Alien {
           if (this.type === AlienType.PHANTOM) {
             bulletManager.fireAlienMissile(this.x, this.y, fighterX, fighterY, missileSpeed, -0.16, '#e879f9');
             bulletManager.fireAlienMissile(this.x, this.y, fighterX, fighterY, missileSpeed, 0.16, '#e879f9');
+          } else if (this.type === AlienType.VORTEX) {
+            // 3-way solar orange fan spread
+            [-0.24, 0, 0.24].forEach(ang => {
+              bulletManager.fireAlienMissile(this.x, this.y, fighterX, fighterY, missileSpeed, ang, '#fb923c');
+            });
+          } else if (this.type === AlienType.OVERLORD) {
+            // 5-way cyan/gold nova star barrage
+            [-0.32, -0.16, 0, 0.16, 0.32].forEach(ang => {
+              bulletManager.fireAlienMissile(this.x, this.y, fighterX, fighterY, missileSpeed * 0.92, ang, '#22d3ee');
+            });
           } else {
             bulletManager.fireAlienMissile(this.x, this.y, fighterX, fighterY, missileSpeed);
           }
@@ -265,6 +310,10 @@ export class Alien {
       this._renderGoei(ctx, flap);
     } else if (this.type === AlienType.PHANTOM) {
       this._renderPhantom(ctx, flap);
+    } else if (this.type === AlienType.VORTEX) {
+      this._renderVortex(ctx, flap);
+    } else if (this.type === AlienType.OVERLORD) {
+      this._renderOverlord(ctx, flap);
     } else {
       this._renderBoss(ctx, flap);
     }
@@ -459,6 +508,136 @@ export class Alien {
       ctx.restore();
     }
   }
+
+  _renderVortex(ctx, flap) {
+    // Stage 13+ Solar Vortex Cruiser (Blazing orange/crimson spinning tri-blade starship)
+    const primaryColor = this.isInjured ? '#fde047' : '#f97316';
+    const coreColor = this.isInjured ? '#ffffff' : '#ef4444';
+    ctx.shadowColor = primaryColor;
+    ctx.shadowBlur = 12;
+
+    // Rotating 4-blade solar fins
+    ctx.save();
+    ctx.rotate(this.animTime * 0.25);
+    ctx.fillStyle = primaryColor;
+    for (let i = 0; i < 4; i++) {
+      ctx.rotate(Math.PI / 2);
+      ctx.beginPath();
+      ctx.moveTo(0, -4);
+      ctx.lineTo(17 + flap * 2, -9);
+      ctx.lineTo(11, 4);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+
+    // Inner armored core
+    ctx.fillStyle = coreColor;
+    ctx.beginPath();
+    ctx.arc(0, 0, 10, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Blazing solar nucleus
+    ctx.fillStyle = '#fde047';
+    ctx.beginPath();
+    ctx.arc(0, 0, 5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Orange octagonal energy barrier
+    if (this.isShielded) {
+      ctx.save();
+      ctx.strokeStyle = '#fb923c';
+      ctx.lineWidth = 2.5;
+      ctx.shadowColor = '#fb923c';
+      ctx.shadowBlur = 12;
+      ctx.beginPath();
+      const shieldR = 23 + Math.sin(this.animTime * 0.9) * 2;
+      for (let i = 0; i < 8; i++) {
+        const a = (i * Math.PI / 4) + this.animTime * 0.2;
+        const sx = Math.cos(a) * shieldR;
+        const sy = Math.sin(a) * shieldR;
+        if (i === 0) ctx.moveTo(sx, sy);
+        else ctx.lineTo(sx, sy);
+      }
+      ctx.closePath();
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(251, 146, 60, 0.18)';
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  _renderOverlord(ctx, flap) {
+    // Stage 19+ Apex Nova Dreadnought (Gold & electric cyan heavy flagship)
+    const hullColor = this.isInjured ? '#f43f5e' : '#eab308';
+    const wingColor = this.isInjured ? '#fb7185' : '#06b6d4';
+    ctx.shadowColor = wingColor;
+    ctx.shadowBlur = 14;
+
+    // Swept dreadnought heavy armor wings
+    ctx.fillStyle = wingColor;
+    ctx.beginPath();
+    ctx.moveTo(-6, -10);
+    ctx.lineTo(-24 - flap * 3, -2);
+    ctx.lineTo(-20, 14);
+    ctx.lineTo(-8, 10);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(6, -10);
+    ctx.lineTo(24 + flap * 3, -2);
+    ctx.lineTo(20, 14);
+    ctx.lineTo(8, 10);
+    ctx.closePath();
+    ctx.fill();
+
+    // Main golden citadel chassis
+    ctx.fillStyle = hullColor;
+    ctx.beginPath();
+    ctx.moveTo(0, 18);
+    ctx.lineTo(-12, 4);
+    ctx.lineTo(-10, -14);
+    ctx.lineTo(0, -18);
+    ctx.lineTo(10, -14);
+    ctx.lineTo(12, 4);
+    ctx.closePath();
+    ctx.fill();
+
+    // Twin nova cannons
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(-15, -16, 4, 9);
+    ctx.fillRect(11, -16, 4, 9);
+
+    // Pulsing cyan nova reactor core
+    ctx.fillStyle = '#22d3ee';
+    ctx.beginPath();
+    ctx.arc(0, 1, 5.5 + flap * 1.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Dual-ring golden-cyan barrier shield
+    if (this.isShielded) {
+      ctx.save();
+      ctx.strokeStyle = '#22d3ee';
+      ctx.lineWidth = 3;
+      ctx.shadowColor = '#22d3ee';
+      ctx.shadowBlur = 14;
+      ctx.beginPath();
+      const shieldR = 27 + Math.sin(this.animTime) * 2;
+      for (let i = 0; i < 6; i++) {
+        const a = (i * Math.PI / 3) + this.animTime * 0.25;
+        const sx = Math.cos(a) * shieldR;
+        const sy = Math.sin(a) * shieldR;
+        if (i === 0) ctx.moveTo(sx, sy);
+        else ctx.lineTo(sx, sy);
+      }
+      ctx.closePath();
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(34, 211, 238, 0.16)';
+      ctx.fill();
+      ctx.restore();
+    }
+  }
 }
 
 export class AlienFormation {
@@ -529,6 +708,16 @@ export class AlienFormation {
       });
     }
 
+    // Stage 19+: 2 Apex Nova Overlords commanding from the apex row
+    if (this.stage >= 19) {
+      const overlordCols = [-1.5, 1.5];
+      overlordCols.forEach((colOffset, idx) => {
+        const hx = this.centerX + colOffset * colSpacing * 1.15;
+        const hy = this.centerY - rowSpacing * 2.95;
+        this.aliens.push(new Alien(AlienType.OVERLORD, 0, idx + 20, hx, hy, this.stage));
+      });
+    }
+
     // Row 1: 10 Goeis (Wide escort formation)
     const goeiCols = [-4.5, -3.5, -2.5, -1.5, -0.5, 0.5, 1.5, 2.5, 3.5, 4.5];
     goeiCols.forEach((colOffset, idx) => {
@@ -536,6 +725,16 @@ export class AlienFormation {
       const hy = this.centerY - rowSpacing * 0.9;
       this.aliens.push(new Alien(AlienType.GOEI, 1, idx, hx, hy, this.stage));
     });
+
+    // Stage 13+: 4 Solar Vortex Cruisers flanking Row 1
+    if (this.stage >= 13) {
+      const vortexCols = [-6.0, -5.25, 5.25, 6.0];
+      vortexCols.forEach((colOffset, idx) => {
+        const hx = this.centerX + colOffset * colSpacing;
+        const hy = this.centerY - rowSpacing * 0.9;
+        this.aliens.push(new Alien(AlienType.VORTEX, 1, idx + 10, hx, hy, this.stage));
+      });
+    }
 
     // Rows 2, 3 & 4: 12 Zakos each (36 Zakos total, spanning wide across screen)
     const zakoCols = [-5.5, -4.5, -3.5, -2.5, -1.5, -0.5, 0.5, 1.5, 2.5, 3.5, 4.5, 5.5];

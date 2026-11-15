@@ -531,8 +531,11 @@ export class GalagaEngine {
             }
             this._spawnExplosion(alien.x, alien.y, alien.type);
 
-            // 급강하 중인 적 격추 시 파워업 아이템 드랍! (신규 적 PHANTOM은 55%, 일반 적은 25%)
-            const dropChance = alien.type === AlienType.PHANTOM ? 0.55 : 0.25;
+            // 급강하 중인 적 격추 시 파워업 아이템 드랍! (신규 정예 적은 높은 확률로 드랍)
+            let dropChance = 0.25;
+            if (alien.type === AlienType.OVERLORD) dropChance = 0.85;
+            else if (alien.type === AlienType.VORTEX) dropChance = 0.65;
+            else if (alien.type === AlienType.PHANTOM) dropChance = 0.55;
             if (alien.isDiving && Math.random() < dropChance) {
               const types = ['TRIPLE', 'PIERCER', 'SHIELD', 'HEART'];
               const chosenType = types[Math.floor(Math.random() * types.length)];
@@ -729,8 +732,10 @@ export class GalagaEngine {
     else if (type === AlienType.GOEI) color = '#ef4444';
     else if (type === AlienType.BOSS_GALAGA) color = '#10b981';
     else if (type === AlienType.PHANTOM) color = '#d946ef';
+    else if (type === AlienType.VORTEX) color = '#f97316';
+    else if (type === AlienType.OVERLORD) color = '#22d3ee';
 
-    const count = type === 'EMP_SPARK' ? 8 : 18;
+    const count = type === 'EMP_SPARK' ? 8 : (type === AlienType.OVERLORD ? 28 : 18);
     for (let i = 0; i < count; i++) {
       const angle = Math.random() * Math.PI * 2;
       const speed = 60 + Math.random() * 180;
@@ -843,16 +848,29 @@ export class GalagaEngine {
     }
     ctx.restore();
 
-    // 8. Stage 7+ New Enemy Alert Banner
-    if (this.stage === 7 && this.state === 'PLAYING' && this.formation && this.formation.formationTime < 3.5) {
+    // 8. Milestone Stage New Enemy Alert Banners (Stage 7, 13, 19)
+    if ((this.stage === 7 || this.stage === 13 || this.stage === 19) &&
+        this.state === 'PLAYING' && this.formation && this.formation.formationTime < 3.5) {
       ctx.save();
       const blink = Math.floor(this.formation.formationTime * 6) % 2 === 0;
-      ctx.fillStyle = blink ? '#e879f9' : '#facc15';
+      let msg = `⚠ NEW ENEMY: PHANTOM SQUADRON DETECTED! ⚠`;
+      let primary = '#e879f9';
+      let glow = '#d946ef';
+      if (this.stage === 13) {
+        msg = `⚠ NEW ENEMY: SOLAR VORTEX DETECTED! ⚠`;
+        primary = '#fb923c';
+        glow = '#f97316';
+      } else if (this.stage === 19) {
+        msg = `⚠ APEX THREAT: OVERLORD DREADNOUGHT DETECTED! ⚠`;
+        primary = '#22d3ee';
+        glow = '#06b6d4';
+      }
+      ctx.fillStyle = blink ? primary : '#facc15';
       ctx.font = '900 22px sans-serif';
       ctx.textAlign = 'center';
-      ctx.shadowColor = '#d946ef';
+      ctx.shadowColor = glow;
       ctx.shadowBlur = 12;
-      ctx.fillText(`⚠ NEW ENEMY: PHANTOM SQUADRON DETECTED! ⚠`, this.width / 2, this.height * 0.48);
+      ctx.fillText(msg, this.width / 2, this.height * 0.48);
       ctx.restore();
     }
 

@@ -454,6 +454,49 @@ function runTests() {
   assert(phantomDive.hit() === 500, '3rd hit kills PHANTOM in formation for 500 pts');
   assert(phantomDive.isDead === true, 'PHANTOM marked dead after 3 hits');
 
+  console.log('\n--- Testing Stage 13+ (VORTEX) & Stage 19+ (OVERLORD) ---');
+  const f12 = new AlienFormation(800, 600, 12);
+  const f13 = new AlienFormation(800, 600, 13);
+  const f18 = new AlienFormation(800, 600, 18);
+  const f19 = new AlienFormation(800, 600, 19);
+
+  // VORTEX (Stage 13+)
+  assert(f12.aliens.filter(a => a.type === AlienType.VORTEX).length === 0, 'Stage 12 does NOT spawn VORTEX units');
+  const vortexes = f13.aliens.filter(a => a.type === AlienType.VORTEX);
+  assert(vortexes.length === 4, 'Stage 13 spawns 4 Solar VORTEX cruisers');
+  assert(vortexes[0].isShielded === true && vortexes[0].maxHp === 3, 'VORTEX spawns shielded with 3 base HP');
+
+  const bmVortex = new BulletManager();
+  const vortexDive = new Alien(AlienType.VORTEX, 1, 10, 400, 140, 13);
+  vortexDive.startDive(400, 140, 400, 520, 800, 600, 13);
+  for (let step = 0; step < 80; step++) {
+    vortexDive.update(0.05, 400, 140, 1.0, bmVortex, 400, 520);
+  }
+  assert(bmVortex.alienMissiles.length === 6, 'Stage 13 VORTEX fires 2 volleys x 3-way fan = 6 solar missiles');
+  assert(vortexDive.hit() === 50, '1st hit breaks VORTEX shield');
+  vortexDive.hit();
+  vortexDive.hit();
+  assert(vortexDive.hit() === 800, '4th hit destroys VORTEX for 800 pts');
+
+  // OVERLORD (Stage 19+)
+  assert(f18.aliens.filter(a => a.type === AlienType.OVERLORD).length === 0, 'Stage 18 does NOT spawn OVERLORD units');
+  const overlords = f19.aliens.filter(a => a.type === AlienType.OVERLORD);
+  assert(overlords.length === 2, 'Stage 19 spawns 2 Apex OVERLORD dreadnoughts');
+  assert(overlords[0].isShielded === true && overlords[0].maxHp === 4, 'OVERLORD spawns shielded with 4 base HP');
+
+  const bmOverlord = new BulletManager();
+  const overlordDive = new Alien(AlienType.OVERLORD, 0, 20, 400, 70, 19);
+  overlordDive.startDive(400, 70, 400, 520, 800, 600, 19);
+  for (let step = 0; step < 80; step++) {
+    overlordDive.update(0.05, 400, 70, 1.0, bmOverlord, 400, 520);
+  }
+  assert(bmOverlord.alienMissiles.length === 10, 'Stage 19 OVERLORD fires 2 volleys x 5-way nova burst = 10 missiles');
+  assert(overlordDive.hit() === 50, '1st hit breaks OVERLORD shield');
+  overlordDive.hit();
+  overlordDive.hit();
+  overlordDive.hit();
+  assert(overlordDive.hit() === 1500, '5th hit destroys OVERLORD for 1500 pts');
+
   console.log(`\nGalaga Tests: ${passed}/${total} passed.`);
   if (passed !== total) process.exit(1);
 }
