@@ -24,7 +24,8 @@ export class GalagaEngine {
     this.tractorBeam = new TractorBeam();
 
     this.score = 0;
-    this.lives = 3;
+    this.lives = 5;
+    this.maxLives = 5;
     this.stage = 1;
     this.state = 'PLAYING'; // 'PLAYING', 'STAGE_CLEAR', 'GAMEOVER'
     this.stageClearTimer = 0;
@@ -49,7 +50,7 @@ export class GalagaEngine {
 
   reset() {
     this.score = 0;
-    this.lives = 3;
+    this.lives = 5;
     this.stage = 1;
     this.state = 'PLAYING';
     this.stageClearTimer = 0;
@@ -65,7 +66,7 @@ export class GalagaEngine {
 
     if (this.ui) {
       this.ui.updateScores(0, 0, false);
-      this.ui.updateLives(this.lives, 3);
+      this.ui.updateLives(this.lives, 5);
     }
   }
 
@@ -123,8 +124,8 @@ export class GalagaEngine {
         const bosses = this.formation.aliens.filter(a => !a.isDead && a.type === AlienType.BOSS_GALAGA && !a.isDiving && !a.isTractorRun);
         if (bosses.length > 0) {
           const chosenBoss = bosses[Math.floor(Math.random() * bosses.length)];
-          // Descend to mid-screen (around 38% ~ 42% screen height) before firing beam!
-          chosenBoss.startTractorDescent(Math.min(320, this.height * 0.4));
+          // Descend 20% deeper towards mid-screen before firing beam!
+          chosenBoss.startTractorDescent(Math.min(420, this.height * 0.50));
         }
       }
     }
@@ -217,7 +218,7 @@ export class GalagaEngine {
         // Player loses 1 fighter into capture
         this.lives = Math.max(0, this.lives - 1);
         this.onLivesChanged(this.lives);
-        if (this.ui) this.ui.updateLives(this.lives, 3);
+        if (this.ui) this.ui.updateLives(this.lives, 5);
 
         if (this.lives <= 0) {
           this._triggerGameOver();
@@ -281,7 +282,7 @@ export class GalagaEngine {
       // Deduct 1 life
       this.lives = Math.max(0, this.lives - 1);
       this.onLivesChanged(this.lives);
-      if (this.ui) this.ui.updateLives(this.lives, 3);
+      if (this.ui) this.ui.updateLives(this.lives, 5);
 
       if (this.lives <= 0) {
         this._triggerGameOver();

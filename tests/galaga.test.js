@@ -163,12 +163,12 @@ function runTests() {
   const distantFighter = new Fighter(100, 500);
   assert(tb.isFighterInside(distantFighter) === false, 'Distant fighter outside cone');
 
-  // Test exposure requirement (1.5 seconds)
+  // Test exposure requirement (1.0 second)
   const exposedFighter = new Fighter(400, 500);
-  const exp1 = tb.updateExposure(0.8, exposedFighter);
-  assert(exp1.isExposed === true && exp1.triggerCapture === false, '0.8s exposure does not trigger capture yet');
-  const exp2 = tb.updateExposure(0.8, exposedFighter); // Total 1.6s >= 1.5s
-  assert(exp2.triggerCapture === true, '1.6s exposure (>=1.5s) triggers capture');
+  const exp1 = tb.updateExposure(0.5, exposedFighter);
+  assert(exp1.isExposed === true && exp1.triggerCapture === false, '0.5s exposure does not trigger capture yet');
+  const exp2 = tb.updateExposure(0.6, exposedFighter); // Total 1.1s >= 1.0s
+  assert(exp2.triggerCapture === true, '1.1s exposure (>=1.0s) triggers capture');
 
   // Test boss descent before tractor beam
   const descentBoss = new Alien(AlienType.BOSS_GALAGA, 0, 0, 400, 80);
@@ -200,8 +200,9 @@ function runTests() {
   console.log('\n--- Testing Galaga Engine & Collision ---');
   const ge = new GalagaEngine(800, 600);
   assert(ge.score === 0, 'Initial score is 0');
-  assert(ge.lives === 3, 'Initial lives set to 3');
+  assert(ge.lives === 5, 'Initial lives set to 5');
   assert(ge.stage === 1, 'Initial stage is 1');
+  assert(ge.formation.aliens.length >= 50, 'Formation spawns 50+ aliens grid');
 
   // Test player bullet vs alien collision
   const targetAlien = ge.formation.aliens[0];
@@ -220,7 +221,7 @@ function runTests() {
   ge.bulletManager.alienMissiles.push(new AlienMissile(400, 518, 400, 520));
 
   ge.checkCollisions();
-  assert(ge.lives === 2, 'Player loses 1 life when hit by alien missile (3 -> 2)');
+  assert(ge.lives === 4, 'Player loses 1 life when hit by alien missile (5 -> 4)');
   assert(ge.fighter.isInvulnerable === true, 'Player gains temporary invulnerability on hit');
 
   // Test Game Over condition

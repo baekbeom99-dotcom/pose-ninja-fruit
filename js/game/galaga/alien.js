@@ -290,31 +290,31 @@ export class AlienFormation {
 
   _buildGrid() {
     this.aliens = [];
-    const colSpacing = 48;
-    const rowSpacing = 42;
+    const colSpacing = 62;
+    const rowSpacing = 38;
 
-    // Row 0: 4 Boss Galagas
-    const bossCols = [-1.5, -0.5, 0.5, 1.5];
+    // Row 0: 6 Boss Galagas (Spaced wide in top row)
+    const bossCols = [-2.5, -1.5, -0.5, 0.5, 1.5, 2.5];
     bossCols.forEach((colOffset, idx) => {
-      const hx = this.centerX + colOffset * colSpacing * 1.3;
-      const hy = this.centerY - rowSpacing * 1.5;
+      const hx = this.centerX + colOffset * colSpacing * 1.15;
+      const hy = this.centerY - rowSpacing * 2.0;
       this.aliens.push(new Alien(AlienType.BOSS_GALAGA, 0, idx, hx, hy));
     });
 
-    // Row 1: 8 Goeis
-    const goeiCols = [-3.5, -2.5, -1.5, -0.5, 0.5, 1.5, 2.5, 3.5];
+    // Row 1: 10 Goeis (Wide escort formation)
+    const goeiCols = [-4.5, -3.5, -2.5, -1.5, -0.5, 0.5, 1.5, 2.5, 3.5, 4.5];
     goeiCols.forEach((colOffset, idx) => {
       const hx = this.centerX + colOffset * colSpacing;
-      const hy = this.centerY - rowSpacing * 0.5;
+      const hy = this.centerY - rowSpacing * 0.9;
       this.aliens.push(new Alien(AlienType.GOEI, 1, idx, hx, hy));
     });
 
-    // Rows 2 & 3: 10 Zakos each (20 Zakos)
-    const zakoCols = [-4.5, -3.5, -2.5, -1.5, -0.5, 0.5, 1.5, 2.5, 3.5, 4.5];
-    for (let r = 0; r < 2; r++) {
+    // Rows 2, 3 & 4: 12 Zakos each (36 Zakos total, spanning wide across screen)
+    const zakoCols = [-5.5, -4.5, -3.5, -2.5, -1.5, -0.5, 0.5, 1.5, 2.5, 3.5, 4.5, 5.5];
+    for (let r = 0; r < 3; r++) {
       zakoCols.forEach((colOffset, idx) => {
         const hx = this.centerX + colOffset * colSpacing;
-        const hy = this.centerY + (r + 0.5) * rowSpacing;
+        const hy = this.centerY + (r + 0.2) * rowSpacing;
         this.aliens.push(new Alien(AlienType.ZAKO, r + 2, idx, hx, hy));
       });
     }

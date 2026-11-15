@@ -12,9 +12,9 @@ export class TractorBeam {
     this.timer = 0;
     this.animTime = 0;
 
-    // 1.5 seconds exposure requirement before capture
+    // 1.0 second exposure requirement before capture
     this.exposureTimer = 0;
-    this.requiredExposure = 1.5;
+    this.requiredExposure = 1.0;
 
     this.capturedShip = null;
     this.isPulling = false;
