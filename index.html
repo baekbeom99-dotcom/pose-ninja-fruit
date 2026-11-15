@@ -32,19 +32,6 @@
           <span class="high-score-display">BEST <span id="high-score-text">0</span></span>
         </div>
 
-        <!-- 2-Player Scoreboard (Visible in 2P mode) -->
-        <div class="duo-score-panel hidden" id="duo-score-panel">
-          <div class="p-score-card p1-card">
-            <span class="p-tag">1P (CYAN)</span>
-            <span id="p1-score-text" class="p-score-num">0</span>
-          </div>
-          <div class="vs-badge">VS</div>
-          <div class="p-score-card p2-card">
-            <span class="p-tag">2P (PINK)</span>
-            <span id="p2-score-text" class="p-score-num">0</span>
-          </div>
-        </div>
-
         <div class="lives-container" id="lives-container">
           <!-- 5 Lives Hearts SVG -->
           <svg class="life-heart" id="life-1" viewBox="0 0 24 24" fill="#ef4444">
@@ -168,12 +155,6 @@
                   <span class="tab-name">갤러그</span>
                 </button>
               </div>
-
-              <div class="start-section-label">👥 플레이 인원</div>
-              <div class="mode-select-container">
-                <button id="btn-mode-solo" class="mode-select-btn active">👤 1인 플레이 (Solo)</button>
-                <button id="btn-mode-duo" class="mode-select-btn">👥 2인 대결 (Duo)</button>
-              </div>
             </div>
 
             <!-- Right Column: Guide & Start Button -->
@@ -182,7 +163,6 @@
               <div class="instructions-card">
                 <div id="instruction-mode-desc">⚔️ <strong>클래식 닌자 모드</strong>: 양손 독립 검기로 날아오는 과일을 베어보세요!</div>
                 <div id="instruction-special">⚡ <strong>필살기 (12개 절단 시)</strong>: 한글 자음(ㄱ, ㄴ, ㅅ, ㅇ) 포즈를 0.5초 유지하면 전멸기 발동!</div>
-                <div id="instruction-players">👤 <strong>1인 모드</strong>: 화면의 모든 대상을 홀로 베어 최고 점수에 도전하세요!</div>
                 <div>💖 <strong>하트 보너스</strong>: 반짝이는 하트를 베면 생명(+1)이 회복됩니다!</div>
                 <div>💣 <strong>폭탄 격파</strong>: 닿으면 하트 2개 차감! 머리(헤딩 ⚽)로 들이받으면 안전하게 격파 (+10점)!</div>
               </div>
@@ -198,26 +178,10 @@
         <div class="modal-content">
           <h1 class="game-title" style="background: linear-gradient(135deg, #ef4444, #f97316);">GAME OVER</h1>
           
-          <!-- Solo Final Score Display -->
+          <!-- Final Score Display -->
           <div id="gameover-solo-content" style="margin-bottom: 24px;">
             <div style="font-size: 16px; color: #94a3b8; margin-bottom: 4px;">최종 점수</div>
             <div id="final-score-text" style="font-size: 56px; font-weight: 900; color: #38bdf8;">0</div>
-          </div>
-
-          <!-- Duo Winner Display -->
-          <div id="gameover-duo-content" class="hidden" style="margin-bottom: 24px;">
-            <div id="duo-winner-banner" class="duo-winner-banner">👑 1P 승리!</div>
-            <div class="duo-final-scores">
-              <div class="duo-final-card p1-card">
-                <span class="duo-final-tag">1P (CYAN)</span>
-                <span id="p1-final-score" class="duo-final-num">0</span>
-              </div>
-              <div class="duo-final-vs">VS</div>
-              <div class="duo-final-card p2-card">
-                <span class="duo-final-tag">2P (PINK)</span>
-                <span id="p2-final-score" class="duo-final-num">0</span>
-              </div>
-            </div>
           </div>
 
           <div class="gameover-btn-group">

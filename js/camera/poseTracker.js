@@ -21,7 +21,7 @@ export class PoseTracker {
       'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm'
     );
 
-    onProgress('포즈 랜드마크 모델 다운로드 중 (2인 지원)...');
+    onProgress('포즈 랜드마크 모델 다운로드 중...');
 
     const modelPath =
       'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task';
@@ -33,7 +33,7 @@ export class PoseTracker {
           delegate: 'GPU'
         },
         runningMode: 'VIDEO',
-        numPoses: 2, // 2-Player Tracking Enabled
+        numPoses: 1,
         minPoseDetectionConfidence: 0.45,
         minPosePresenceConfidence: 0.45,
         minTrackingConfidence: 0.45
@@ -47,7 +47,7 @@ export class PoseTracker {
           delegate: 'CPU'
         },
         runningMode: 'VIDEO',
-        numPoses: 2,
+        numPoses: 1,
         minPoseDetectionConfidence: 0.45,
         minPosePresenceConfidence: 0.45,
         minTrackingConfidence: 0.45
