@@ -43,6 +43,8 @@ export class Alien {
   startTractorDescent(targetY) {
     this.isTractorRun = true;
     this.tractorState = 'DESCENDING';
+    this.startY = this.y;
+    this.startX = this.x;
     this.targetTractorY = targetY;
   }
 
@@ -97,20 +99,34 @@ export class Alien {
       if (this.tractorState === 'DESCENDING') {
         this.y += 140 * dt;
         this.x += (formationX - this.x) * 0.05;
-        this.angle = 0;
+
+        // 출발할 때 180도(Math.PI) 회전하면서 하강
+        const startY = this.startY !== undefined ? this.startY : (this.homeY || 80);
+        const totalDist = Math.max(1, this.targetTractorY - startY);
+        const currentDist = Math.max(0, this.y - startY);
+        const rotProgress = Math.min(1.0, currentDist / (totalDist * 0.45));
+        const easedRot = 0.5 - 0.5 * Math.cos(rotProgress * Math.PI);
+        this.angle = easedRot * Math.PI;
+
         if (this.y >= this.targetTractorY) {
           this.y = this.targetTractorY;
           this.tractorState = 'BEAMING';
+          this.angle = Math.PI;
         }
       } else if (this.tractorState === 'BEAMING') {
-        // Hover at targetTractorY with subtle oscillation
-        this.angle = Math.sin(this.animTime * 0.6) * 0.06;
+        // 180도 회전된 상태(플레이어를 향한 상태)로 호버링하며 미세 진동
+        this.angle = Math.PI + Math.sin(this.animTime * 0.8) * 0.08;
       } else if (this.tractorState === 'RETURNING') {
-        // Return back to formation slot
+        // Return back to formation slot, rotating back to 0 degrees
         this.y -= 130 * dt;
         const targetHomeX = formationX + (this.homeX - formationX) * formationScale;
         const targetHomeY = formationY + (this.homeY - formationY) * formationScale;
         this.x += (targetHomeX - this.x) * 0.08;
+
+        const returnTotalDist = Math.max(1, this.targetTractorY - targetHomeY);
+        const returnCurrentDist = Math.max(0, this.targetTractorY - this.y);
+        const returnProgress = Math.min(1.0, returnCurrentDist / returnTotalDist);
+        this.angle = Math.PI * (1.0 - returnProgress);
 
         if (this.y <= targetHomeY + 10) {
           this.isTractorRun = false;

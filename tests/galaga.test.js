@@ -206,8 +206,10 @@ function runTests() {
   assert(descentBoss.tractorState === 'DESCENDING', 'Boss state is DESCENDING');
   descentBoss.update(1.5, 400, 80, 1.0, null, 400, 550);
   assert(descentBoss.y > 80, 'Boss moves downward towards target');
+  assert(descentBoss.angle > 0, 'Boss rotates 180 degrees during tractor launch descent');
   descentBoss.update(1.0, 400, 80, 1.0, null, 400, 550);
   assert(descentBoss.tractorState === 'BEAMING', 'Boss enters BEAMING state upon reaching target Y');
+  assert(Math.abs(descentBoss.angle - Math.PI) < 0.2, 'Boss rotated ~180 degrees facing downward while beaming');
 
   // Test capture pull
   tb.startCapture(insideFighter);
