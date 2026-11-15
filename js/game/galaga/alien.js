@@ -74,13 +74,16 @@ export class Alien {
 
     if (this.hp <= 0) {
       this.isDead = true;
+      const wasDiving = this.isDiving;
+      this.isFlyIn = false;
+      this.isDiving = false;
       if (this.type === AlienType.ZAKO) {
-        return this.isDiving ? 200 : 100;
+        return wasDiving ? 200 : 100;
       } else if (this.type === AlienType.GOEI) {
-        return this.isDiving ? 320 : 160;
+        return wasDiving ? 320 : 160;
       } else {
         // BOSS_GALAGA
-        return this.isDiving ? 400 : 200;
+        return wasDiving ? 400 : 200;
       }
     } else {
       this.isInjured = true;
@@ -91,9 +94,10 @@ export class Alien {
   startDive(startX, startY, targetX, targetY, canvasWidth, canvasHeight, stage = this.stage) {
     this.isDiving = true;
     this.diveT = 0;
+    this.diveFired = false;
     // Higher stages swoop down faster
     const speedUp = Math.min(1.3, (stage - 1) * 0.25);
-    this.diveDuration = Math.max(1.4, (2.8 - speedUp) + Math.random() * 0.5);
+    this.diveDuration = Math.max(1.4, (2.6 - speedUp) + Math.random() * 0.4);
 
     // Generate cubic Bezier dive path: start -> sweep across center -> target area -> loop back up
     const dir = Math.random() > 0.5 ? 1 : -1;
@@ -201,10 +205,12 @@ export class Alien {
         // Face dive direction
         this.angle = Math.atan2(this.y - prevY, this.x - prevX) - Math.PI / 2;
 
-        // Chance to fire missile mid-dive - scales with stage!
-        const fireChance = Math.min(0.045, 0.012 + (this.stage - 1) * 0.007);
+        // Guaranteed missile drop during mid-dive + chance for second shot!
         const missileSpeed = 360 + Math.min(220, (this.stage - 1) * 40);
-        if (bulletManager && Math.random() < fireChance && this.y < fighterY - 80) {
+        if (bulletManager && !this.diveFired && t >= 0.30 && this.y < fighterY - 60) {
+          this.diveFired = true;
+          bulletManager.fireAlienMissile(this.x, this.y, fighterX, fighterY, missileSpeed);
+        } else if (bulletManager && Math.random() < 0.035 && this.y < fighterY - 80) {
           bulletManager.fireAlienMissile(this.x, this.y, fighterX, fighterY, missileSpeed);
         }
       } else {
@@ -366,16 +372,20 @@ export class AlienFormation {
     this.formationTime = 0;
     this.centerX = canvasWidth / 2;
     this.centerY = 180;
-    this.diveTimer = 0;
+    this.diveTimer = 1.0;
     this.isFlyIn = false;
-    // Higher stages dive more frequently
-    this.diveInterval = Math.max(0.85, 2.8 - (stage - 1) * 0.42);
+    this.flyInTimer = 0;
+    // Higher stages dive and shoot more frequently
+    this.diveInterval = Math.max(0.75, 1.8 - (stage - 1) * 0.25);
+    this.formationFireTimer = 0;
+    this.formationFireInterval = Math.max(1.2, 2.4 - (stage - 1) * 0.3);
 
     this._buildGrid();
   }
 
   startFlyIn() {
     this.isFlyIn = true;
+    this.flyInTimer = 0;
     for (let i = 0; i < this.aliens.length; i++) {
       const a = this.aliens[i];
       a.isFlyIn = true;
@@ -388,7 +398,7 @@ export class AlienFormation {
       const midX = fromLeft ? this.canvasWidth * 0.35 : this.canvasWidth * 0.65;
       const midY = this.canvasHeight * 0.40;
 
-      a.flyInDelay = a.row * 0.35 + (a.col % 6) * 0.08;
+      a.flyInDelay = (a.row % 3) * 0.25 + (a.col % 4) * 0.06;
       a.flyInCurve = {
         p0: { x: startX, y: startY },
         p1: { x: midX, y: midY }
@@ -457,13 +467,29 @@ export class AlienFormation {
     const swayY = this.centerY + Math.cos(this.formationTime * 0.8) * 12;
     const scale = 1.0 + Math.sin(this.formationTime * (2.2 + Math.min(1.0, (this.stage - 1) * 0.2))) * 0.05;
 
-    // Periodic dive attacks (only after fly-in intro completes)
-    const isAnyFlyingIn = this.aliens.some(a => a.isFlyIn);
-    if (!isAnyFlyingIn) {
+    // Fly-in master timer
+    if (this.isFlyIn) {
+      this.flyInTimer += dt;
+      if (this.flyInTimer >= 2.0) {
+        this.isFlyIn = false;
+        for (let i = 0; i < this.aliens.length; i++) {
+          this.aliens[i].isFlyIn = false;
+        }
+      }
+    }
+
+    // Periodic dive attacks & formation sniping (active once fly-in completes)
+    if (!this.isFlyIn) {
       this.diveTimer += dt;
       if (this.diveTimer >= this.diveInterval) {
         this.diveTimer = 0;
         this._launchDiveAttack(fighterX, fighterY, canvasWidth, canvasHeight);
+      }
+
+      this.formationFireTimer += dt;
+      if (this.formationFireTimer >= this.formationFireInterval) {
+        this.formationFireTimer = 0;
+        this._launchFormationMissile(bulletManager, fighterX, fighterY);
       }
     }
 
@@ -473,13 +499,27 @@ export class AlienFormation {
     }
   }
 
-  _launchDiveAttack(fighterX, fighterY, canvasWidth, canvasHeight) {
-    const candidates = this.aliens.filter(a => !a.isDead && !a.isDiving && !a.isTractorRun);
+  _launchFormationMissile(bulletManager, fighterX, fighterY) {
+    if (!bulletManager) return;
+    const candidates = this.aliens.filter(a => !a.isDead && !a.isDiving && !a.isTractorRun && !a.isFlyIn);
     if (candidates.length === 0) return;
 
-    // Simultaneous diving attackers scale with stage
-    const maxDiveBatch = Math.min(4, 1 + Math.floor((this.stage - 1) / 2));
-    const count = Math.min(candidates.length, Math.floor(Math.random() * maxDiveBatch) + 1);
+    // Favor bottom-row aliens (Zakos & Goeis) facing the player
+    candidates.sort((a, b) => b.row - a.row);
+    const pool = candidates.slice(0, Math.min(candidates.length, 14));
+    const shooter = pool[Math.floor(Math.random() * pool.length)];
+
+    const missileSpeed = 340 + Math.min(220, (this.stage - 1) * 35);
+    bulletManager.fireAlienMissile(shooter.x, shooter.y, fighterX, fighterY, missileSpeed);
+  }
+
+  _launchDiveAttack(fighterX, fighterY, canvasWidth, canvasHeight) {
+    const candidates = this.aliens.filter(a => !a.isDead && !a.isDiving && !a.isTractorRun && !a.isFlyIn);
+    if (candidates.length === 0) return;
+
+    // Simultaneous squad diving attackers: 2 to 4 enemies swoop down together!
+    const maxDiveBatch = Math.min(4, 2 + Math.floor((this.stage - 1) * 0.5));
+    const count = Math.min(candidates.length, Math.floor(Math.random() * (maxDiveBatch - 1)) + 2);
     for (let i = 0; i < count; i++) {
       if (candidates.length === 0) break;
       const idx = Math.floor(Math.random() * candidates.length);
