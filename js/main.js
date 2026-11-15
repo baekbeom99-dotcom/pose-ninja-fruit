@@ -105,6 +105,12 @@ class App {
     let isDown = false;
 
     const handlePointerMove = (x, y) => {
+      // In Galaga mode, mouse position maps to head position (whether mouse is down or just moving)
+      if (this.gameEngine && this.gameEngine.gameMode === 'GALAGA') {
+        const normalizedX = 1.0 - (x / Math.max(1, this.gameEngine.width));
+        this.gameEngine.lastHeadPose = { x: normalizedX, y: y / Math.max(1, this.gameEngine.height) };
+      }
+
       if (!isDown) return;
       const now = performance.now();
       // Inject into P1 Right Blade as pointer emulation

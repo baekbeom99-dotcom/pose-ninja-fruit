@@ -8,6 +8,7 @@ import { BladeManager } from './bladeManager.js';
 import { FruitManager } from './fruitManager.js';
 import { ParticleSystem } from './particleSystem.js';
 import { GestureDetector, CONSONANT_POSES } from './gestureDetector.js';
+import { GalagaEngine } from './galaga/galagaEngine.js';
 import { soundManager } from '../audio/soundManager.js';
 
 export const GameState = {
@@ -55,6 +56,19 @@ export class GameEngine {
     this.shakeDuration = 0;
     this.shakeIntensity = 0;
     this.lastPoses = null;
+    this.lastHeadPose = null;
+
+    // Galaga Mode Subsystem
+    this.galagaEngine = new GalagaEngine(this.width, this.height, this.ui, soundManager);
+    this.galagaEngine.onGameOver = () => {
+      this.triggerGameOver();
+    };
+    this.galagaEngine.onScore = (score) => {
+      this.p1Score = score;
+    };
+    this.galagaEngine.onLivesChanged = (lives) => {
+      this.lives = lives;
+    };
 
     this._bindFruitCallbacks();
     this._setupResizeHandler();
@@ -158,6 +172,10 @@ export class GameEngine {
 
       CONFIG.CANVAS.WIDTH = w;
       CONFIG.CANVAS.HEIGHT = h;
+
+      if (this.galagaEngine) {
+        this.galagaEngine.resize(w, h);
+      }
     };
 
     window.addEventListener('resize', resize);
@@ -173,6 +191,9 @@ export class GameEngine {
     this.state = GameState.READY;
     this.p1Score = 0;
     this.p2Score = 0;
+    if (this.galagaEngine) {
+      this.galagaEngine.reset();
+    }
     this.fruitManager.reset();
     this.particles.clear();
     this.ui.updateScores(0, 0, this.isTwoPlayerMode);
@@ -186,6 +207,17 @@ export class GameEngine {
     this.p1Score = 0;
     this.p2Score = 0;
     this.lives = CONFIG.GAME.START_LIVES;
+
+    if (this.gameMode === CONFIG.MODES.GALAGA) {
+      this.state = GameState.PLAYING;
+      this.galagaEngine.start();
+      this.ui.updateHUDMode(false, this.gameMode);
+      this.ui.updateScores(0, 0, false);
+      this.ui.updateLives(this.lives, CONFIG.GAME.MAX_LIVES);
+      this.ui.hideStartModal();
+      this.ui.hideGameOverModal();
+      return;
+    }
 
     const isDocStrange = this.gameMode === CONFIG.MODES.DOCTOR_STRANGE;
     this.blades.setMode(this.isTwoPlayerMode);
@@ -280,6 +312,20 @@ export class GameEngine {
       }
     }
 
+    // Extract head pose for Galaga mode (landmark 0 is nose in MediaPipe Pose)
+    if (poses && poses.length > 0 && poses[0] && poses[0][0]) {
+      this.lastHeadPose = poses[0][0];
+    }
+
+    // Galaga Mode Update Loop
+    if (this.gameMode === CONFIG.MODES.GALAGA) {
+      if (this.state === GameState.PLAYING) {
+        this.galagaEngine.update(dt, currentTime, this.lastHeadPose);
+      }
+      this.lastPoses = poses;
+      return;
+    }
+
     // 2. Update Blade Tracker with filtered poses first
     this.blades.update(poses, this.width, this.height, currentTime, CONFIG.CANVAS.MIRROR);
 
@@ -337,6 +383,28 @@ export class GameEngine {
   render() {
     const w = this.width;
     const h = this.height;
+
+    // Galaga Mode Render Pipeline
+    if (this.gameMode === CONFIG.MODES.GALAGA) {
+      // Layer 1: Background Video (Subtle dark opacity so starfield shines)
+      this.bgCtx.clearRect(0, 0, w, h);
+      if (this.video.readyState >= 2) {
+        this.bgCtx.save();
+        this.bgCtx.translate(w, 0);
+        this.bgCtx.scale(-1, 1);
+        this.bgCtx.globalAlpha = 0.28;
+        this.bgCtx.drawImage(this.video, 0, 0, w, h);
+        this.bgCtx.restore();
+      }
+
+      // Layer 2: Galaga Engine (Starfield, Formation, Bullets, Fighter, HUD)
+      this.gameCtx.clearRect(0, 0, w, h);
+      this.galagaEngine.render(this.gameCtx);
+
+      // Layer 3: Clear blade canvas
+      this.bladeCtx.clearRect(0, 0, w, h);
+      return;
+    }
 
     let offsetX = 0;
     let offsetY = 0;

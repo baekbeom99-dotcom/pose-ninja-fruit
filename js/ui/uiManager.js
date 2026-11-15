@@ -59,6 +59,7 @@ export class UIManager {
     this.btnModeClassic = document.getElementById('btn-mode-classic');
     this.btnModeStrange = document.getElementById('btn-mode-strange');
     this.btnModeUfo = document.getElementById('btn-mode-ufo');
+    this.btnModeGalaga = document.getElementById('btn-mode-galaga');
     this.instructionModeDesc = document.getElementById('instruction-mode-desc');
     this.instructionSpecial = document.getElementById('instruction-special');
     this.selectedGameMode = 'CLASSIC';
@@ -92,7 +93,8 @@ export class UIManager {
     const tabs = [
       { btn: this.btnModeClassic, mode: 'CLASSIC' },
       { btn: this.btnModeStrange, mode: 'DOCTOR_STRANGE' },
-      { btn: this.btnModeUfo, mode: 'UFO_FISH' }
+      { btn: this.btnModeUfo, mode: 'UFO_FISH' },
+      { btn: this.btnModeGalaga, mode: 'GALAGA' }
     ];
 
     tabs.forEach(({ btn, mode }) => {
@@ -168,7 +170,7 @@ export class UIManager {
   setGameMode(mode = 'CLASSIC') {
     this.selectedGameMode = mode;
 
-    [this.btnModeClassic, this.btnModeStrange, this.btnModeUfo].forEach(btn => {
+    [this.btnModeClassic, this.btnModeStrange, this.btnModeUfo, this.btnModeGalaga].forEach(btn => {
       if (btn) btn.classList.remove('active');
     });
 
@@ -191,6 +193,16 @@ export class UIManager {
       if (this.instructionSpecial) {
         this.instructionSpecial.innerHTML =
           '🌊 <strong>무중력 비행 궤적</strong>: 사인파, 8자 순찰, 제트 대시, 벽면 반사 궤적으로 비행하는 과일들을 베어보세요!';
+      }
+    } else if (mode === 'GALAGA') {
+      if (this.btnModeGalaga) this.btnModeGalaga.classList.add('active');
+      if (this.instructionModeDesc) {
+        this.instructionModeDesc.innerHTML =
+          '👾 <strong>갤러그 모드</strong>: 머리를 좌우로 부드럽게 움직여 비행기 조종! 자동 연속 총알 발사!';
+      }
+      if (this.instructionSpecial) {
+        this.instructionSpecial.innerHTML =
+          '🚀 <strong>듀얼 파이터</strong>: 보스 갈라가의 트랙터 빔에 잡힌 아군기를 구출하여 합체(2발 동시 발사)!';
       }
     } else {
       if (this.btnModeClassic) this.btnModeClassic.classList.add('active');
