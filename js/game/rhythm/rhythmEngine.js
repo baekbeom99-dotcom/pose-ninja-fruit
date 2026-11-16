@@ -417,9 +417,9 @@ export class RhythmEngine {
         let match = { hit: false };
 
         if (ev.type === RhythmNoteType.TAP) {
-          match = this.judge.checkTapHit(sector, handSegments, 16);
+          match = this.judge.checkTapHit(sector, handSegments, 22);
         } else if (ev.type === RhythmNoteType.SLASH) {
-          match = this.judge.checkSlashHit(sector, ev.direction, handSegments, 20, 5);
+          match = this.judge.checkSlashHit(sector, ev.direction, handSegments, 26, 5);
         }
 
         if (match.hit) {
@@ -551,15 +551,13 @@ export class RhythmEngine {
     // 4. Body-Centered 5 Spaced Semicircular Hitbox Sectors
     this._renderSemicircleHitboxes(ctx, anchor, beatImpulse);
 
-    // 5. Hand Wrist Cursors
+    // 5. Hand Wrist Cursors (thin & soft so beat objects stand out)
     this.activeHandPoints.forEach((pt) => {
       ctx.save();
       ctx.beginPath();
-      ctx.arc(pt.x, pt.y, 17 + beatImpulse * 3, 0, Math.PI * 2);
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 3;
-      ctx.shadowColor = '#38bdf8';
-      ctx.shadowBlur = 14;
+      ctx.arc(pt.x, pt.y, 15 + beatImpulse * 2.5, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(226, 232, 240, 0.72)';
+      ctx.lineWidth = 1.5;
       ctx.stroke();
       ctx.restore();
     });
@@ -624,26 +622,27 @@ export class RhythmEngine {
 
   /**
    * Renders the receding 3D perspective tunnel arches and ceiling/side LED light strips
-   * continuously rushing forward with BPM speed.
+   * continuously rushing forward with BPM speed using muted colors & hairline thin strokes
+   * so active beat objects pop cleanly.
    */
   _renderTunnelArchitecture(ctx, anchor, beatFloat, beatImpulse, track) {
     const deep = this._projectTunnelDepth(anchor, 0);
     const front = this._projectTunnelDepth(anchor, 1);
 
-    // Subtle tunnel sector rail guide lines converging from hitbox sector gaps into deep tunnel
+    // Faint hairline sector rail guide lines converging from hitbox sector gaps into deep tunnel
     ctx.save();
     RHYTHM_LANES.forEach((lane) => {
       [lane.startAngle, lane.endAngle].forEach((ang) => {
         ctx.beginPath();
         ctx.moveTo(deep.cx + Math.cos(ang) * deep.radius, deep.cy + Math.sin(ang) * deep.radius);
         ctx.lineTo(front.cx + Math.cos(ang) * front.outerR, front.cy + Math.sin(ang) * front.outerR);
-        ctx.strokeStyle = 'rgba(148, 163, 184, 0.22)';
-        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.13)';
+        ctx.lineWidth = 0.9;
         ctx.stroke();
       });
     });
 
-    // Streaming concentric LED tunnel ribs (inspired by illuminated highway tunnel arches)
+    // Streaming concentric LED tunnel ribs (soft translucent colors & thin strokes)
     const ribCount = 9;
     const scrollPhase = (beatFloat * 0.35) % 1;
     for (let i = 0; i < ribCount; i++) {
@@ -651,59 +650,55 @@ export class RhythmEngine {
       const proj = this._projectTunnelDepth(anchor, z);
       const ribColor =
         this.feverTimer > 0
-          ? '#facc15'
+          ? '#fde047'
           : TUNNEL_RIB_COLORS[i % TUNNEL_RIB_COLORS.length] || track.accentColor;
 
-      const alpha = (0.14 + z * 0.52) * (0.85 + beatImpulse * 0.35);
-      const ribWidth = Math.max(1.5, 2 + proj.p * 7 + beatImpulse * 2.5);
+      const alpha = (0.06 + z * 0.19) * (0.9 + beatImpulse * 0.25);
+      const ribWidth = Math.max(0.75, 0.85 + proj.p * 1.15 + beatImpulse * 0.5);
 
       ctx.save();
       ctx.beginPath();
       ctx.arc(proj.cx, proj.cy, proj.radius, Math.PI, Math.PI * 2);
       ctx.strokeStyle = ribColor;
-      ctx.globalAlpha = Math.min(0.88, alpha);
+      ctx.globalAlpha = Math.min(0.28, alpha);
       ctx.lineWidth = ribWidth;
-      ctx.shadowColor = ribColor;
-      ctx.shadowBlur = 8 + proj.p * 16 + beatImpulse * 10;
       ctx.stroke();
 
-      // Overhead twin tunnel ceiling LED light fixtures (receding left & right)
+      // Overhead twin tunnel ceiling LED light fixtures (subtle muted white markers)
       const podOffsetAngleLeft = Math.PI + Math.PI * 0.34;
       const podOffsetAngleRight = Math.PI + Math.PI * 0.66;
-      const podW = 4 + proj.p * 12;
-      const podH = 2.5 + proj.p * 6;
+      const podW = 2.5 + proj.p * 6.5;
+      const podH = 1.5 + proj.p * 3.2;
       [podOffsetAngleLeft, podOffsetAngleRight].forEach((podAng) => {
         const lx = proj.cx + Math.cos(podAng) * (proj.radius * 0.96);
         const ly = proj.cy + Math.sin(podAng) * (proj.radius * 0.96);
-        ctx.fillStyle = '#ffffff';
-        ctx.globalAlpha = Math.min(0.95, alpha * 1.15);
-        ctx.shadowColor = '#ffffff';
-        ctx.shadowBlur = 10 + beatImpulse * 10;
+        ctx.fillStyle = 'rgba(241, 245, 249, 0.85)';
+        ctx.globalAlpha = Math.min(0.30, alpha * 1.1);
         ctx.fillRect(lx - podW * 0.5, ly - podH * 0.5, podW, podH);
       });
       ctx.restore();
     }
 
-    // Center body anchor marker (subtle glowing core reticle)
+    // Center body anchor marker (subtle faint core reticle)
     ctx.beginPath();
-    ctx.arc(anchor.cx, anchor.cy, 9 + beatImpulse * 4, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(56, 189, 248, 0.35)';
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
-    ctx.lineWidth = 2;
+    ctx.arc(anchor.cx, anchor.cy, 7 + beatImpulse * 2.5, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(148, 163, 184, 0.14)';
+    ctx.strokeStyle = 'rgba(226, 232, 240, 0.28)';
+    ctx.lineWidth = 1;
     ctx.fill();
     ctx.stroke();
     ctx.restore();
   }
 
   /**
-   * Renders the 5 curved semicircular hitbox arcs around the player's body
-   * with visible un-hittable gaps between adjacent hitboxes.
+   * Renders the 5 wide curved semicircular hitbox arcs around the player's body
+   * using pale colors & thin borders so approaching beat objects stay prominent.
    */
   _renderSemicircleHitboxes(ctx, anchor, beatImpulse) {
     RHYTHM_LANES.forEach((lane, idx) => {
       const flash = this.padFlashes[idx] || 0;
-      const rIn = anchor.innerRadius - beatImpulse * 2 - flash * 4;
-      const rOut = anchor.outerRadius + beatImpulse * 3 + flash * 6;
+      const rIn = anchor.innerRadius - beatImpulse * 1.5 - flash * 3;
+      const rOut = anchor.outerRadius + beatImpulse * 2 + flash * 4;
 
       ctx.save();
       ctx.beginPath();
@@ -711,20 +706,22 @@ export class RhythmEngine {
       ctx.arc(anchor.cx, anchor.cy, rIn, lane.endAngle, lane.startAngle, true);
       ctx.closePath();
 
-      ctx.fillStyle = flash > 0 ? `${lane.color}77` : `${lane.color}22`;
+      ctx.fillStyle = flash > 0 ? `${lane.color}55` : `${lane.color}12`;
       ctx.fill();
 
-      ctx.lineWidth = 2.5 + flash * 3.5 + beatImpulse * 1.2;
-      ctx.strokeStyle = flash > 0 ? '#ffffff' : lane.color;
-      ctx.shadowColor = lane.color;
-      ctx.shadowBlur = 10 + beatImpulse * 10 + flash * 22;
+      ctx.lineWidth = flash > 0 ? 2.2 + flash * 2 : 1.1 + beatImpulse * 0.4;
+      ctx.strokeStyle = flash > 0 ? 'rgba(255, 255, 255, 0.9)' : `${lane.color}66`;
+      if (flash > 0) {
+        ctx.shadowColor = lane.color;
+        ctx.shadowBlur = 14 * flash;
+      }
       ctx.stroke();
 
-      // Subtle inner groove arc
+      // Thin muted inner center arc guide
       ctx.beginPath();
       ctx.arc(anchor.cx, anchor.cy, (rIn + rOut) * 0.5, lane.startAngle + 0.03, lane.endAngle - 0.03);
-      ctx.strokeStyle = flash > 0 ? '#ffffff' : `${lane.color}99`;
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = flash > 0 ? 'rgba(255, 255, 255, 0.7)' : `${lane.color}30`;
+      ctx.lineWidth = 0.8;
       ctx.stroke();
       ctx.restore();
     });
@@ -748,7 +745,7 @@ export class RhythmEngine {
 
       const lane = ev.lane;
       const noteColor = ev.type === RhythmNoteType.SLASH ? '#facc15' : lane.color;
-      const arcBandHalf = Math.max(5, (anchor.bandWidth * 0.36) * curr.p);
+      const arcBandHalf = Math.max(6, Math.min(34, anchor.bandWidth * 0.22) * curr.p);
       const rOuter = curr.radius + arcBandHalf;
       const rInner = Math.max(4, curr.radius - arcBandHalf);
       const padA = 0.015;
@@ -772,24 +769,24 @@ export class RhythmEngine {
         rOuter
       );
       streakGrad.addColorStop(0, 'rgba(255,255,255,0.0)');
-      streakGrad.addColorStop(0.55, `${lane.color}38`);
-      streakGrad.addColorStop(1, `${noteColor}aa`);
+      streakGrad.addColorStop(0.55, `${lane.color}48`);
+      streakGrad.addColorStop(1, `${noteColor}cc`);
       ctx.fillStyle = streakGrad;
       ctx.fill();
 
-      // 2. Main Glowing Tunnel Light Arch Block
+      // 2. Main Glowing Tunnel Light Arch Block (high-contrast focal object)
       ctx.beginPath();
       ctx.arc(curr.cx, curr.cy, rOuter, sAng, eAng, false);
       ctx.arc(curr.cx, curr.cy, rInner, eAng, sAng, true);
       ctx.closePath();
 
-      ctx.globalAlpha = 0.45 + Math.min(0.55, t * 0.55);
+      ctx.globalAlpha = 0.65 + Math.min(0.35, t * 0.35);
       ctx.fillStyle = noteColor;
       ctx.shadowColor = noteColor;
-      ctx.shadowBlur = 18 + t * 18 + beatImpulse * 8;
+      ctx.shadowBlur = 22 + t * 20 + beatImpulse * 10;
       ctx.fill();
 
-      ctx.lineWidth = 2.5 + t * 2;
+      ctx.lineWidth = 2.8 + t * 2;
       ctx.strokeStyle = '#ffffff';
       ctx.stroke();
 
@@ -910,22 +907,22 @@ export class RhythmEngine {
     ctx.save();
     ctx.translate(0, vibY * 0.65);
 
-    // Top-center track pill + progress bar pulsing with beat
+    // Top-center track pill + progress bar (subtle thin muted styling)
     ctx.textAlign = 'center';
-    ctx.fillStyle = 'rgba(15, 23, 42, 0.78)';
-    ctx.fillRect(w * 0.32, 16, w * 0.36, 50);
-    ctx.strokeStyle = track.accentColor;
-    ctx.lineWidth = 2 + beatImpulse * 2.2;
-    ctx.strokeRect(w * 0.32, 16, w * 0.36, 50);
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.55)';
+    ctx.fillRect(w * 0.32, 16, w * 0.36, 48);
+    ctx.strokeStyle = `${track.accentColor}55`;
+    ctx.lineWidth = 1 + beatImpulse * 0.8;
+    ctx.strokeRect(w * 0.32, 16, w * 0.36, 48);
 
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '800 16px system-ui, sans-serif';
-    ctx.fillText(`🎵 ${track.title} (${track.bpm} BPM)`, w * 0.5, 38);
+    ctx.fillStyle = 'rgba(241, 245, 249, 0.88)';
+    ctx.font = '700 15px system-ui, sans-serif';
+    ctx.fillText(`🎵 ${track.title} (${track.bpm} BPM)`, w * 0.5, 37);
 
-    ctx.fillStyle = 'rgba(255,255,255,0.16)';
-    ctx.fillRect(w * 0.34, 48, w * 0.32, 7);
-    ctx.fillStyle = track.accentColor;
-    ctx.fillRect(w * 0.34, 48, w * 0.32 * progress, 7);
+    ctx.fillStyle = 'rgba(255,255,255,0.10)';
+    ctx.fillRect(w * 0.34, 47, w * 0.32, 5);
+    ctx.fillStyle = `${track.accentColor}88`;
+    ctx.fillRect(w * 0.34, 47, w * 0.32 * progress, 5);
 
     // Count-in indicator (before beat 4)
     if (beatFloat < this.synth.countInBeats && this.state === 'PLAYING') {

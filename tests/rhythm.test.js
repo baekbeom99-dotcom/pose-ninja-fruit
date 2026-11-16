@@ -147,6 +147,12 @@ function runTests() {
     outerRadius: testAnchor.outerRadius
   };
 
+  // Doubled hitbox radial depth check at 1280x720
+  assert(
+    testAnchor.bandWidth >= 170,
+    `Hitbox radial bandWidth doubled (>= 170px at 720p, got ${Math.round(testAnchor.bandWidth)}px)`
+  );
+
   // Point cleanly inside sector 0 center
   const s0MidX = testAnchor.cx + Math.cos(sector0.midAngle) * testAnchor.midRadius;
   const s0MidY = testAnchor.cy + Math.sin(sector0.midAngle) * testAnchor.midRadius;

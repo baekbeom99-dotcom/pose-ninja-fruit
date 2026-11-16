@@ -32,9 +32,9 @@ export class PoseRhythmJudge {
    * 5 semicircular hitboxes fit inside the visible canvas.
    */
   computeBodyAnchor(poses, prevAnchor, width, height, mirror = true, dt = 0.016) {
-    const outerRadius = Math.max(170, Math.min(width * 0.41, height * 0.54));
-    const bandWidth = Math.max(54, Math.min(88, outerRadius * 0.24));
-    const innerRadius = Math.max(85, outerRadius - bandWidth);
+    const outerRadius = Math.max(190, Math.min(width * 0.43, height * 0.58));
+    const bandWidth = Math.max(110, Math.min(185, outerRadius * 0.48));
+    const innerRadius = Math.max(46, outerRadius - bandWidth);
     const midRadius = (innerRadius + outerRadius) * 0.5;
 
     const minX = outerRadius + 24;
