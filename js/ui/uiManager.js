@@ -213,7 +213,7 @@ export class UIManager {
       if (this.btnModeRhythm) this.btnModeRhythm.classList.add('active');
       if (this.instructionModeDesc) {
         this.instructionModeDesc.innerHTML =
-          '🎵 <strong>리듬 비트 모드</strong>: 내장 신스 음악 박자에 맞춰 4개의 네온 패드를 손으로 터치하거나 화살표 방향으로 베어보세요!';
+          '🎵 <strong>리듬 비트 모드</strong>: 몸 중심 위 <strong>5분할 반원 아치</strong>로 달려오는 터널 조명을 박자에 맞춰 터치하거나 화살표 방향으로 베어보세요!';
       }
       if (this.instructionSpecial) {
         this.instructionSpecial.innerHTML =
@@ -245,6 +245,18 @@ export class UIManager {
       } else {
         this.ultimatePanel.classList.remove('hidden');
       }
+    }
+    this.pulseBeatHUD(0);
+  }
+
+  pulseBeatHUD(impulse = 0) {
+    const val = impulse > 0.02 ? impulse : 0;
+    const transform = val > 0 ? `scale(${(1 + val * 0.045).toFixed(4)}) translateY(${(-val * 2.5).toFixed(2)}px)` : '';
+    if (this.soloScorePanel) {
+      this.soloScorePanel.style.transform = transform;
+    }
+    if (this.livesContainer) {
+      this.livesContainer.style.transform = val > 0 ? `scale(${(1 + val * 0.035).toFixed(4)})` : '';
     }
   }
 

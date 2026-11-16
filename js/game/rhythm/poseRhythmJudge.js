@@ -1,11 +1,12 @@
 /**
  * Pose & Hand Motion Judge for Rhythm Mode
- * Evaluates wrist segment collisions, directional slash velocity vectors,
- * head/nose dodge zones, and minimized Manse fever triggers.
+ * Supports body-centered 5-sector semicircular hitboxes with angular gaps,
+ * wrist segment swept collision, directional slash vectors, head dodge zones,
+ * and minimized Manse fever triggers.
  */
 
 import { checkSegmentCircleCollision } from '../collision.js';
-import { DodgeZone, SlashDirection } from './chartGenerator.js';
+import { DodgeZone, SlashDirection, SEMICIRCLE_SECTOR_COUNT } from './chartGenerator.js';
 
 const DIR_VECTORS = {
   [SlashDirection.LEFT]: { x: -1, y: 0 },
@@ -23,6 +24,146 @@ export class PoseRhythmJudge {
   reset() {
     this.prevLeft = null;
     this.prevRight = null;
+  }
+
+  /**
+   * Computes smoothed body-center anchor & semicircular arch radii from MediaPipe pose.
+   * Uses shoulder midpoint + torso offset (and hips when visible), clamped so all
+   * 5 semicircular hitboxes fit inside the visible canvas.
+   */
+  computeBodyAnchor(poses, prevAnchor, width, height, mirror = true, dt = 0.016) {
+    const outerRadius = Math.max(170, Math.min(width * 0.41, height * 0.54));
+    const bandWidth = Math.max(54, Math.min(88, outerRadius * 0.24));
+    const innerRadius = Math.max(85, outerRadius - bandWidth);
+    const midRadius = (innerRadius + outerRadius) * 0.5;
+
+    const minX = outerRadius + 24;
+    const maxX = Math.max(minX, width - outerRadius - 24);
+    const minY = outerRadius + 76;
+    const maxY = Math.max(minY, height - 28);
+
+    const clampAnchor = (x, y) => ({
+      cx: Math.max(minX, Math.min(maxX, x)),
+      cy: Math.max(minY, Math.min(maxY, y)),
+      innerRadius,
+      outerRadius,
+      midRadius,
+      bandWidth
+    });
+
+    const fallback = clampAnchor(width * 0.5, height * 0.72);
+
+    let target = null;
+    if (Array.isArray(poses) && poses.length > 0 && Array.isArray(poses[0])) {
+      const lm = poses[0];
+      const mapPt = (pt) => ({
+        x: (mirror ? 1 - pt.x : pt.x) * width,
+        y: pt.y * height
+      });
+
+      const ls = lm[11];
+      const rs = lm[12];
+      const lh = lm[23];
+      const rh = lm[24];
+      const visOk = (p) => p && (p.visibility == null || p.visibility > 0.35);
+
+      if (visOk(ls) && visOk(rs)) {
+        const pLs = mapPt(ls);
+        const pRs = mapPt(rs);
+        const shoulderMidX = (pLs.x + pRs.x) * 0.5;
+        const shoulderMidY = (pLs.y + pRs.y) * 0.5;
+        const shoulderSpan = Math.hypot(pLs.x - pRs.x, pLs.y - pRs.y);
+
+        let bodyY = shoulderMidY + Math.max(55, shoulderSpan * 0.42);
+        let bodyX = shoulderMidX;
+
+        if (visOk(lh) && visOk(rh)) {
+          const pLh = mapPt(lh);
+          const pRh = mapPt(rh);
+          const hipMidX = (pLh.x + pRh.x) * 0.5;
+          const hipMidY = (pLh.y + pRh.y) * 0.5;
+          bodyX = shoulderMidX * 0.65 + hipMidX * 0.35;
+          bodyY = shoulderMidY * 0.55 + hipMidY * 0.45;
+        }
+
+        target = clampAnchor(bodyX, bodyY);
+      } else if (visOk(lm[0])) {
+        const nose = mapPt(lm[0]);
+        target = clampAnchor(nose.x, nose.y + outerRadius * 0.48);
+      }
+    }
+
+    if (!target) {
+      target = prevAnchor ? clampAnchor(prevAnchor.cx, prevAnchor.cy) : fallback;
+      return target;
+    }
+
+    if (!prevAnchor || dt <= 0) {
+      return target;
+    }
+
+    const alpha = 1 - Math.exp(-8.5 * Math.min(dt, 0.1));
+    return clampAnchor(
+      prevAnchor.cx + (target.cx - prevAnchor.cx) * alpha,
+      prevAnchor.cy + (target.cy - prevAnchor.cy) * alpha
+    );
+  }
+
+  /**
+   * Tests whether a canvas point (px, py) lies inside an annular sector hitbox,
+   * strictly preserving the angular gaps between adjacent sectors.
+   */
+  isPointInSector(px, py, sector, radialPad = 14) {
+    const dx = px - sector.cx;
+    const dy = py - sector.cy;
+    const r = Math.hypot(dx, dy);
+
+    if (r < sector.innerRadius - radialPad || r > sector.outerRadius + radialPad) {
+      return false;
+    }
+
+    // Raw atan2 returns (-PI, PI]; map upper arch (dy <= 0) to [PI, 2*PI]
+    let theta = Math.atan2(dy, dx);
+    if (theta < 0) {
+      theta += Math.PI * 2;
+    }
+
+    // Allow small outer-horizon extension only on leftmost bottom edge (id 0) and rightmost bottom edge (last)
+    const isFirst = sector.id === 0;
+    const isLast = sector.id === SEMICIRCLE_SECTOR_COUNT - 1;
+    const outerHorizonTol = 0.08;
+
+    // Normalize wrap near 0/2*PI for last sector bottom edge (small positive dy -> theta just > 0)
+    if (isLast && theta >= 0 && theta <= outerHorizonTol) {
+      return true;
+    }
+    // Near PI positive dy (dy > 0 on left side -> theta just < PI) for first sector
+    if (isFirst && theta >= Math.PI - outerHorizonTol && theta <= Math.PI) {
+      return true;
+    }
+
+    return theta >= sector.startAngle && theta <= sector.endAngle;
+  }
+
+  /**
+   * Sweeps a hand movement segment against an annular sector hitbox so fast swings
+   * cannot tunnel through sector arcs while strictly respecting inter-sector gaps.
+   */
+  checkSegmentSectorCollision(p1, p2, sector, radialPad = 14) {
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
+    const segLen = Math.hypot(dx, dy);
+    const steps = Math.max(1, Math.ceil(segLen / 8));
+
+    for (let i = 0; i <= steps; i++) {
+      const t = steps === 0 ? 0 : i / steps;
+      const sx = p1.x + dx * t;
+      const sy = p1.y + dy * t;
+      if (this.isPointInSector(sx, sy, sector, radialPad)) {
+        return { hit: true, closestPoint: { x: sx, y: sy } };
+      }
+    }
+    return { hit: false };
   }
 
   /**
@@ -93,11 +234,18 @@ export class PoseRhythmJudge {
   }
 
   /**
-   * Checks whether any active hand segment enters or sweeps through a target circle.
+   * Checks whether any active hand segment enters a sector hitbox (or fallback circle).
    */
-  checkTapHit(targetCircle, handSegments, touchPadding = 24) {
+  checkTapHit(targetHitbox, handSegments, touchPadding = 16) {
+    const isSector =
+      targetHitbox &&
+      typeof targetHitbox.startAngle === 'number' &&
+      typeof targetHitbox.endAngle === 'number';
+
     for (const seg of handSegments) {
-      const res = checkSegmentCircleCollision(seg.p1, seg.p2, targetCircle, touchPadding);
+      const res = isSector
+        ? this.checkSegmentSectorCollision(seg.p1, seg.p2, targetHitbox, touchPadding)
+        : checkSegmentCircleCollision(seg.p1, seg.p2, targetHitbox, touchPadding);
       if (res.hit) {
         return { hit: true, seg, closestPoint: res.closestPoint };
       }
@@ -106,18 +254,25 @@ export class PoseRhythmJudge {
   }
 
   /**
-   * Checks directional slash note: hand must intersect the target zone AND move
+   * Checks directional slash note: hand must intersect the sector hitbox AND move
    * generally in the requested arrow direction (with forgiving angular tolerance).
    */
-  checkSlashHit(targetCircle, direction, handSegments, touchPadding = 32, minMovePx = 6) {
+  checkSlashHit(targetHitbox, direction, handSegments, touchPadding = 20, minMovePx = 6) {
     const expected = DIR_VECTORS[direction];
+    const isSector =
+      targetHitbox &&
+      typeof targetHitbox.startAngle === 'number' &&
+      typeof targetHitbox.endAngle === 'number';
+
     for (const seg of handSegments) {
-      const res = checkSegmentCircleCollision(seg.p1, seg.p2, targetCircle, touchPadding);
+      const res = isSector
+        ? this.checkSegmentSectorCollision(seg.p1, seg.p2, targetHitbox, touchPadding)
+        : checkSegmentCircleCollision(seg.p1, seg.p2, targetHitbox, touchPadding);
       if (!res.hit) continue;
 
       const dx = seg.p2.x - seg.p1.x;
       const dy = seg.p2.y - seg.p1.y;
-      const len = Math.sqrt(dx * dx + dy * dy);
+      const len = Math.hypot(dx, dy);
       if (len < minMovePx) continue;
 
       if (!expected) {
@@ -125,7 +280,6 @@ export class PoseRhythmJudge {
       }
 
       const dot = (dx / len) * expected.x + (dy / len) * expected.y;
-      // dot >= 0.20 allows roughly +-78 degree cone for comfortable webcam swiping
       if (dot >= 0.2) {
         return { hit: true, seg, closestPoint: res.closestPoint };
       }
@@ -135,21 +289,17 @@ export class PoseRhythmJudge {
 
   /**
    * Checks whether head/nose stays clear of a dodge barrier hazard zone.
-   * If camera head tracking is unavailable, returns safe=true so mouse-only users aren't unfairly penalized.
    */
   checkDodgeSafe(dodgeZone, headPos, width, height) {
     if (!headPos) return { safe: true, reason: 'no_head_pose' };
 
     if (dodgeZone === DodgeZone.LEFT) {
-      // Hazard occupies left side x < 0.44 * width
       return { safe: headPos.x >= width * 0.44 };
     }
     if (dodgeZone === DodgeZone.RIGHT) {
-      // Hazard occupies right side x > 0.56 * width
       return { safe: headPos.x <= width * 0.56 };
     }
     if (dodgeZone === DodgeZone.TOP) {
-      // Hazard occupies upper beam y < 0.45 * height
       return { safe: headPos.y >= height * 0.45 };
     }
     return { safe: true };

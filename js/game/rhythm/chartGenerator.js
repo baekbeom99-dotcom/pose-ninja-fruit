@@ -1,9 +1,10 @@
 /**
  * Deterministic Beat-Locked Rhythm Chart Generator
  * Type C Hybrid Design ("Beat Pose Arena" - Minimized Static Poses):
- *   - ~65% TAP Beat Orbs (hit/touch target pad on beat)
- *   - ~25% SLASH Notes (directional hand swipe across pad)
- *   - ~8% DODGE Barriers (brief head dodge left/right/duck)
+ *   - 5 Semicircular Hitbox Sectors centered above the player's body with explicit gaps
+ *   - ~65% TAP Tunnel Light Arches
+ *   - ~25% SLASH Directional Light Arches
+ *   - ~8% DODGE Barriers (brief head dodge left/right/top)
  *   - 1-2 FEVER_POSE moments per track (optional Manse bonus at chorus drops)
  */
 
@@ -29,13 +30,43 @@ export const DodgeZone = {
   TOP: 'TOP'
 };
 
-// 4 ergonomic upper/mid play zones (normalized coordinates [0..1])
-export const RHYTHM_LANES = [
-  { id: 0, name: 'LEFT_HIGH', side: 'L', nx: 0.23, ny: 0.31, color: '#22d3ee', glow: 'rgba(34, 211, 238, 0.55)' },
-  { id: 1, name: 'LEFT_MID', side: 'L', nx: 0.21, ny: 0.62, color: '#38bdf8', glow: 'rgba(56, 189, 248, 0.55)' },
-  { id: 2, name: 'RIGHT_HIGH', side: 'R', nx: 0.77, ny: 0.31, color: '#f472b6', glow: 'rgba(244, 114, 182, 0.55)' },
-  { id: 3, name: 'RIGHT_MID', side: 'R', nx: 0.79, ny: 0.62, color: '#facc15', glow: 'rgba(250, 204, 21, 0.55)' }
+// Upper Semicircle Geometry divided into 5 spaced arc hitboxes (PI -> 2*PI clockwise)
+export const SEMICIRCLE_SECTOR_COUNT = 5;
+export const SEMICIRCLE_START_ANGLE = Math.PI;
+export const SEMICIRCLE_END_ANGLE = Math.PI * 2;
+export const SECTOR_GAP_RAD = (7 * Math.PI) / 180; // 7 deg gap between adjacent hitboxes
+export const SECTOR_SPAN_RAD =
+  (SEMICIRCLE_END_ANGLE - SEMICIRCLE_START_ANGLE - (SEMICIRCLE_SECTOR_COUNT - 1) * SECTOR_GAP_RAD) /
+  SEMICIRCLE_SECTOR_COUNT;
+
+export function getSectorAngleRange(sectorIndex) {
+  const idx = Math.max(0, Math.min(SEMICIRCLE_SECTOR_COUNT - 1, sectorIndex));
+  const startAngle = SEMICIRCLE_START_ANGLE + idx * (SECTOR_SPAN_RAD + SECTOR_GAP_RAD);
+  const endAngle = startAngle + SECTOR_SPAN_RAD;
+  const midAngle = (startAngle + endAngle) * 0.5;
+  return { startAngle, endAngle, midAngle };
+}
+
+// 5 Semicircular Arch Hitbox Lanes (Left -> Crown -> Right), matching tunnel light hues
+const LANE_DEFS = [
+  { id: 0, name: 'ARCH_LEFT_LOW', side: 'L', color: '#f59e0b', glow: 'rgba(245, 158, 11, 0.65)' },
+  { id: 1, name: 'ARCH_LEFT_HIGH', side: 'L', color: '#10b981', glow: 'rgba(16, 185, 129, 0.65)' },
+  { id: 2, name: 'ARCH_CROWN_TOP', side: 'C', color: '#38bdf8', glow: 'rgba(56, 189, 248, 0.65)' },
+  { id: 3, name: 'ARCH_RIGHT_HIGH', side: 'R', color: '#d946ef', glow: 'rgba(217, 70, 239, 0.65)' },
+  { id: 4, name: 'ARCH_RIGHT_LOW', side: 'R', color: '#fb7185', glow: 'rgba(251, 113, 133, 0.65)' }
 ];
+
+export const RHYTHM_LANES = LANE_DEFS.map((def) => {
+  const angles = getSectorAngleRange(def.id);
+  // Default normalized anchor coordinates derived mathematically around center (0.5, 0.70)
+  const defaultR = 0.34;
+  return {
+    ...def,
+    ...angles,
+    nx: 0.5 + Math.cos(angles.midAngle) * defaultR,
+    ny: 0.70 + Math.sin(angles.midAngle) * (defaultR * (16 / 9) * 0.85)
+  };
+});
 
 // Generous timing windows tailored for 30-60fps webcam motion tracking
 export const TIMING_WINDOWS = {
@@ -67,7 +98,8 @@ export function evaluateTiming(absDeltaMs) {
 }
 
 /**
- * Generates a deterministic chart of beat-locked events for the given track.
+ * Generates a deterministic chart of beat-locked events distributed across
+ * the 5 semicircular arc hitboxes for the given track.
  * @param {string} trackId
  * @param {number} [countInBeats=4]
  */
@@ -75,18 +107,22 @@ export function generateChart(trackId = 'neon_cruise', countInBeats = 4) {
   const track = getTrackById(trackId);
   const beatSec = 60 / track.bpm;
   const approachTime =
-    track.difficulty === 'HARD' ? 0.98 : track.difficulty === 'NORMAL' ? 1.12 : 1.25;
+    track.difficulty === 'HARD' ? 1.02 : track.difficulty === 'NORMAL' ? 1.18 : 1.32;
 
   const events = [];
   let nextId = 1;
 
   const pushNote = (beatOffset, laneIndex, type, extra = {}) => {
     const targetTime = (countInBeats + beatOffset) * beatSec;
+    const clampedLane =
+      laneIndex != null
+        ? ((laneIndex % SEMICIRCLE_SECTOR_COUNT) + SEMICIRCLE_SECTOR_COUNT) % SEMICIRCLE_SECTOR_COUNT
+        : null;
     events.push({
       id: nextId++,
       type,
-      laneIndex,
-      lane: laneIndex != null ? RHYTHM_LANES[laneIndex] : null,
+      laneIndex: clampedLane,
+      lane: clampedLane != null ? RHYTHM_LANES[clampedLane] : null,
       beatOffset,
       targetTime,
       approachTime,
@@ -97,19 +133,25 @@ export function generateChart(trackId = 'neon_cruise', countInBeats = 4) {
     });
   };
 
-  // Musical bar loop (skip final bar for clean outro ring-out)
   const activeBars = Math.max(4, track.bars - 1);
-  const slashDirs = [SlashDirection.DOWN, SlashDirection.RIGHT, SlashDirection.LEFT, SlashDirection.UP];
+  const slashDirs = [
+    SlashDirection.DOWN,
+    SlashDirection.RIGHT,
+    SlashDirection.LEFT,
+    SlashDirection.UP
+  ];
   const dodgeZones = [DodgeZone.LEFT, DodgeZone.RIGHT, DodgeZone.TOP];
 
-  // Put 1 chorus Fever Pose on Easy/Normal, 2 on Hard (minimized pose frequency!)
   const chorusBarA = Math.floor(activeBars * 0.45);
   const chorusBarB = track.difficulty === 'HARD' ? Math.floor(activeBars * 0.78) : -1;
+
+  // Sweep order sequences across all 5 semicircle sectors (0..4)
+  const archSweepSeq = [0, 1, 2, 3, 4, 3, 2, 1];
 
   for (let bar = 0; bar < activeBars; bar++) {
     const barBeat = bar * 4;
 
-    // 1. Rare Chorus Fever Pose (Manse bonus wave, lasts ~2 beats, zero penalty if skipped)
+    // 1. Rare Chorus Fever Pose (Manse bonus wave, zero penalty if skipped)
     if (bar === chorusBarA || bar === chorusBarB) {
       pushNote(barBeat + 1.0, null, RhythmNoteType.FEVER_POSE, {
         label: '🙌 만세 피버! 양손을 머리 위로!',
@@ -117,11 +159,10 @@ export function generateChart(trackId = 'neon_cruise', countInBeats = 4) {
         windowEnd: (countInBeats + barBeat + 2.5) * beatSec,
         durationMultiplierSec: 8.0
       });
-      // Give breathing room on bar+1 after fever peak on Easy
       if (track.difficulty === 'EASY') continue;
     }
 
-    // 2. Occasional Neon Dodge Barrier (every ~5-6 bars, starting bar 3)
+    // 2. Occasional Neon Dodge Barrier (every ~5 bars starting bar 3)
     if (bar >= 3 && bar % 5 === 3 && bar !== chorusBarA && bar !== chorusBarB) {
       const zone = dodgeZones[Math.floor(bar / 5) % dodgeZones.length];
       pushNote(barBeat + 2.0, null, RhythmNoteType.DODGE, {
@@ -133,65 +174,66 @@ export function generateChart(trackId = 'neon_cruise', countInBeats = 4) {
               ? '➡️ 오른쪽으로 피해!'
               : '⬅️ 왼쪽으로 피해!'
       });
-      // Also allow 1 clean beat tap before the barrier on Hard/Normal
       if (track.difficulty !== 'EASY') {
-        pushNote(barBeat + 0.0, bar % 2 === 0 ? 0 : 2, RhythmNoteType.TAP);
+        pushNote(barBeat + 0.0, zone === DodgeZone.LEFT ? 4 : 0, RhythmNoteType.TAP);
       }
       continue;
     }
 
-    // 3. Core Rhythmic Hand Pattern (88%+ of gameplay)
+    // 3. Rhythmic Tunnel Light Notes across the 5 Semicircle Hitboxes
+    const seqBase = (bar * 2) % archSweepSeq.length;
     if (track.difficulty === 'EASY') {
-      // Bar alternates smoothly left/right on beats 0 & 2 (+ beat 3 fill on every 4th bar)
-      const firstLane = bar % 2 === 0 ? 0 : 2;
-      const secondLane = bar % 2 === 0 ? 3 : 1;
+      const laneA = archSweepSeq[seqBase];
+      const laneB = archSweepSeq[(seqBase + 2) % archSweepSeq.length];
 
-      pushNote(barBeat + 0.0, firstLane, RhythmNoteType.TAP);
+      pushNote(barBeat + 0.0, laneA, RhythmNoteType.TAP);
 
       if (bar % 3 === 2) {
-        const dir = firstLane < 2 ? SlashDirection.RIGHT : SlashDirection.LEFT;
-        pushNote(barBeat + 2.0, secondLane, RhythmNoteType.SLASH, { direction: dir });
+        const dir = laneB <= 1 ? SlashDirection.RIGHT : laneB >= 3 ? SlashDirection.LEFT : SlashDirection.DOWN;
+        pushNote(barBeat + 2.0, laneB, RhythmNoteType.SLASH, { direction: dir });
       } else {
-        pushNote(barBeat + 2.0, secondLane, RhythmNoteType.TAP);
+        pushNote(barBeat + 2.0, laneB, RhythmNoteType.TAP);
       }
 
       if (bar % 4 === 3) {
-        pushNote(barBeat + 3.0, (bar + 1) % 4, RhythmNoteType.TAP);
+        pushNote(barBeat + 3.0, 2, RhythmNoteType.TAP);
       }
     } else if (track.difficulty === 'NORMAL') {
-      // Flowing 4-beat groove: taps on 0, 1, 2 + directional slash on 3 every other bar
-      const baseLeft = bar % 2 === 0;
-      pushNote(barBeat + 0.0, baseLeft ? 0 : 2, RhythmNoteType.TAP);
-      pushNote(barBeat + 1.0, baseLeft ? 1 : 3, RhythmNoteType.TAP);
-      pushNote(barBeat + 2.0, baseLeft ? 2 : 0, RhythmNoteType.TAP);
+      const l0 = (bar * 2) % 5;
+      const l1 = (bar * 2 + 1) % 5;
+      const l2 = (bar * 2 + 2) % 5;
+      const l3 = (bar * 2 + 3) % 5;
+
+      pushNote(barBeat + 0.0, l0, RhythmNoteType.TAP);
+      pushNote(barBeat + 1.0, l1, RhythmNoteType.TAP);
+      pushNote(barBeat + 2.0, l2, RhythmNoteType.TAP);
 
       if (bar % 2 === 1) {
-        const slashLane = baseLeft ? 3 : 1;
         const dir = slashDirs[bar % slashDirs.length];
-        pushNote(barBeat + 3.0, slashLane, RhythmNoteType.SLASH, { direction: dir });
+        pushNote(barBeat + 3.0, l3, RhythmNoteType.SLASH, { direction: dir });
       }
     } else {
-      // HARD (Overdrive Blitz): energetic 4-beat combos + occasional eighth-note double hit
-      const pattern = bar % 4;
-      if (pattern === 0) {
+      // HARD (Overdrive Blitz): crisp multi-sector arch sweeps & directional slashes
+      const pat = bar % 4;
+      if (pat === 0) {
         pushNote(barBeat + 0.0, 0, RhythmNoteType.TAP);
-        pushNote(barBeat + 1.0, 2, RhythmNoteType.TAP);
-        pushNote(barBeat + 2.0, 1, RhythmNoteType.SLASH, { direction: SlashDirection.RIGHT });
-        pushNote(barBeat + 3.0, 3, RhythmNoteType.SLASH, { direction: SlashDirection.LEFT });
-      } else if (pattern === 1) {
-        pushNote(barBeat + 0.0, 2, RhythmNoteType.TAP);
-        pushNote(barBeat + 0.5, 0, RhythmNoteType.TAP);
-        pushNote(barBeat + 1.5, 3, RhythmNoteType.TAP);
+        pushNote(barBeat + 1.0, 1, RhythmNoteType.TAP);
+        pushNote(barBeat + 2.0, 2, RhythmNoteType.SLASH, { direction: SlashDirection.RIGHT });
+        pushNote(barBeat + 3.0, 4, RhythmNoteType.SLASH, { direction: SlashDirection.LEFT });
+      } else if (pat === 1) {
+        pushNote(barBeat + 0.0, 4, RhythmNoteType.TAP);
+        pushNote(barBeat + 0.5, 3, RhythmNoteType.TAP);
+        pushNote(barBeat + 1.5, 2, RhythmNoteType.TAP);
         pushNote(barBeat + 2.5, 1, RhythmNoteType.SLASH, { direction: SlashDirection.DOWN });
-        pushNote(barBeat + 3.5, 2, RhythmNoteType.TAP);
-      } else if (pattern === 2) {
+        pushNote(barBeat + 3.5, 0, RhythmNoteType.TAP);
+      } else if (pat === 2) {
         pushNote(barBeat + 0.0, 1, RhythmNoteType.TAP);
         pushNote(barBeat + 1.0, 3, RhythmNoteType.TAP);
         pushNote(barBeat + 2.0, 2, RhythmNoteType.SLASH, { direction: SlashDirection.UP });
-        pushNote(barBeat + 3.0, 0, RhythmNoteType.SLASH, { direction: SlashDirection.DOWN });
+        pushNote(barBeat + 3.0, 4, RhythmNoteType.SLASH, { direction: SlashDirection.DOWN });
       } else {
         pushNote(barBeat + 0.0, 0, RhythmNoteType.TAP);
-        pushNote(barBeat + 1.0, 2, RhythmNoteType.TAP);
+        pushNote(barBeat + 1.0, 4, RhythmNoteType.TAP);
         pushNote(barBeat + 1.5, 3, RhythmNoteType.TAP);
         pushNote(barBeat + 2.5, 1, RhythmNoteType.TAP);
         pushNote(barBeat + 3.0, 2, RhythmNoteType.SLASH, { direction: SlashDirection.RIGHT });
@@ -199,7 +241,6 @@ export function generateChart(trackId = 'neon_cruise', countInBeats = 4) {
     }
   }
 
-  // Sort chronologically
   events.sort((a, b) => a.targetTime - b.targetTime);
 
   return {
@@ -208,7 +249,10 @@ export function generateChart(trackId = 'neon_cruise', countInBeats = 4) {
     approachTime,
     events,
     totalScorableNotes: events.filter(
-      (e) => e.type === RhythmNoteType.TAP || e.type === RhythmNoteType.SLASH || e.type === RhythmNoteType.DODGE
+      (e) =>
+        e.type === RhythmNoteType.TAP ||
+        e.type === RhythmNoteType.SLASH ||
+        e.type === RhythmNoteType.DODGE
     ).length
   };
 }

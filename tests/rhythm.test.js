@@ -2,6 +2,8 @@ import { CONFIG } from '../js/config.js';
 import { RHYTHM_TRACKS, RhythmSynth, getTrackById } from '../js/game/rhythm/rhythmSynth.js';
 import {
   RHYTHM_LANES,
+  SEMICIRCLE_SECTOR_COUNT,
+  SECTOR_GAP_RAD,
   RhythmNoteType,
   SlashDirection,
   DodgeZone,
@@ -10,7 +12,7 @@ import {
   generateChart
 } from '../js/game/rhythm/chartGenerator.js';
 import { PoseRhythmJudge } from '../js/game/rhythm/poseRhythmJudge.js';
-import { RhythmEngine } from '../js/game/rhythm/rhythmEngine.js';
+import { RhythmEngine, computeBeatVibration } from '../js/game/rhythm/rhythmEngine.js';
 
 let passed = 0;
 let total = 0;
@@ -25,9 +27,11 @@ function assert(condition, message) {
   }
 }
 
-function makePose({ nose = { x: 0.5, y: 0.3 }, lw = null, rw = null } = {}) {
-  const lm = Array.from({ length: 33 }, () => ({ x: 0.5, y: 0.5, visibility: 0.9 }));
+function makePose({ nose = { x: 0.5, y: 0.3 }, ls = { x: 0.42, y: 0.55 }, rs = { x: 0.58, y: 0.55 }, lw = null, rw = null } = {}) {
+  const lm = Array.from({ length: 33 }, () => ({ x: 0.5, y: 0.5, visibility: 0.1 }));
   lm[0] = { x: nose.x, y: nose.y, visibility: 0.95 };
+  lm[11] = { x: ls.x, y: ls.y, visibility: 0.95 };
+  lm[12] = { x: rs.x, y: rs.y, visibility: 0.95 };
   lm[15] = lw ? { x: lw.x, y: lw.y, visibility: 0.95 } : { x: 0.5, y: 0.8, visibility: 0.1 };
   lm[16] = rw ? { x: rw.x, y: rw.y, visibility: 0.95 } : { x: 0.5, y: 0.8, visibility: 0.1 };
   return [lm];
@@ -83,49 +87,111 @@ function runTests() {
     assert(tapSlashCount / chartA.events.length >= 0.78, `${track.id}: Type C majority rhythmic hand strikes`);
   }
 
-  console.log('--- Testing PoseRhythmJudge ---');
-  const judge = new PoseRhythmJudge();
-  const width = 1000;
-  const height = 500;
-  const lane0 = {
-    x: RHYTHM_LANES[0].nx * width,
-    y: RHYTHM_LANES[0].ny * height,
-    radius: 50
-  };
-  // Unmirrored wrist placed at mirrored screen coordinate -> (1 - nx) in raw camera coordinates
-  const rawXForLane0 = 1 - RHYTHM_LANES[0].nx;
-  const rawYForLane0 = RHYTHM_LANES[0].ny;
-  const segs1 = judge.extractHandSegments(
-    makePose({ lw: { x: rawXForLane0, y: rawYForLane0 } }),
-    width,
-    height,
-    true
-  );
-  assert(segs1.length === 1, 'Extracts visible left wrist segment');
+  console.log('--- Testing Semicircle 5-Sector Hitbox Geometry & Beat Vibration ---');
+  assert(RHYTHM_LANES.length === 5 && SEMICIRCLE_SECTOR_COUNT === 5, 'Rhythm arena uses 5 semicircular hitboxes');
+  let gapsValid = true;
+  for (let i = 0; i < RHYTHM_LANES.length - 1; i++) {
+    const gap = RHYTHM_LANES[i + 1].startAngle - RHYTHM_LANES[i].endAngle;
+    if (Math.abs(gap - SECTOR_GAP_RAD) > 0.0001 || gap <= 0) {
+      gapsValid = false;
+    }
+  }
+  assert(gapsValid, 'Explicit angular gaps separate all 5 semicircular hitboxes');
   assert(
-    Math.abs(segs1[0].p2.x - lane0.x) < 1 && Math.abs(segs1[0].p2.y - lane0.y) < 1,
-    'Mirror transform maps wrist accurately onto canvas lane'
+    Math.abs(RHYTHM_LANES[2].midAngle - Math.PI * 1.5) < 0.0001,
+    'Center sector #2 sits squarely overhead at 270 deg (1.5*PI)'
   );
-  assert(judge.checkTapHit(lane0, segs1).hit === true, 'TAP hit detected inside target circle');
 
-  // Directional slash check: swipe RIGHT through lane0
-  judge.reset();
-  judge.extractHandSegments(makePose({ lw: { x: rawXForLane0 + 0.08, y: rawYForLane0 } }), width, height, true);
-  // Decreasing raw X increases mirrored canvas X (swiping RIGHT on screen)
-  const rightSwipeSegs = judge.extractHandSegments(
-    makePose({ lw: { x: rawXForLane0 - 0.08, y: rawYForLane0 } }),
+  const vibOnBeat = computeBeatVibration(0.5, 120, false); // beat 1.0 exact
+  const vibMidBeat = computeBeatVibration(0.75, 120, false); // beat 1.5 off-beat
+  assert(vibOnBeat.beatImpulse > 0.95, 'Beat impulse peaks near 1.0 on exact beat');
+  assert(vibMidBeat.beatImpulse < vibOnBeat.beatImpulse * 0.25, 'Beat impulse decays sharply between beats');
+  assert(vibOnBeat.scalePulse > 1.01 && vibMidBeat.scalePulse < vibOnBeat.scalePulse, 'Scale pulse vibrates with base beats');
+
+  console.log('--- Testing PoseRhythmJudge (Semicircle & Body Center) ---');
+  const judge = new PoseRhythmJudge();
+  const width = 1280;
+  const height = 720;
+
+  const anchorLeftBody = judge.computeBodyAnchor(
+    makePose({ ls: { x: 0.65, y: 0.6 }, rs: { x: 0.75, y: 0.6 } }), // mirrored X ~ 0.30
+    null,
     width,
     height,
-    true
+    true,
+    0
+  );
+  const anchorRightBody = judge.computeBodyAnchor(
+    makePose({ ls: { x: 0.25, y: 0.6 }, rs: { x: 0.35, y: 0.6 } }), // mirrored X ~ 0.70
+    null,
+    width,
+    height,
+    true,
+    0
+  );
+  assert(anchorLeftBody.cx < anchorRightBody.cx, 'Semicircle anchor tracks body horizontal center');
+
+  const testAnchor = judge.computeBodyAnchor(null, null, width, height, true, 0);
+  const sector0 = {
+    ...RHYTHM_LANES[0],
+    cx: testAnchor.cx,
+    cy: testAnchor.cy,
+    innerRadius: testAnchor.innerRadius,
+    outerRadius: testAnchor.outerRadius
+  };
+  const sector1 = {
+    ...RHYTHM_LANES[1],
+    cx: testAnchor.cx,
+    cy: testAnchor.cy,
+    innerRadius: testAnchor.innerRadius,
+    outerRadius: testAnchor.outerRadius
+  };
+
+  // Point cleanly inside sector 0 center
+  const s0MidX = testAnchor.cx + Math.cos(sector0.midAngle) * testAnchor.midRadius;
+  const s0MidY = testAnchor.cy + Math.sin(sector0.midAngle) * testAnchor.midRadius;
+  const tapSegs = [{ p1: { x: s0MidX, y: s0MidY }, p2: { x: s0MidX, y: s0MidY }, hand: 'LEFT' }];
+  assert(judge.checkTapHit(sector0, tapSegs).hit === true, 'TAP hit detected inside annular sector #0');
+
+  // Point placed strictly inside the angular gap between sector 0 and sector 1
+  const gapMidAngle = (sector0.endAngle + sector1.startAngle) * 0.5;
+  const gapX = testAnchor.cx + Math.cos(gapMidAngle) * testAnchor.midRadius;
+  const gapY = testAnchor.cy + Math.sin(gapMidAngle) * testAnchor.midRadius;
+  const gapSegs = [{ p1: { x: gapX, y: gapY }, p2: { x: gapX, y: gapY }, hand: 'LEFT' }];
+  assert(judge.checkTapHit(sector0, gapSegs).hit === false, 'Point in inter-sector gap misses sector #0');
+  assert(judge.checkTapHit(sector1, gapSegs).hit === false, 'Point in inter-sector gap misses sector #1');
+
+  // Directional slash check: swipe RIGHT through top crown sector #2
+  const sector2 = {
+    ...RHYTHM_LANES[2],
+    cx: testAnchor.cx,
+    cy: testAnchor.cy,
+    innerRadius: testAnchor.innerRadius,
+    outerRadius: testAnchor.outerRadius
+  };
+  const s2MidX = testAnchor.cx + Math.cos(sector2.midAngle) * testAnchor.midRadius;
+  const s2MidY = testAnchor.cy + Math.sin(sector2.midAngle) * testAnchor.midRadius;
+  const rightSwipeSegs = [
+    { p1: { x: s2MidX - 40, y: s2MidY }, p2: { x: s2MidX + 40, y: s2MidY }, hand: 'RIGHT' }
+  ];
+  assert(
+    judge.checkSlashHit(sector2, SlashDirection.RIGHT, rightSwipeSegs).hit === true,
+    'SLASH hit accepted when hand swipes along target direction through sector'
   );
   assert(
-    judge.checkSlashHit(lane0, SlashDirection.RIGHT, rightSwipeSegs).hit === true,
-    'SLASH hit accepted when hand swipes along target direction'
-  );
-  assert(
-    judge.checkSlashHit(lane0, SlashDirection.LEFT, rightSwipeSegs).hit === false,
+    judge.checkSlashHit(sector2, SlashDirection.LEFT, rightSwipeSegs).hit === false,
     'SLASH hit rejected when hand swipes opposite direction'
   );
+
+  // Also check webcam mirror extraction
+  judge.reset();
+  const extSegs = judge.extractHandSegments(
+    makePose({ lw: { x: 0.2, y: 0.3 } }),
+    width,
+    height,
+    true
+  );
+  assert(extSegs.length === 1 && Math.abs(extSegs[0].p2.x - 0.8 * width) < 1, 'Mirror transform maps raw wrist to canvas');
 
   // Dodge checks
   assert(judge.checkDodgeSafe(DodgeZone.LEFT, { x: 200, y: 200 }, 1000, 500).safe === false, 'DODGE LEFT detects hazard overlap');
@@ -166,16 +232,13 @@ function runTests() {
   // Step time smoothly in 0.05s frames up to firstTap.targetTime
   const tapTime = firstTap.targetTime;
   const tapLane = firstTap.lane;
-  const tapPose = makePose({
-    lw: { x: 1 - tapLane.nx, y: tapLane.ny }
-  });
-  const tapCenter = engine.getLaneCenter(tapLane);
   while (engine.synth.getSongTime() + 0.05 < tapTime) {
     engine.update(0.05, 0, null, null, []);
   }
+  const tapSector = engine.getLaneCenter(tapLane);
   engine.synth.fallbackElapsed = tapTime;
-  engine.update(0.01, 0, null, tapPose, [
-    { p1: { x: tapCenter.x, y: tapCenter.y }, p2: { x: tapCenter.x, y: tapCenter.y }, bladeName: 'TEST' }
+  engine.update(0.01, 0, null, null, [
+    { p1: { x: tapSector.x, y: tapSector.y }, p2: { x: tapSector.x, y: tapSector.y }, bladeName: 'TEST' }
   ]);
 
   assert(firstTap.hit === true && firstTap.grade === 'PERFECT', 'TAP note hits as PERFECT on target beat');
