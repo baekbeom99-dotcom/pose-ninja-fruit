@@ -27,11 +27,13 @@ function assert(condition, message) {
   }
 }
 
-function makePose({ nose = { x: 0.5, y: 0.3 }, ls = { x: 0.42, y: 0.55 }, rs = { x: 0.58, y: 0.55 }, lw = null, rw = null } = {}) {
+function makePose({ nose = { x: 0.5, y: 0.3 }, ls = { x: 0.42, y: 0.55 }, rs = { x: 0.58, y: 0.55 }, lh = null, rh = null, lw = null, rw = null } = {}) {
   const lm = Array.from({ length: 33 }, () => ({ x: 0.5, y: 0.5, visibility: 0.1 }));
   lm[0] = { x: nose.x, y: nose.y, visibility: 0.95 };
   lm[11] = { x: ls.x, y: ls.y, visibility: 0.95 };
   lm[12] = { x: rs.x, y: rs.y, visibility: 0.95 };
+  if (lh) lm[23] = { x: lh.x, y: lh.y, visibility: 0.95 };
+  if (rh) lm[24] = { x: rh.x, y: rh.y, visibility: 0.95 };
   lm[15] = lw ? { x: lw.x, y: lw.y, visibility: 0.95 } : { x: 0.5, y: 0.8, visibility: 0.1 };
   lm[16] = rw ? { x: rw.x, y: rw.y, visibility: 0.95 } : { x: 0.5, y: 0.8, visibility: 0.1 };
   return [lm];
@@ -130,6 +132,88 @@ function runTests() {
     0
   );
   assert(anchorLeftBody.cx < anchorRightBody.cx, 'Semicircle anchor tracks body horizontal center');
+
+  // Verify shoulders (11,12) + in-frame hips (23,24) torso center calculation & clamping
+  const anchorWithHips = judge.computeBodyAnchor(
+    makePose({
+      ls: { x: 0.45, y: 0.55 },
+      rs: { x: 0.55, y: 0.55 },
+      lh: { x: 0.45, y: 0.85 },
+      rh: { x: 0.55, y: 0.85 }
+    }),
+    null,
+    width,
+    height,
+    true,
+    0
+  );
+  // Midpoint Y = (0.55 + 0.85)/2 = 0.70 -> 504px (inside clamped range)
+  assert(
+    Math.abs(anchorWithHips.cy - 0.7 * height) < 2,
+    'Torso center tracks shoulder (11,12) and hip (23,24) midpoint accurately'
+  );
+
+  // Verify extrapolated out-of-frame hips (y > 1.2) do not pull anchor to bottom edge
+  const anchorOobHips = judge.computeBodyAnchor(
+    makePose({
+      ls: { x: 0.45, y: 0.55 },
+      rs: { x: 0.55, y: 0.55 },
+      lh: { x: 0.45, y: 1.45 },
+      rh: { x: 0.55, y: 1.45 }
+    }),
+    null,
+    width,
+    height,
+    true,
+    0
+  );
+  assert(
+    anchorOobHips.cy < height - 50,
+    'Out-of-frame extrapolated hips do not drag semicircle center off bottom edge'
+  );
+
+  // Verify strict viewport boundary clamping on extreme left/top and narrow viewport
+  const extremeAnchor = judge.computeBodyAnchor(
+    makePose({
+      ls: { x: 0.99, y: 0.05 }, // mirrored X -> 0.01 (far left)
+      rs: { x: 0.99, y: 0.05 },
+      lh: { x: 0.99, y: 0.15 },
+      rh: { x: 0.99, y: 0.15 }
+    }),
+    null,
+    width,
+    height,
+    true,
+    0
+  );
+  assert(
+    extremeAnchor.cx - extremeAnchor.outerRadius >= 24 &&
+      extremeAnchor.cx + extremeAnchor.outerRadius <= width - 24 &&
+      extremeAnchor.cy - extremeAnchor.outerRadius >= 60 &&
+      extremeAnchor.cy <= height - 24,
+    'Semicircle arch stays strictly within top/left/right/bottom viewport bounds'
+  );
+
+  const narrowAnchor = judge.computeBodyAnchor(null, null, 500, 700, true, 0);
+  assert(
+    narrowAnchor.cx - narrowAnchor.outerRadius >= 20 &&
+      narrowAnchor.cx + narrowAnchor.outerRadius <= 480,
+    'Compact viewport shrinks outerRadius to prevent horizontal arch overflow'
+  );
+
+  // Verify smooth temporal EMA interpolation rather than instant snap
+  const smoothedAnchor = judge.computeBodyAnchor(
+    makePose({ ls: { x: 0.25, y: 0.6 }, rs: { x: 0.35, y: 0.6 } }),
+    anchorLeftBody,
+    width,
+    height,
+    true,
+    0.016
+  );
+  assert(
+    smoothedAnchor.cx > anchorLeftBody.cx && smoothedAnchor.cx < anchorRightBody.cx,
+    'Body anchor interpolates smoothly over dt frame without snapping'
+  );
 
   const testAnchor = judge.computeBodyAnchor(null, null, width, height, true, 0);
   const sector0 = {

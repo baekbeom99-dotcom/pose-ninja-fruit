@@ -19,28 +19,43 @@ export class PoseRhythmJudge {
   constructor() {
     this.prevLeft = null;
     this.prevRight = null;
+    this.missedPoseFrames = 0;
   }
 
   reset() {
     this.prevLeft = null;
     this.prevRight = null;
+    this.missedPoseFrames = 0;
   }
 
   /**
    * Computes smoothed body-center anchor & semicircular arch radii from MediaPipe pose.
-   * Uses shoulder midpoint + torso offset (and hips when visible), clamped so all
-   * 5 semicircular hitboxes fit inside the visible canvas.
+   * Tracks upper torso center using shoulders (11, 12) and in-frame hips (23, 24),
+   * and clamps center/radius so the 5 semicircular hitboxes never exceed top/left/right
+   * viewport boundaries.
    */
   computeBodyAnchor(poses, prevAnchor, width, height, mirror = true, dt = 0.016) {
-    const outerRadius = Math.max(190, Math.min(width * 0.43, height * 0.58));
-    const bandWidth = Math.max(110, Math.min(185, outerRadius * 0.48));
-    const innerRadius = Math.max(46, outerRadius - bandWidth);
+    const marginX = 28;
+    const marginTop = 76;
+    const marginBottom = 28;
+
+    const maxSafeRadius = Math.max(
+      96,
+      Math.min((width - marginX * 2) * 0.5, height - marginTop - marginBottom)
+    );
+    const desiredOuter = Math.max(170, Math.min(width * 0.43, height * 0.58));
+    const outerRadius = Math.min(maxSafeRadius, desiredOuter);
+    const bandWidth = Math.min(
+      outerRadius * 0.62,
+      Math.max(110, Math.min(185, outerRadius * 0.48))
+    );
+    const innerRadius = Math.max(36, outerRadius - bandWidth);
     const midRadius = (innerRadius + outerRadius) * 0.5;
 
-    const minX = outerRadius + 24;
-    const maxX = Math.max(minX, width - outerRadius - 24);
-    const minY = outerRadius + 76;
-    const maxY = Math.max(minY, height - 28);
+    const minX = outerRadius + marginX;
+    const maxX = Math.max(minX, width - outerRadius - marginX);
+    const minY = outerRadius + marginTop;
+    const maxY = Math.max(minY, height - marginBottom);
 
     const clampAnchor = (x, y) => ({
       cx: Math.max(minX, Math.min(maxX, x)),
@@ -66,6 +81,8 @@ export class PoseRhythmJudge {
       const lh = lm[23];
       const rh = lm[24];
       const visOk = (p) => p && (p.visibility == null || p.visibility > 0.35);
+      const inFrame = (p) =>
+        visOk(p) && p.x >= -0.1 && p.x <= 1.1 && p.y >= -0.05 && p.y <= 1.05;
 
       if (visOk(ls) && visOk(rs)) {
         const pLs = mapPt(ls);
@@ -74,19 +91,23 @@ export class PoseRhythmJudge {
         const shoulderMidY = (pLs.y + pRs.y) * 0.5;
         const shoulderSpan = Math.hypot(pLs.x - pRs.x, pLs.y - pRs.y);
 
-        let bodyY = shoulderMidY + Math.max(55, shoulderSpan * 0.42);
         let bodyX = shoulderMidX;
+        let bodyY = shoulderMidY + Math.max(50, shoulderSpan * 0.55);
 
-        if (visOk(lh) && visOk(rh)) {
+        if (inFrame(lh) && inFrame(rh)) {
           const pLh = mapPt(lh);
           const pRh = mapPt(rh);
           const hipMidX = (pLh.x + pRh.x) * 0.5;
           const hipMidY = (pLh.y + pRh.y) * 0.5;
-          bodyX = shoulderMidX * 0.65 + hipMidX * 0.35;
-          bodyY = shoulderMidY * 0.55 + hipMidY * 0.45;
+          bodyX = (shoulderMidX + hipMidX) * 0.5;
+          bodyY = (shoulderMidY + hipMidY) * 0.5;
         }
 
         target = clampAnchor(bodyX, bodyY);
+      } else if (inFrame(lh) && inFrame(rh)) {
+        const pLh = mapPt(lh);
+        const pRh = mapPt(rh);
+        target = clampAnchor((pLh.x + pRh.x) * 0.5, (pLh.y + pRh.y) * 0.5 - 60);
       } else if (visOk(lm[0])) {
         const nose = mapPt(lm[0]);
         target = clampAnchor(nose.x, nose.y + outerRadius * 0.48);
@@ -102,7 +123,7 @@ export class PoseRhythmJudge {
       return target;
     }
 
-    const alpha = 1 - Math.exp(-8.5 * Math.min(dt, 0.1));
+    const alpha = 1 - Math.exp(-9.0 * Math.min(dt, 0.1));
     return clampAnchor(
       prevAnchor.cx + (target.cx - prevAnchor.cx) * alpha,
       prevAnchor.cy + (target.cy - prevAnchor.cy) * alpha
@@ -174,6 +195,7 @@ export class PoseRhythmJudge {
     const segments = [];
 
     if (Array.isArray(poses) && poses.length > 0 && Array.isArray(poses[0])) {
+      this.missedPoseFrames = 0;
       const lm = poses[0];
       const mapPoint = (pt) => ({
         x: (mirror ? 1 - pt.x : pt.x) * width,
@@ -200,8 +222,12 @@ export class PoseRhythmJudge {
         this.prevRight = null;
       }
     } else {
-      this.prevLeft = null;
-      this.prevRight = null;
+      // Preserve wrist history across 1-2 skipped webcam frames when rAF renders faster than video
+      this.missedPoseFrames++;
+      if (this.missedPoseFrames > 2) {
+        this.prevLeft = null;
+        this.prevRight = null;
+      }
     }
 
     if (Array.isArray(externalSegments)) {
