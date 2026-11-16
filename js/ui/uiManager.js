@@ -49,6 +49,7 @@ export class UIManager {
     this.btnModeStrange = document.getElementById('btn-mode-strange');
     this.btnModeUfo = document.getElementById('btn-mode-ufo');
     this.btnModeGalaga = document.getElementById('btn-mode-galaga');
+    this.ultimatePanel = document.getElementById('ultimate-panel');
     this.instructionModeDesc = document.getElementById('instruction-mode-desc');
     this.instructionSpecial = document.getElementById('instruction-special');
     this.selectedGameMode = 'CLASSIC';
@@ -162,7 +163,7 @@ export class UIManager {
       }
       if (this.instructionSpecial) {
         this.instructionSpecial.innerHTML =
-          '🌀 <strong>차원 포털 오픈</strong>: 왼손 정면 가드 + 오른손 원을 그려 포털을 열면 화면 전체 전멸!';
+          '🌀 <strong>Y자 차원 포털</strong>: 양팔을 위로 활짝 벌려 큰 <strong>Y자</strong> 포즈를 취하면 화면 전체 전멸!';
       }
     } else if (mode === 'UFO_FISH') {
       if (this.btnModeUfo) this.btnModeUfo.classList.add('active');
@@ -182,7 +183,7 @@ export class UIManager {
       }
       if (this.instructionSpecial) {
         this.instructionSpecial.innerHTML =
-          '🚀 <strong>듀얼 파이터</strong>: 보스 갈라가의 트랙터 빔에 잡힌 아군기를 구출하여 합체(2발 동시 발사)!';
+          '🚀 <strong>하이퍼 윙맨 폭격 (스테이지당 2회)</strong>: 만세🙌 자세(또는 Space)로 편대 메가 레이저 일제 사격 + 적 미사일 일괄 소거!';
       }
     } else {
       if (this.btnModeClassic) this.btnModeClassic.classList.add('active');
@@ -199,11 +200,25 @@ export class UIManager {
 
   setMode(twoPlayer = false) {
     this.isTwoPlayer = false;
-    this.updateHUDMode(false);
+    this.updateHUDMode(false, this.selectedGameMode);
   }
 
-  updateHUDMode(twoPlayer = false) {
+  updateHUDMode(twoPlayer = false, gameMode = 'CLASSIC') {
     if (this.soloScorePanel) this.soloScorePanel.classList.remove('hidden');
+    if (this.ultimatePanel) {
+      if (gameMode === 'GALAGA') {
+        this.ultimatePanel.classList.add('hidden');
+      } else {
+        this.ultimatePanel.classList.remove('hidden');
+      }
+    }
+    if (this.btnGuide) {
+      if (gameMode === 'GALAGA') {
+        this.btnGuide.classList.add('hidden');
+      } else {
+        this.btnGuide.classList.remove('hidden');
+      }
+    }
   }
 
   updateScores(p1Score, p2Score = 0, isTwoPlayer = false) {

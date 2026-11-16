@@ -58,12 +58,18 @@ function runTests() {
     assert(result.matched === false, 'Hands at waist do not trigger SIOT');
   }
 
-  // Test 5: Doctor Strange PORTAL gesture (Left guard, Right wide circular open)
+  // Test 5: Doctor Strange PORTAL Y-Shape Pose (Both arms raised outward in Y shape)
   {
     detector.reset();
-    const lm = createMockLandmarks({ lwY: 0.35, rwY: 0.30, lwX: 0.42, rwX: 0.88, headY: 0.25 });
-    const result = detector.evaluate('PORTAL', lm, 0.1, true);
-    assert(result.matched === true, 'PORTAL matches Doctor Strange sling-ring guard and circle open');
+    const lmY = createMockLandmarks({ lwY: 0.14, rwY: 0.14, lwX: 0.25, rwX: 0.75, headY: 0.25 });
+    const resultY = detector.evaluate('PORTAL', lmY, 0.1, true);
+    assert(resultY.matched === true, 'PORTAL matches Doctor Strange Y-shape arm extension');
+
+    // Negative check: hands down at chest/waist narrow should NOT match Y-pose
+    detector.reset();
+    const lmDown = createMockLandmarks({ lwY: 0.50, rwY: 0.50, lwX: 0.45, rwX: 0.55, headY: 0.25 });
+    const resultDown = detector.evaluate('PORTAL', lmDown, 0.1, true);
+    assert(resultDown.matched === false, 'Hands lowered narrow do not falsely trigger PORTAL Y-pose');
   }
 
   console.log(`\nGesture Tests: ${passed}/${total} passed.`);

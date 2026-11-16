@@ -292,11 +292,13 @@ function runTests() {
   }
   assert(geEmp.bulletManager.alienMissiles.length === 5, '5 alien missiles spawned on screen');
 
-  // Trigger EMP shockwave
+  // Trigger Galaga Hyper Cannon & EMP shockwave
   const empFired = geEmp.triggerEmpShockwave();
-  assert(empFired === true, 'EMP shockwave triggered successfully');
-  assert(geEmp.empStock === 1, 'EMP stock decremented to 1');
-  assert(geEmp.bulletManager.alienMissiles.length === 0, 'All alien missiles destroyed by EMP blast');
+  assert(empFired === true, 'Galaga special triggered successfully');
+  assert(geEmp.empStock === 1, 'Special stock decremented to 1');
+  assert(geEmp.bulletManager.alienMissiles.length === 0, 'All alien missiles destroyed by blast');
+  assert(geEmp.bulletManager.playerBullets.length === 9, 'Hyper Cannon fires 9 piercing Wingman & fan plasma bolts');
+  assert(geEmp.wingmanBeams.length === 3, 'Twin Wingman + center orbital laser beams spawned');
   assert(geEmp.shockwaves.length === 1, 'Expanding shockwave VFX created');
 
   // Second EMP trigger

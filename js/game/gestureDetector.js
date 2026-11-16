@@ -81,21 +81,21 @@ export const CONSONANT_POSES = [
   {
     id: 'PORTAL',
     symbol: '🌀',
-    name: '차원 포털 오픈 (Portal)',
-    desc: '한 손은 정면 가드, 다른 손은 크게 뻗어 포털을 열기!',
+    name: '닥터 Y포즈 포털 (Portal)',
+    desc: '양팔을 위로 활짝 벌려 Y자 모양 만들기!',
     color: '#f97316',
     illustrationSvg: `
-      <svg viewBox="0 0 100 100" class="pose-stickman">
+      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" class="pose-stickman">
         <path d="M42,28 Q50,18 58,28 L64,52 L36,52 Z" fill="#b91c1c" opacity="0.85"/>
         <circle cx="50" cy="22" r="8" fill="#facc15"/>
         <line x1="50" y1="30" x2="50" y2="65" stroke="#facc15" stroke-width="4" stroke-linecap="round"/>
         <line x1="50" y1="65" x2="35" y2="90" stroke="#facc15" stroke-width="4" stroke-linecap="round"/>
         <line x1="50" y1="65" x2="65" y2="90" stroke="#facc15" stroke-width="4" stroke-linecap="round"/>
-        <polyline points="46,38 34,42 28,34" fill="none" stroke="#38bdf8" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
-        <polyline points="54,38 70,30 84,20" fill="none" stroke="#f97316" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
-        <circle cx="80" cy="26" r="16" fill="none" stroke="#f59e0b" stroke-width="3" stroke-dasharray="4,2"/>
-        <circle cx="28" cy="34" r="3.5" fill="#ffffff"/>
-        <circle cx="84" cy="20" r="4.5" fill="#ffffff"/>
+        <polyline points="50,38 33,24 18,9" fill="none" stroke="#f97316" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+        <polyline points="50,38 67,24 82,9" fill="none" stroke="#f97316" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="50" cy="24" r="21" fill="none" stroke="#f59e0b" stroke-width="2.5" stroke-dasharray="5,3"/>
+        <circle cx="18" cy="9" r="4.5" fill="#ffffff"/>
+        <circle cx="82" cy="9" r="4.5" fill="#ffffff"/>
       </svg>
     `
   }
@@ -211,19 +211,12 @@ export class GestureDetector {
       }
 
       case 'PORTAL': {
-        // Doctor Strange Portal Opening Pose:
-        // One hand (left) in front near chest/shoulder level (guard),
-        // Other hand (right) extended wide out or up drawing the portal circle
-        const hand1Guard = Math.abs(lw.y - avgShoulderY) < 0.22 && Math.abs(lw.x - l_sh.x) < 0.24;
-        const hand2Portal = Math.abs(rw.x - r_sh.x) > 0.20 && rw.y < avgShoulderY + 0.14;
-
-        const altHand1Guard = Math.abs(rw.y - avgShoulderY) < 0.22 && Math.abs(rw.x - r_sh.x) < 0.24;
-        const altHand2Portal = Math.abs(lw.x - l_sh.x) > 0.20 && lw.y < avgShoulderY + 0.14;
-
-        const bothHandsWideApart = Math.abs(lw.x - rw.x) > Math.max(0.40, shoulderDist * 1.5);
-        const handsAtChestHeight = Math.abs(lw.y - avgShoulderY) < 0.22 && Math.abs(rw.y - avgShoulderY) < 0.22;
-
-        return (hand1Guard && hand2Portal) || (altHand1Guard && altHand2Portal) || (bothHandsWideApart && handsAtChestHeight);
+        // Doctor Strange Y-Shape Pose:
+        // Both arms raised diagonally upward above shoulder line and spread outward in a wide V / Y shape.
+        // High webcam reliability compared to asymmetric guard+circle poses.
+        const bothArmsRaised = lw.y < avgShoulderY - 0.05 && rw.y < avgShoulderY - 0.05;
+        const wristsSpreadWideY = Math.abs(lw.x - rw.x) > Math.max(0.22, shoulderDist * 1.12);
+        return bothArmsRaised && wristsSpreadWideY;
       }
 
       default:

@@ -34,10 +34,11 @@ export class GalagaEngine {
     this.tractorTimer = 0;
     this.tractorInterval = 8.5;
 
-    // 만세 제스처 EMP 미사일 일괄 제거 (스테이지당 2회 제공)
+    // 갤러그 특수기술: 하이퍼 윙맨 폭격 & EMP 미사일 소거 (스테이지당 2회 제공)
     this.empStock = 2;
     this.empCooldown = 0;
     this.shockwaves = [];
+    this.wingmanBeams = [];
 
     // 소행성 및 메테오 (Stage 2+)
     this.asteroids = [];
@@ -128,10 +129,11 @@ export class GalagaEngine {
     this.starfield.setWarp(false);
     this.starfield.setStage(this.stage);
 
-    // 스테이지마다 EMP 스톡 2회 초기 충전!
+    // 스테이지마다 하이퍼 윙맨 폭격 스톡 2회 초기 충전!
     this.empStock = 2;
     this.empCooldown = 0;
     this.shockwaves = [];
+    this.wingmanBeams = [];
     this.particles = [];
     this.asteroids = [];
     this.asteroidTimer = 0;
@@ -257,12 +259,18 @@ export class GalagaEngine {
   }
 
   /**
-   * EMP 충격파 발동: 화면 내 모든 적 미사일 즉시 일괄 파괴
+   * 갤러그 특수기술 발동 (하이퍼 윙맨 폭격):
+   * 1) 화면 내 적 미사일 일괄 소멸
+   * 2) 쌍둥이 윙맨 편대 소환 + 관통 하이퍼 레이저 9발 일제 사격
+   * 3) 화면 전체 충격파 전개
    */
   triggerEmpShockwave() {
     if (this.empStock <= 0) return false;
     this.empStock--;
     this.empCooldown = 1.3;
+
+    const fx = this.fighter ? this.fighter.x : this.width / 2;
+    const fy = this.fighter ? this.fighter.y : this.height - 75;
 
     // 1. 화면 내 모든 외계인 미사일 폭파 및 소멸
     const missileCount = this.bulletManager.alienMissiles.length;
@@ -272,17 +280,34 @@ export class GalagaEngine {
     }
     this.bulletManager.alienMissiles = [];
 
-    // 2. 화면 전체로 퍼져나가는 푸른 전자기 펄스(EMP) 충격파 링 생성
+    // 2. 갤러그 편대 하이퍼 캐논 & 쌍둥이 윙맨 관통 레이저 발사
+    this.bulletManager.fireHyperBarrage(fx, fy, this.width);
+    const wingOffset = Math.min(130, Math.max(75, this.width * 0.1));
+    [
+      Math.max(24, fx - wingOffset),
+      fx,
+      Math.min(this.width - 24, fx + wingOffset)
+    ].forEach((bx, idx) => {
+      this.wingmanBeams.push({
+        x: bx,
+        y: fy - 12,
+        isCenter: idx === 1,
+        life: 0.55,
+        maxLife: 0.55
+      });
+    });
+
+    // 3. 화면 전체로 퍼져나가는 전자기 펄스 충격파 링 생성
     this.shockwaves.push({
-      x: this.fighter ? this.fighter.x : this.width / 2,
-      y: this.fighter ? this.fighter.y : this.height / 2,
+      x: fx,
+      y: fy,
       radius: 15,
       maxRadius: Math.max(this.width, this.height) * 1.15,
       speed: 1500,
       alpha: 1.0
     });
 
-    // 3. 강력한 EMP 폭발 사운드 재생
+    // 4. 강력한 특수무기 발동 사운드 재생
     if (this.sound && typeof this.sound.playEmpBlast === 'function') {
       this.sound.playEmpBlast();
     }
@@ -761,6 +786,14 @@ export class GalagaEngine {
         this.shockwaves.splice(i, 1);
       }
     }
+
+    for (let i = this.wingmanBeams.length - 1; i >= 0; i--) {
+      const wb = this.wingmanBeams[i];
+      wb.life -= dt;
+      if (wb.life <= 0) {
+        this.wingmanBeams.splice(i, 1);
+      }
+    }
   }
 
   _updateParticles(dt) {
@@ -792,8 +825,9 @@ export class GalagaEngine {
       this.tractorBeam.render(ctx, this.height, this.fighter);
     }
 
-    // 3. Bullets, PowerUps, and Shockwaves
+    // 3. Bullets, PowerUps, Wingman Beams, and Shockwaves
     this.bulletManager.render(ctx);
+    this._renderWingmanBeams(ctx);
     this._renderShockwaves(ctx);
     this._renderParticles(ctx);
 
@@ -809,31 +843,31 @@ export class GalagaEngine {
     ctx.shadowBlur = 8;
     ctx.fillText(`STAGE ${this.stage}`, this.width - 24, this.height - 24);
 
-    // 6. HUD: EMP Stock & Weapon Status at top-left
+    // 6. HUD: Galaga Hyper Cannon & Weapon Status placed cleanly BELOW Score Panel (no top HUD overlap)
     ctx.textAlign = 'left';
-    ctx.fillStyle = '#38bdf8';
-    ctx.fillText(`⚡ EMP [만세]: ${this.empStock}/2`, 24, 32);
+    ctx.fillStyle = '#22d3ee';
+    ctx.fillText(`🚀 HYPER CANNON [만세🙌]: ${this.empStock}/2`, 24, 134);
 
     if (this.fighter.weaponTimer > 0) {
       ctx.fillStyle = this.fighter.weaponType === 'PIERCER' ? '#c084fc' : '#38bdf8';
-      ctx.fillText(`WEAPON: ${this.fighter.weaponType} (${Math.ceil(this.fighter.weaponTimer)}s)`, 24, 56);
+      ctx.fillText(`WEAPON: ${this.fighter.weaponType} (${Math.ceil(this.fighter.weaponTimer)}s)`, 24, 158);
     } else if (this.fighter.hasShield) {
       ctx.fillStyle = '#10b981';
-      ctx.fillText(`SHIELD: ACTIVE 🛡️`, 24, 56);
+      ctx.fillText(`SHIELD: ACTIVE 🛡️`, 24, 158);
     }
 
-    // 7. HUD: Challenging Stage Hits & Results
+    // 7. HUD: Challenging Stage Hits & Results placed cleanly BELOW top-center Heart Icons
     if (this.isChallengingStage) {
       ctx.textAlign = 'center';
       ctx.fillStyle = '#facc15';
       ctx.font = '900 22px sans-serif';
       ctx.shadowColor = '#facc15';
       ctx.shadowBlur = 12;
-      ctx.fillText(`⭐ CHALLENGING STAGE ⭐`, this.width / 2, 40);
+      ctx.fillText(`⭐ CHALLENGING STAGE ⭐`, this.width / 2, 82);
 
       ctx.font = '700 16px sans-serif';
       ctx.fillStyle = '#ffffff';
-      ctx.fillText(`NUMBER OF HITS: ${this.challengingHits} / ${this.challengingTotal}`, this.width / 2, 66);
+      ctx.fillText(`NUMBER OF HITS: ${this.challengingHits} / ${this.challengingTotal}`, this.width / 2, 108);
 
       if (this.challengingCompleted) {
         ctx.font = '900 32px sans-serif';
@@ -886,6 +920,41 @@ export class GalagaEngine {
       ctx.fillStyle = '#ffffff';
       ctx.font = '700 20px sans-serif';
       ctx.fillText(`WARPING TO STAGE ${this.stage + 1}...`, this.width / 2, this.height / 2 + 25);
+      ctx.restore();
+    }
+  }
+
+  _renderWingmanBeams(ctx) {
+    if (!this.wingmanBeams || this.wingmanBeams.length === 0) return;
+
+    for (let i = 0; i < this.wingmanBeams.length; i++) {
+      const wb = this.wingmanBeams[i];
+      const alpha = Math.max(0, wb.life / wb.maxLife);
+      const beamW = (wb.isCenter ? 22 : 16) * alpha;
+
+      ctx.save();
+      ctx.globalAlpha = alpha;
+
+      // Vertical orbital laser beam column
+      ctx.fillStyle = wb.isCenter ? 'rgba(250, 204, 21, 0.75)' : 'rgba(34, 211, 238, 0.75)';
+      ctx.shadowColor = wb.isCenter ? '#facc15' : '#22d3ee';
+      ctx.shadowBlur = 18;
+      ctx.fillRect(wb.x - beamW * 0.5, 0, beamW, wb.y);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(wb.x - Math.max(2, beamW * 0.2), 0, Math.max(4, beamW * 0.4), wb.y);
+
+      // Holographic Wingman Galaga escort silhouette for side beams
+      if (!wb.isCenter) {
+        ctx.fillStyle = '#38bdf8';
+        ctx.beginPath();
+        ctx.moveTo(wb.x, wb.y - 14);
+        ctx.lineTo(wb.x - 13, wb.y + 10);
+        ctx.lineTo(wb.x, wb.y + 4);
+        ctx.lineTo(wb.x + 13, wb.y + 10);
+        ctx.closePath();
+        ctx.fill();
+      }
       ctx.restore();
     }
   }

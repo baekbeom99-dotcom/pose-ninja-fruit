@@ -349,13 +349,23 @@
   color: #facc15;
 }
 
-/* Ultimate Move HUD Panel (Top Right) */
+/* Ultimate Move HUD Panel (Top Right, offset below .hud-controls so buttons never overlap) */
 .ultimate-panel {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   gap: 6px;
   min-width: 200px;
+  margin-left: auto;
+  margin-top: 48px;
+}
+
+.ultimate-panel.hidden {
+  display: none;
+}
+
+.hud-btn.hidden {
+  display: none;
 }
 
 .ultimate-header {
@@ -565,8 +575,12 @@
   color: #94a3b8;
 }
 
-/* Life Hearts */
+/* Life Hearts - always centered cleanly at top regardless of right HUD panel visibility */
 .lives-container {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
   gap: 10px;
   align-items: center;

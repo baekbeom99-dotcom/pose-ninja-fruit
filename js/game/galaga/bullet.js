@@ -186,6 +186,27 @@ export class BulletManager {
     this.alienMissiles.push(new AlienMissile(x, y, targetX, targetY, speed, angleOffset, color));
   }
 
+  /**
+   * Fires a Galaga-style Hyper Cannon & Twin Wingman Barrage:
+   * 3 vertical piercing main beams + 6 wide-fanning plasma bolts.
+   */
+  fireHyperBarrage(x, y, canvasWidth = 1280) {
+    const wingOffset = Math.min(130, Math.max(75, canvasWidth * 0.1));
+    const wingXs = [
+      Math.max(24, x - wingOffset),
+      x,
+      Math.min(canvasWidth - 24, x + wingOffset)
+    ];
+
+    wingXs.forEach((bx) => {
+      this.playerBullets.push(new Bullet(bx, y - 16, -1280, 0, true, '#22d3ee'));
+    });
+
+    [-460, -280, -140, 140, 280, 460].forEach((vx) => {
+      this.playerBullets.push(new Bullet(x, y - 12, -1120, vx, true, '#facc15'));
+    });
+  }
+
   update(dt, canvasWidth, canvasHeight) {
     for (let i = this.playerBullets.length - 1; i >= 0; i--) {
       const b = this.playerBullets[i];
