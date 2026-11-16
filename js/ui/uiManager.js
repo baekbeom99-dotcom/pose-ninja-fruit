@@ -49,14 +49,9 @@ export class UIManager {
     this.btnModeStrange = document.getElementById('btn-mode-strange');
     this.btnModeUfo = document.getElementById('btn-mode-ufo');
     this.btnModeGalaga = document.getElementById('btn-mode-galaga');
-    this.btnModeRhythm = document.getElementById('btn-mode-rhythm');
-    this.rhythmTrackSelector = document.getElementById('rhythm-track-selector');
-    this.rhythmTrackBtns = Array.from(document.querySelectorAll('.rhythm-track-btn'));
-    this.ultimatePanel = document.getElementById('ultimate-panel');
     this.instructionModeDesc = document.getElementById('instruction-mode-desc');
     this.instructionSpecial = document.getElementById('instruction-special');
     this.selectedGameMode = 'CLASSIC';
-    this.selectedRhythmTrack = 'neon_cruise';
 
     this.onExitRequested = () => {};
 
@@ -78,8 +73,7 @@ export class UIManager {
       { btn: this.btnModeClassic, mode: 'CLASSIC' },
       { btn: this.btnModeStrange, mode: 'DOCTOR_STRANGE' },
       { btn: this.btnModeUfo, mode: 'UFO_FISH' },
-      { btn: this.btnModeGalaga, mode: 'GALAGA' },
-      { btn: this.btnModeRhythm, mode: 'RHYTHM' }
+      { btn: this.btnModeGalaga, mode: 'GALAGA' }
     ];
 
     tabs.forEach(({ btn, mode }) => {
@@ -88,17 +82,6 @@ export class UIManager {
           this.setGameMode(mode);
         });
       }
-    });
-
-    // Rhythm Track Selector Buttons
-    this.rhythmTrackBtns.forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const trackId = btn.dataset.track;
-        if (!trackId) return;
-        this.selectedRhythmTrack = trackId;
-        this.rhythmTrackBtns.forEach((b) => b.classList.remove('active'));
-        btn.classList.add('active');
-      });
     });
 
     // Fullscreen Toggle (Synchronized for HUD and Start Screen)
@@ -167,17 +150,9 @@ export class UIManager {
   setGameMode(mode = 'CLASSIC') {
     this.selectedGameMode = mode;
 
-    [this.btnModeClassic, this.btnModeStrange, this.btnModeUfo, this.btnModeGalaga, this.btnModeRhythm].forEach(btn => {
+    [this.btnModeClassic, this.btnModeStrange, this.btnModeUfo, this.btnModeGalaga].forEach(btn => {
       if (btn) btn.classList.remove('active');
     });
-
-    if (this.rhythmTrackSelector) {
-      if (mode === 'RHYTHM') {
-        this.rhythmTrackSelector.classList.remove('hidden');
-      } else {
-        this.rhythmTrackSelector.classList.add('hidden');
-      }
-    }
 
     if (mode === 'DOCTOR_STRANGE') {
       if (this.btnModeStrange) this.btnModeStrange.classList.add('active');
@@ -209,16 +184,6 @@ export class UIManager {
         this.instructionSpecial.innerHTML =
           '🚀 <strong>듀얼 파이터</strong>: 보스 갈라가의 트랙터 빔에 잡힌 아군기를 구출하여 합체(2발 동시 발사)!';
       }
-    } else if (mode === 'RHYTHM') {
-      if (this.btnModeRhythm) this.btnModeRhythm.classList.add('active');
-      if (this.instructionModeDesc) {
-        this.instructionModeDesc.innerHTML =
-          '🎵 <strong>리듬 비트 모드</strong>: 몸 중심 위 <strong>5분할 반원 아치</strong>로 달려오는 터널 조명을 박자에 맞춰 터치하거나 화살표 방향으로 베어보세요!';
-      }
-      if (this.instructionSpecial) {
-        this.instructionSpecial.innerHTML =
-          '⚡ <strong>하이브리드 액션</strong>: 가끔 날아오는 레이저 벽만 몸으로 피하고, 하이라이트 구간의 <strong>만세🙌 포즈</strong>로 2배 피버!';
-      }
     } else {
       if (this.btnModeClassic) this.btnModeClassic.classList.add('active');
       if (this.instructionModeDesc) {
@@ -234,30 +199,11 @@ export class UIManager {
 
   setMode(twoPlayer = false) {
     this.isTwoPlayer = false;
-    this.updateHUDMode(false, this.selectedGameMode);
+    this.updateHUDMode(false);
   }
 
-  updateHUDMode(twoPlayer = false, gameMode = 'CLASSIC') {
+  updateHUDMode(twoPlayer = false) {
     if (this.soloScorePanel) this.soloScorePanel.classList.remove('hidden');
-    if (this.ultimatePanel) {
-      if (gameMode === 'RHYTHM' || gameMode === 'GALAGA') {
-        this.ultimatePanel.classList.add('hidden');
-      } else {
-        this.ultimatePanel.classList.remove('hidden');
-      }
-    }
-    this.pulseBeatHUD(0);
-  }
-
-  pulseBeatHUD(impulse = 0) {
-    const val = impulse > 0.02 ? impulse : 0;
-    const transform = val > 0 ? `scale(${(1 + val * 0.045).toFixed(4)}) translateY(${(-val * 2.5).toFixed(2)}px)` : '';
-    if (this.soloScorePanel) {
-      this.soloScorePanel.style.transform = transform;
-    }
-    if (this.livesContainer) {
-      this.livesContainer.style.transform = val > 0 ? `scale(${(1 + val * 0.035).toFixed(4)})` : '';
-    }
   }
 
   updateScores(p1Score, p2Score = 0, isTwoPlayer = false) {
