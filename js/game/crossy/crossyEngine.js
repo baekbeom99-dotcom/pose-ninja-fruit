@@ -45,8 +45,10 @@ export class CrossyEngine {
     this.poseState = { jumpRatio: 0, isWingFlapUp: false, wingSpreadRatio: 0, lastReason: null };
     this.wingAnimTimer = 0;
     this.particles = [];
+    this.groundRipples = [];
     this.floatingTexts = [];
     this.shakeTimer = 0;
+    this.landCameraBounce = 0;
 
     this.onScore = () => {};
     this.onLivesChanged = () => {};
@@ -94,8 +96,10 @@ export class CrossyEngine {
     this.poseState = { jumpRatio: 0, isWingFlapUp: false, wingSpreadRatio: 0, lastReason: null };
     this.wingAnimTimer = 0;
     this.particles = [];
+    this.groundRipples = [];
     this.floatingTexts = [];
     this.shakeTimer = 0;
+    this.landCameraBounce = 0;
 
     // Generate initial visible terrain (-4 .. +22)
     for (let r = -4; r <= 2; r++) {
@@ -196,6 +200,8 @@ export class CrossyEngine {
     const currentLane = this.getLane(this.player.row);
     const currentType = currentLane ? currentLane.type : LaneType.GRASS;
 
+    const launchX = this.player.x;
+    const launchRow = this.player.row;
     const started = this.player.startHop(currentType);
     if (!started) return false;
 
@@ -203,10 +209,26 @@ export class CrossyEngine {
     this.wingAnimTimer = 0.28;
     this.poseState.lastReason = source;
 
+    // Takeoff puff & launch ripple
+    this._spawnGroundRipple(launchX, launchRow, 'rgba(255, 255, 255, 0.75)', 28);
+    this._spawnBurst(launchX, launchRow, '#f8fafc', 7);
+
     if (this.sound && typeof this.sound.playCrossyHop === 'function') {
       this.sound.playCrossyHop();
     }
     return true;
+  }
+
+  _spawnGroundRipple(x, row, color = 'rgba(255,255,255,0.8)', maxRadius = 36) {
+    this.groundRipples.push({
+      x,
+      row,
+      color,
+      radius: 8,
+      maxRadius,
+      life: 0.34,
+      maxLife: 0.34
+    });
   }
 
   _addScore(points) {
@@ -305,6 +327,23 @@ export class CrossyEngine {
 
   _onPlayerLanded(row) {
     const lane = this.getLane(row);
+    const landedOnRaft = lane && lane.type === LaneType.RIVER && !!lane.findRaftAt(this.player.x, 15);
+    const landColor = landedOnRaft
+      ? '#fef3c7'
+      : lane && lane.type === LaneType.GRASS
+        ? '#86efac'
+        : '#cbd5e1';
+
+    this._spawnGroundRipple(this.player.x, row, landColor, landedOnRaft ? 40 : 34);
+    this._spawnBurst(this.player.x, row, landColor, 8);
+    this.landCameraBounce = 0.15;
+
+    if (this.sound && typeof this.sound.playCrossyLand === 'function') {
+      if (!lane || lane.type !== LaneType.RIVER || landedOnRaft) {
+        this.sound.playCrossyLand(landedOnRaft);
+      }
+    }
+
     if (lane && lane.type === LaneType.GRASS) {
       this.lastSafeRow = Math.max(this.lastSafeRow, row);
     }
@@ -454,6 +493,17 @@ export class CrossyEngine {
     if (this.shakeTimer > 0) {
       this.shakeTimer = Math.max(0, this.shakeTimer - dt);
     }
+    if (this.landCameraBounce > 0) {
+      this.landCameraBounce = Math.max(0, this.landCameraBounce - dt);
+    }
+
+    for (let i = this.groundRipples.length - 1; i >= 0; i--) {
+      const gr = this.groundRipples[i];
+      gr.life -= dt;
+      const t = 1 - Math.max(0, gr.life) / gr.maxLife;
+      gr.radius = 8 + (gr.maxRadius - 8) * t;
+      if (gr.life <= 0) this.groundRipples.splice(i, 1);
+    }
 
     for (let i = this.particles.length - 1; i >= 0; i--) {
       const p = this.particles[i];
@@ -494,6 +544,9 @@ export class CrossyEngine {
     if (this.shakeTimer > 0) {
       const mag = (this.shakeTimer / 0.35) * 10;
       ctx.translate((Math.random() - 0.5) * mag, (Math.random() - 0.5) * mag);
+    } else if (this.landCameraBounce > 0) {
+      const bump = Math.sin((this.landCameraBounce / 0.15) * Math.PI) * 3.5;
+      ctx.translate(0, bump);
     }
 
     // Subtle dark sky/vignette behind world
@@ -706,68 +759,84 @@ export class CrossyEngine {
       ctx.globalAlpha = 0.45;
     }
 
-    // Ground Shadow shrinks slightly during airborne hop
-    const shadowScale = Math.max(0.55, 1 - p.arcZ / 90);
+    // Ground Shadow shrinks slightly during airborne hop & responds to squash/stretch
+    const totalZ = p.arcZ + (p.bounceZ || 0);
+    const shadowScale = Math.max(0.55, 1 - totalZ / 90) * Math.max(0.9, p.scaleX || 1);
     ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
     ctx.beginPath();
     ctx.ellipse(sx, sy + 6, 20 * scaleX * shadowScale, 10 * scaleX * shadowScale, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Stylized 2.5D Voxel Chicken Rear View (facing forward up the lane) shifted up by arcZ
-    const py = sy - p.arcZ;
+    // Stylized 2.5D Voxel Chicken Rear View anchored at feet for Squash & Stretch Bounce
+    const py = sy - totalZ;
     const s = scaleX;
     const wingLift = this.poseState.isWingFlapUp || this.wingAnimTimer > 0 ? 1 : 0;
 
+    ctx.translate(sx, py);
+    ctx.scale(p.scaleX || 1, p.scaleY || 1);
+
     // Tiny orange feet tucked behind/below
     ctx.fillStyle = '#f59e0b';
-    ctx.fillRect(sx - 9 * s, py - 2 * s, 5 * s, 5 * s);
-    ctx.fillRect(sx + 4 * s, py - 2 * s, 5 * s, 5 * s);
+    ctx.fillRect(-9 * s, -2 * s, 5 * s, 5 * s);
+    ctx.fillRect(4 * s, -2 * s, 5 * s, 5 * s);
 
     // Flapping side wings (spread out & up when jumping/flapping)
     ctx.fillStyle = '#f1f5f9';
     if (wingLift) {
-      ctx.fillRect(sx - 25 * s, py - 29 * s, 10 * s, 14 * s);
-      ctx.fillRect(sx + 15 * s, py - 29 * s, 10 * s, 14 * s);
+      ctx.fillRect(-25 * s, -29 * s, 10 * s, 14 * s);
+      ctx.fillRect(15 * s, -29 * s, 10 * s, 14 * s);
       // Feather tips
       ctx.fillStyle = '#cbd5e1';
-      ctx.fillRect(sx - 26 * s, py - 21 * s, 5 * s, 6 * s);
-      ctx.fillRect(sx + 21 * s, py - 21 * s, 5 * s, 6 * s);
+      ctx.fillRect(-26 * s, -21 * s, 5 * s, 6 * s);
+      ctx.fillRect(21 * s, -21 * s, 5 * s, 6 * s);
     } else {
-      ctx.fillRect(sx - 20 * s, py - 22 * s, 5 * s, 15 * s);
-      ctx.fillRect(sx + 15 * s, py - 22 * s, 5 * s, 15 * s);
+      ctx.fillRect(-20 * s, -22 * s, 5 * s, 15 * s);
+      ctx.fillRect(15 * s, -22 * s, 5 * s, 15 * s);
     }
 
     // Back body block & soft back shading
     ctx.fillStyle = '#ffffff';
-    ctx.fillRect(sx - 15 * s, py - 34 * s, 30 * s, 32 * s);
+    ctx.fillRect(-15 * s, -34 * s, 30 * s, 32 * s);
     ctx.fillStyle = '#e2e8f0';
-    ctx.fillRect(sx - 13 * s, py - 26 * s, 26 * s, 21 * s);
+    ctx.fillRect(-13 * s, -26 * s, 26 * s, 21 * s);
 
     // Ninja headband tied cleanly at the back of the head (with trailing tails!)
     ctx.fillStyle = '#ef4444';
-    ctx.fillRect(sx - 16 * s, py - 30 * s, 32 * s, 6 * s);
+    ctx.fillRect(-16 * s, -30 * s, 32 * s, 6 * s);
     // Headband knot & flowing ribbons on the back of head
     ctx.fillStyle = '#dc2626';
-    ctx.fillRect(sx - 3 * s, py - 30 * s, 6 * s, 7 * s);
-    ctx.fillRect(sx - 7 * s, py - 25 * s, 4 * s, 8 * s);
-    ctx.fillRect(sx + 3 * s, py - 25 * s, 4 * s, 8 * s);
+    ctx.fillRect(-3 * s, -30 * s, 6 * s, 7 * s);
+    ctx.fillRect(-7 * s, -25 * s, 4 * s, 8 * s);
+    ctx.fillRect(3 * s, -25 * s, 4 * s, 8 * s);
 
     // Red comb peeking at crown
     ctx.fillStyle = '#f43f5e';
-    ctx.fillRect(sx - 5 * s, py - 42 * s, 10 * s, 8 * s);
+    ctx.fillRect(-5 * s, -42 * s, 10 * s, 8 * s);
 
     // Fluffy White Tail Feathers prominent at the rear bottom!
     ctx.fillStyle = '#ffffff';
-    ctx.fillRect(sx - 9 * s, py - 11 * s, 18 * s, 11 * s);
+    ctx.fillRect(-9 * s, -11 * s, 18 * s, 11 * s);
     ctx.fillStyle = '#cbd5e1';
-    ctx.fillRect(sx - 6 * s, py - 8 * s, 12 * s, 8 * s);
+    ctx.fillRect(-6 * s, -8 * s, 12 * s, 8 * s);
     ctx.fillStyle = '#ffffff';
-    ctx.fillRect(sx - 4 * s, py - 14 * s, 8 * s, 7 * s);
+    ctx.fillRect(-4 * s, -14 * s, 8 * s, 7 * s);
 
     ctx.restore();
   }
 
   _renderEffects(ctx) {
+    for (const gr of this.groundRipples) {
+      const { sx, sy, scaleX } = this._worldToScreen(gr.x, gr.row);
+      const alpha = Math.max(0, gr.life / gr.maxLife);
+      ctx.save();
+      ctx.globalAlpha = alpha * 0.85;
+      ctx.strokeStyle = gr.color;
+      ctx.lineWidth = 2.5 * alpha + 1;
+      ctx.beginPath();
+      ctx.ellipse(sx, sy + 4, gr.radius * scaleX, gr.radius * 0.45 * scaleX, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
     for (const pt of this.particles) {
       const { sx, sy } = this._worldToScreen(pt.x, pt.row);
       const alpha = Math.max(0, pt.life / pt.maxLife);

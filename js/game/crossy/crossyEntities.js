@@ -224,6 +224,13 @@ export class CrossyPlayer {
 
     this.invulnerableTimer = 0;
     this.standingRaft = null;
+
+    // Squash & Stretch + Landing Bounce animation state
+    this.scaleX = 1;
+    this.scaleY = 1;
+    this.bounceTimer = 0;
+    this.bounceDuration = 0.24;
+    this.bounceZ = 0;
   }
 
   reset(row = 0, x = 0) {
@@ -238,6 +245,10 @@ export class CrossyPlayer {
     this.hopStartX = x;
     this.hopTargetX = x;
     this.standingRaft = null;
+    this.scaleX = 1;
+    this.scaleY = 1;
+    this.bounceTimer = 0;
+    this.bounceZ = 0;
   }
 
   /**
@@ -254,6 +265,11 @@ export class CrossyPlayer {
     this.hopTargetRow = this.row + 1;
     this.hopStartX = this.x;
     this.standingRaft = null;
+    this.bounceTimer = 0;
+    this.bounceZ = 0;
+    // Takeoff anticipation stretch
+    this.scaleX = 0.84;
+    this.scaleY = 1.24;
 
     if (currentLaneType === LaneType.RIVER) {
       // Keep exact drifted X when jumping forward from a moving raft
@@ -273,6 +289,23 @@ export class CrossyPlayer {
     if (!this.isHopping) {
       this.visualRow = this.row;
       this.arcZ = 0;
+
+      if (this.bounceTimer > 0) {
+        this.bounceTimer = Math.max(0, this.bounceTimer - dt);
+        const phase = 1 - this.bounceTimer / this.bounceDuration; // 0 -> 1
+        const decay = Math.exp(-5.0 * phase);
+        const squashWave = Math.cos(phase * Math.PI * 2.5);
+        this.scaleX = 1 + 0.32 * decay * squashWave;
+        this.scaleY = 1 - 0.30 * decay * squashWave;
+        // Little elastic rebound hop right after impact squash
+        this.bounceZ = phase > 0.18 && phase < 0.72
+          ? Math.sin(((phase - 0.18) / 0.54) * Math.PI) * 7
+          : 0;
+      } else {
+        this.scaleX = 1;
+        this.scaleY = 1;
+        this.bounceZ = 0;
+      }
       return { landed: false };
     }
 
@@ -284,6 +317,11 @@ export class CrossyPlayer {
       this.visualRow = this.row;
       this.x = this.hopTargetX;
       this.arcZ = 0;
+      // Trigger landing squash & bounce rebound
+      this.bounceTimer = this.bounceDuration;
+      this.scaleX = 1.32;
+      this.scaleY = 0.68;
+      this.bounceZ = 0;
       return { landed: true, row: this.row, x: this.x };
     }
 
@@ -292,6 +330,21 @@ export class CrossyPlayer {
     this.x = this.hopStartX + (this.hopTargetX - this.hopStartX) * p;
     // Parabolic jump arc
     this.arcZ = Math.sin(p * Math.PI) * 34;
+
+    // Mid-air squash & stretch: tall launch -> neutral apex -> pre-land stretch
+    if (p < 0.35) {
+      const k = 1 - p / 0.35;
+      this.scaleX = 1 - 0.16 * k;
+      this.scaleY = 1 + 0.24 * k;
+    } else if (p > 0.72) {
+      const k = (p - 0.72) / 0.28;
+      this.scaleX = 1 - 0.10 * k;
+      this.scaleY = 1 + 0.14 * k;
+    } else {
+      this.scaleX = 1;
+      this.scaleY = 1;
+    }
+
     return { landed: false };
   }
 }

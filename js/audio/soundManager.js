@@ -827,6 +827,23 @@ export class SoundManager {
     osc.stop(now + 0.12);
   }
 
+  playCrossyLand(isRaft = false) {
+    if (!this.ctx || this.isMuted) return;
+    this.resume();
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = isRaft ? 'triangle' : 'sine';
+    osc.frequency.setValueAtTime(isRaft ? 210 : 165, now);
+    osc.frequency.exponentialRampToValueAtTime(75, now + 0.06);
+    gain.gain.setValueAtTime(0.14, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.075);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.08);
+  }
+
   playCrossyCoin() {
     if (!this.ctx || this.isMuted) return;
     this.resume();

@@ -112,8 +112,10 @@ function runTests() {
   console.log('--- Testing CrossyEngine Gameplay, Raft Drift & Camera Respawn ---');
   let reportedScore = 0;
   let gameOverCalled = false;
+  let landSoundCalled = false;
   const mockSound = {
     playCrossyHop() {},
+    playCrossyLand() { landSoundCalled = true; },
     playCrossyCoin() {},
     playCrossySplash() {},
     playCrossyTrainWarn() {},
@@ -128,9 +130,29 @@ function runTests() {
 
   const hopped = engine.triggerHop('TEST');
   assert(hopped === true && engine.player.isHopping === true, 'triggerHop initiates forward hop');
-  for (let i = 0; i < 6; i++) {
+  assert(
+    engine.player.scaleY > 1.1 && engine.groundRipples.length >= 1 && engine.particles.length >= 5,
+    'Takeoff applies vertical stretch and spawns launch ripple + dust puff'
+  );
+
+  // Advance just past hopDuration (0.17s) to catch impact squash & landing effects
+  engine.update(0.10, 0, null, null);
+  engine.update(0.08, 0, null, null);
+  assert(
+    engine.player.scaleX > 1.15 && engine.player.scaleY < 0.85 && engine.landCameraBounce > 0 && landSoundCalled,
+    'Landing triggers impact squash, camera bounce, and landing ripple/SFX'
+  );
+
+  // Advance partway through elastic bounce rebound (bounceZ > 0), then settle cleanly to rest
+  engine.update(0.09, 0, null, null);
+  assert(engine.player.bounceZ > 0, 'Post-landing spring rebound lifts chicken slightly (bounceZ > 0)');
+  for (let i = 0; i < 4; i++) {
     engine.update(0.05, 0, null, null);
   }
+  assert(
+    engine.player.scaleX === 1 && engine.player.scaleY === 1 && engine.player.bounceZ === 0,
+    'Bounce settles smoothly back to neutral scale (1, 1)'
+  );
   assert(engine.player.row === 1 && engine.maxRow === 1 && engine.score >= 1, 'Player lands on row 1 and scores forward point');
   assert(reportedScore === engine.score, 'onScore callback synced');
 
