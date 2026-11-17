@@ -55,9 +55,11 @@ export class CrossyLane {
         }
       });
 
-      if (this.row > 2 && Math.random() < 0.32) {
+      if (this.row > 2 && Math.random() < 0.34) {
+        // Place grass coins strictly within reachable central corridor [-18..+18]
         this.coin = {
-          x: (Math.random() - 0.5) * 140,
+          x: (Math.random() - 0.5) * 36,
+          raftIndex: null,
           collected: false,
           bobPhase: Math.random() * Math.PI * 2
         };
@@ -98,9 +100,12 @@ export class CrossyLane {
         });
       }
 
-      if (Math.random() < 0.25) {
+      if (this.rafts.length > 0 && Math.random() < 0.48) {
+        // Ride coin squarely on top of a raft so there are no unreachable floating coins over water
+        const raftIndex = Math.floor(Math.random() * this.rafts.length);
         this.coin = {
-          x: (Math.random() - 0.5) * 180,
+          x: this.rafts[raftIndex].x,
+          raftIndex,
           collected: false,
           bobPhase: Math.random() * Math.PI * 2
         };
@@ -160,6 +165,9 @@ export class CrossyLane {
     }
 
     if (this.coin && !this.coin.collected) {
+      if (this.type === LaneType.RIVER && this.coin.raftIndex != null && this.rafts[this.coin.raftIndex]) {
+        this.coin.x = this.rafts[this.coin.raftIndex].x;
+      }
       this.coin.bobPhase += dt * 4.5;
     }
   }

@@ -42,7 +42,8 @@ export class CrossyEngine {
     this.streak = 0;
     this.streakWindow = 0;
 
-    this.poseState = { jumpRatio: 0, isManseHeld: false, lastReason: null };
+    this.poseState = { jumpRatio: 0, isWingFlapUp: false, wingSpreadRatio: 0, lastReason: null };
+    this.wingAnimTimer = 0;
     this.particles = [];
     this.floatingTexts = [];
     this.shakeTimer = 0;
@@ -90,7 +91,8 @@ export class CrossyEngine {
     this.idleTimer = 0;
     this.streak = 0;
     this.streakWindow = 0;
-    this.poseState = { jumpRatio: 0, isManseHeld: false, lastReason: null };
+    this.poseState = { jumpRatio: 0, isWingFlapUp: false, wingSpreadRatio: 0, lastReason: null };
+    this.wingAnimTimer = 0;
     this.particles = [];
     this.floatingTexts = [];
     this.shakeTimer = 0;
@@ -173,8 +175,8 @@ export class CrossyEngine {
       }
     }
 
-    // Prune far behind rows to keep memory lean
-    const pruneCutoff = this.player.row - 10;
+    // Prune far behind rows while preserving lastSafeRow for respawn
+    const pruneCutoff = Math.min(this.player.row, this.lastSafeRow) - 6;
     for (const r of this.lanes.keys()) {
       if (r < pruneCutoff) {
         this.lanes.delete(r);
@@ -187,7 +189,7 @@ export class CrossyEngine {
   }
 
   /**
-   * Triggers 1 forward hop (+1 row) via Jump, Manse, Keyboard, or Click/Touch.
+   * Triggers 1 forward hop (+1 row) via Jump, Wing Flap, Keyboard, or Click/Touch.
    */
   triggerHop(source = 'MANUAL') {
     if (this.state !== 'PLAYING') return false;
@@ -198,6 +200,7 @@ export class CrossyEngine {
     if (!started) return false;
 
     this.idleTimer = 0;
+    this.wingAnimTimer = 0.28;
     this.poseState.lastReason = source;
 
     if (this.sound && typeof this.sound.playCrossyHop === 'function') {
@@ -286,13 +289,18 @@ export class CrossyEngine {
 
     // Respawn on nearest safe Grass row at x = 0 with brief invulnerability
     let safeRow = this.lastSafeRow;
-    while (safeRow > this.player.row - 6) {
+    while (safeRow > this.player.row - 8) {
       const l = this.getLane(safeRow);
       if (l && l.type === LaneType.GRASS) break;
       safeRow--;
     }
+    if (!this.getLane(safeRow)) {
+      this.lanes.set(safeRow, new CrossyLane(safeRow, LaneType.GRASS, 1));
+    }
     this.player.reset(safeRow, 0);
     this.player.invulnerableTimer = 1.6;
+    // Follow player cleanly back onto the respawn safe row
+    this.cameraRow = Math.max(1.8, safeRow + 1.8);
   }
 
   _onPlayerLanded(row) {
@@ -351,10 +359,14 @@ export class CrossyEngine {
       if (this.streakWindow <= 0) this.streak = 0;
     }
 
-    // 1. Evaluate Jump / Manse Pose Triggers
+    // 1. Evaluate Jump / Wing Flap Pose Triggers
+    if (this.wingAnimTimer > 0) {
+      this.wingAnimTimer = Math.max(0, this.wingAnimTimer - safeDt);
+    }
     const poseRes = this.poseController.update(poses, safeDt);
     this.poseState.jumpRatio = poseRes.jumpRatio;
-    this.poseState.isManseHeld = poseRes.isManseHeld;
+    this.poseState.isWingFlapUp = poseRes.isWingFlapUp;
+    this.poseState.wingSpreadRatio = poseRes.wingSpreadRatio;
     if (poseRes.triggerHop) {
       this.triggerHop(poseRes.reason);
     }
@@ -701,26 +713,56 @@ export class CrossyEngine {
     ctx.ellipse(sx, sy + 6, 20 * scaleX * shadowScale, 10 * scaleX * shadowScale, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Stylized 2.5D Voxel Ninja Chick Hero shifted up by arcZ
+    // Stylized 2.5D Voxel Chicken Rear View (facing forward up the lane) shifted up by arcZ
     const py = sy - p.arcZ;
     const s = scaleX;
+    const wingLift = this.poseState.isWingFlapUp || this.wingAnimTimer > 0 ? 1 : 0;
 
-    // Body
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(sx - 16 * s, py - 34 * s, 32 * s, 32 * s);
-    // Ninja headband (red/cyan accent!)
-    ctx.fillStyle = '#ef4444';
-    ctx.fillRect(sx - 17 * s, py - 30 * s, 34 * s, 7 * s);
-    // Comb crest on top
-    ctx.fillStyle = '#f43f5e';
-    ctx.fillRect(sx - 6 * s, py - 42 * s, 12 * s, 8 * s);
-    // Eyes
-    ctx.fillStyle = '#0f172a';
-    ctx.fillRect(sx - 9 * s, py - 21 * s, 4 * s, 5 * s);
-    ctx.fillRect(sx + 5 * s, py - 21 * s, 4 * s, 5 * s);
-    // Beak
+    // Tiny orange feet tucked behind/below
     ctx.fillStyle = '#f59e0b';
-    ctx.fillRect(sx - 5 * s, py - 15 * s, 10 * s, 6 * s);
+    ctx.fillRect(sx - 9 * s, py - 2 * s, 5 * s, 5 * s);
+    ctx.fillRect(sx + 4 * s, py - 2 * s, 5 * s, 5 * s);
+
+    // Flapping side wings (spread out & up when jumping/flapping)
+    ctx.fillStyle = '#f1f5f9';
+    if (wingLift) {
+      ctx.fillRect(sx - 25 * s, py - 29 * s, 10 * s, 14 * s);
+      ctx.fillRect(sx + 15 * s, py - 29 * s, 10 * s, 14 * s);
+      // Feather tips
+      ctx.fillStyle = '#cbd5e1';
+      ctx.fillRect(sx - 26 * s, py - 21 * s, 5 * s, 6 * s);
+      ctx.fillRect(sx + 21 * s, py - 21 * s, 5 * s, 6 * s);
+    } else {
+      ctx.fillRect(sx - 20 * s, py - 22 * s, 5 * s, 15 * s);
+      ctx.fillRect(sx + 15 * s, py - 22 * s, 5 * s, 15 * s);
+    }
+
+    // Back body block & soft back shading
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(sx - 15 * s, py - 34 * s, 30 * s, 32 * s);
+    ctx.fillStyle = '#e2e8f0';
+    ctx.fillRect(sx - 13 * s, py - 26 * s, 26 * s, 21 * s);
+
+    // Ninja headband tied cleanly at the back of the head (with trailing tails!)
+    ctx.fillStyle = '#ef4444';
+    ctx.fillRect(sx - 16 * s, py - 30 * s, 32 * s, 6 * s);
+    // Headband knot & flowing ribbons on the back of head
+    ctx.fillStyle = '#dc2626';
+    ctx.fillRect(sx - 3 * s, py - 30 * s, 6 * s, 7 * s);
+    ctx.fillRect(sx - 7 * s, py - 25 * s, 4 * s, 8 * s);
+    ctx.fillRect(sx + 3 * s, py - 25 * s, 4 * s, 8 * s);
+
+    // Red comb peeking at crown
+    ctx.fillStyle = '#f43f5e';
+    ctx.fillRect(sx - 5 * s, py - 42 * s, 10 * s, 8 * s);
+
+    // Fluffy White Tail Feathers prominent at the rear bottom!
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(sx - 9 * s, py - 11 * s, 18 * s, 11 * s);
+    ctx.fillStyle = '#cbd5e1';
+    ctx.fillRect(sx - 6 * s, py - 8 * s, 12 * s, 8 * s);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(sx - 4 * s, py - 14 * s, 8 * s, 7 * s);
 
     ctx.restore();
   }
@@ -757,22 +799,22 @@ export class CrossyEngine {
 
     ctx.save();
 
-    // Bottom-left Live Jump & Manse Input Sensor Gauge (never overlaps top Score/Hearts)
+    // Bottom-left Live Jump & Wing Flap Input Sensor Gauge (never overlaps top Score/Hearts)
     const panelX = 24;
     const panelY = h - 104;
-    const panelW = 248;
+    const panelW = 264;
     const panelH = 82;
 
     ctx.fillStyle = 'rgba(15, 23, 42, 0.78)';
     ctx.fillRect(panelX, panelY, panelW, panelH);
-    ctx.strokeStyle = this.poseState.isManseHeld ? '#facc15' : 'rgba(56, 189, 248, 0.45)';
+    ctx.strokeStyle = this.poseState.isWingFlapUp ? '#facc15' : 'rgba(56, 189, 248, 0.45)';
     ctx.lineWidth = 1.5;
     ctx.strokeRect(panelX, panelY, panelW, panelH);
 
     ctx.fillStyle = '#e2e8f0';
     ctx.font = '800 13px system-ui, sans-serif';
     ctx.textAlign = 'left';
-    ctx.fillText('🦘 점프 또는 🙌 만세 → 전진!', panelX + 12, panelY + 22);
+    ctx.fillText('🦘 점프 또는 🪽 날개짓 → 전진!', panelX + 12, panelY + 22);
 
     // Jump progress bar
     ctx.fillStyle = 'rgba(255,255,255,0.14)';
@@ -781,11 +823,11 @@ export class CrossyEngine {
     ctx.fillStyle = fillRatio >= 0.85 ? '#4ade80' : '#38bdf8';
     ctx.fillRect(panelX + 12, panelY + 32, (panelW - 24) * fillRatio, 10);
 
-    // Manse indicator + key fallback hint
+    // Wing flap indicator + key fallback hint
     ctx.font = '700 11.5px system-ui, sans-serif';
-    ctx.fillStyle = this.poseState.isManseHeld ? '#facc15' : '#94a3b8';
+    ctx.fillStyle = this.poseState.isWingFlapUp ? '#facc15' : '#94a3b8';
     ctx.fillText(
-      this.poseState.isManseHeld ? '🙌 만세 인식됨! (내렸다 다시 올리기)' : '[Space / ↑ / 화면 클릭] 점프 가능',
+      this.poseState.isWingFlapUp ? '🪽 날개 올림 감지! (내렸다 다시 파닥!)' : '[Space / ↑ / 화면 클릭] 점프 가능',
       panelX + 12,
       panelY + 64
     );

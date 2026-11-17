@@ -202,11 +202,11 @@ export class UIManager {
       if (this.btnModeCrossy) this.btnModeCrossy.classList.add('active');
       if (this.instructionModeDesc) {
         this.instructionModeDesc.innerHTML =
-          '🐔 <strong>길건너 점프 모드</strong>: <strong>제자리 점프</strong> 또는 <strong>만세🙌 포즈</strong>로 앞으로 1칸씩 전진!';
+          '🐔 <strong>길건너 점프 모드</strong>: <strong>제자리 점프</strong> 또는 <strong>🪽 양팔 날개짓</strong>으로 앞으로 1칸씩 전진!';
       }
       if (this.instructionSpecial) {
         this.instructionSpecial.innerHTML =
-          '🛶 <strong>뗏목 표류 & 중앙 복귀</strong>: 강 위 뗏목을 타면 좌우로 흘러갑니다! 육지로 돌아와 뛰면 중앙으로 자동 복귀!';
+          '🛶 <strong>뗏목 표류 & 중앙 복귀</strong>: 강 위 뗏목(동전 포함)을 타면 좌우로 흘러갑니다! 육지로 돌아와 뛰면 중앙으로 자동 복귀!';
       }
       if (this.instructionTip1) {
         this.instructionTip1.innerHTML =
