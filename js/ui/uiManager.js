@@ -49,9 +49,12 @@ export class UIManager {
     this.btnModeStrange = document.getElementById('btn-mode-strange');
     this.btnModeUfo = document.getElementById('btn-mode-ufo');
     this.btnModeGalaga = document.getElementById('btn-mode-galaga');
+    this.btnModeCrossy = document.getElementById('btn-mode-crossy');
     this.ultimatePanel = document.getElementById('ultimate-panel');
     this.instructionModeDesc = document.getElementById('instruction-mode-desc');
     this.instructionSpecial = document.getElementById('instruction-special');
+    this.instructionTip1 = document.getElementById('instruction-tip-1');
+    this.instructionTip2 = document.getElementById('instruction-tip-2');
     this.selectedGameMode = 'CLASSIC';
 
     this.onExitRequested = () => {};
@@ -74,7 +77,8 @@ export class UIManager {
       { btn: this.btnModeClassic, mode: 'CLASSIC' },
       { btn: this.btnModeStrange, mode: 'DOCTOR_STRANGE' },
       { btn: this.btnModeUfo, mode: 'UFO_FISH' },
-      { btn: this.btnModeGalaga, mode: 'GALAGA' }
+      { btn: this.btnModeGalaga, mode: 'GALAGA' },
+      { btn: this.btnModeCrossy, mode: 'CROSSY' }
     ];
 
     tabs.forEach(({ btn, mode }) => {
@@ -151,9 +155,18 @@ export class UIManager {
   setGameMode(mode = 'CLASSIC') {
     this.selectedGameMode = mode;
 
-    [this.btnModeClassic, this.btnModeStrange, this.btnModeUfo, this.btnModeGalaga].forEach(btn => {
+    [this.btnModeClassic, this.btnModeStrange, this.btnModeUfo, this.btnModeGalaga, this.btnModeCrossy].forEach(btn => {
       if (btn) btn.classList.remove('active');
     });
+
+    const restoreFruitTips = () => {
+      if (this.instructionTip1) {
+        this.instructionTip1.innerHTML = '💖 <strong>하트 보너스</strong>: 반짝이는 하트를 베면 생명(+1)이 회복됩니다!';
+      }
+      if (this.instructionTip2) {
+        this.instructionTip2.innerHTML = '💣 <strong>폭탄 격파</strong>: 닿으면 하트 2개 차감! 머리(헤딩 ⚽)로 들이받으면 안전하게 격파 (+10점)!';
+      }
+    };
 
     if (mode === 'DOCTOR_STRANGE') {
       if (this.btnModeStrange) this.btnModeStrange.classList.add('active');
@@ -185,7 +198,26 @@ export class UIManager {
         this.instructionSpecial.innerHTML =
           '🚀 <strong>하이퍼 윙맨 폭격 (스테이지당 2회)</strong>: 만세🙌 자세(또는 Space)로 편대 메가 레이저 일제 사격 + 적 미사일 일괄 소거!';
       }
+    } else if (mode === 'CROSSY') {
+      if (this.btnModeCrossy) this.btnModeCrossy.classList.add('active');
+      if (this.instructionModeDesc) {
+        this.instructionModeDesc.innerHTML =
+          '🐔 <strong>길건너 점프 모드</strong>: <strong>제자리 점프</strong> 또는 <strong>만세🙌 포즈</strong>로 앞으로 1칸씩 전진!';
+      }
+      if (this.instructionSpecial) {
+        this.instructionSpecial.innerHTML =
+          '🛶 <strong>뗏목 표류 & 중앙 복귀</strong>: 강 위 뗏목을 타면 좌우로 흘러갑니다! 육지로 돌아와 뛰면 중앙으로 자동 복귀!';
+      }
+      if (this.instructionTip1) {
+        this.instructionTip1.innerHTML =
+          '🚆 <strong>도로 & 철도 타이밍</strong>: 차와 기차 경고등을 피해 연속 전진 콤보 & 코인(⭐ +5점) 획득!';
+      }
+      if (this.instructionTip2) {
+        this.instructionTip2.innerHTML =
+          '🕹️ <strong>간편 조작 지원</strong>: <code>Space</code> / <code>↑</code> 키 또는 화면 클릭/터치로도 바로 점프 가능!';
+      }
     } else {
+      restoreFruitTips();
       if (this.btnModeClassic) this.btnModeClassic.classList.add('active');
       if (this.instructionModeDesc) {
         this.instructionModeDesc.innerHTML =
@@ -196,6 +228,9 @@ export class UIManager {
           '⚡ <strong>필살기 (12개 절단 시)</strong>: 한글 자음(ㄱ, ㄴ, ㅅ, ㅇ) 포즈를 0.5초 유지하면 전멸기 발동!';
       }
     }
+    if (mode !== 'CROSSY') {
+      restoreFruitTips();
+    }
   }
 
   setMode(twoPlayer = false) {
@@ -204,16 +239,17 @@ export class UIManager {
   }
 
   updateHUDMode(twoPlayer = false, gameMode = 'CLASSIC') {
+    const hideFruitUltimate = gameMode === 'GALAGA' || gameMode === 'CROSSY';
     if (this.soloScorePanel) this.soloScorePanel.classList.remove('hidden');
     if (this.ultimatePanel) {
-      if (gameMode === 'GALAGA') {
+      if (hideFruitUltimate) {
         this.ultimatePanel.classList.add('hidden');
       } else {
         this.ultimatePanel.classList.remove('hidden');
       }
     }
     if (this.btnGuide) {
-      if (gameMode === 'GALAGA') {
+      if (hideFruitUltimate) {
         this.btnGuide.classList.add('hidden');
       } else {
         this.btnGuide.classList.remove('hidden');

@@ -9,6 +9,7 @@ import { FruitManager } from './fruitManager.js';
 import { ParticleSystem } from './particleSystem.js';
 import { GestureDetector, CONSONANT_POSES } from './gestureDetector.js';
 import { GalagaEngine } from './galaga/galagaEngine.js';
+import { CrossyEngine } from './crossy/crossyEngine.js';
 import { soundManager } from '../audio/soundManager.js';
 
 export const GameState = {
@@ -67,6 +68,18 @@ export class GameEngine {
       this.p1Score = score;
     };
     this.galagaEngine.onLivesChanged = (lives) => {
+      this.lives = lives;
+    };
+
+    // Crossy Mode Subsystem
+    this.crossyEngine = new CrossyEngine(this.width, this.height, this.ui, soundManager);
+    this.crossyEngine.onGameOver = () => {
+      this.triggerGameOver();
+    };
+    this.crossyEngine.onScore = (score) => {
+      this.p1Score = score;
+    };
+    this.crossyEngine.onLivesChanged = (lives) => {
       this.lives = lives;
     };
 
@@ -176,6 +189,9 @@ export class GameEngine {
       if (this.galagaEngine) {
         this.galagaEngine.resize(w, h);
       }
+      if (this.crossyEngine) {
+        this.crossyEngine.resize(w, h);
+      }
     };
 
     window.addEventListener('resize', resize);
@@ -196,6 +212,10 @@ export class GameEngine {
       this.galagaEngine.stop();
       this.galagaEngine.reset();
     }
+    if (this.crossyEngine) {
+      this.crossyEngine.stop();
+      this.crossyEngine.reset();
+    }
     this.fruitManager.reset();
     this.particles.clear();
     this.ui.updateScores(0, 0, this.isTwoPlayerMode);
@@ -211,6 +231,7 @@ export class GameEngine {
     this.lives = CONFIG.GAME.START_LIVES;
 
     if (this.gameMode === CONFIG.MODES.GALAGA) {
+      this.crossyEngine.stop();
       this.state = GameState.PLAYING;
       this.galagaEngine.start();
       this.ui.updateHUDMode(false, this.gameMode);
@@ -221,7 +242,21 @@ export class GameEngine {
       return;
     }
 
+    if (this.gameMode === CONFIG.MODES.CROSSY) {
+      soundManager.stopGalagaBGM();
+      this.galagaEngine.stop();
+      this.state = GameState.PLAYING;
+      this.crossyEngine.start();
+      this.ui.updateHUDMode(false, this.gameMode);
+      this.ui.updateScores(0, 0, false);
+      this.ui.updateLives(this.lives, CONFIG.GAME.MAX_LIVES);
+      this.ui.hideStartModal();
+      this.ui.hideGameOverModal();
+      return;
+    }
+
     soundManager.stopGalagaBGM();
+    this.crossyEngine.stop();
 
     const isDocStrange = this.gameMode === CONFIG.MODES.DOCTOR_STRANGE;
     this.blades.setMode(this.isTwoPlayerMode);
@@ -330,6 +365,15 @@ export class GameEngine {
       return;
     }
 
+    // Crossy Mode Update Loop
+    if (this.gameMode === CONFIG.MODES.CROSSY) {
+      if (this.state === GameState.PLAYING) {
+        this.crossyEngine.update(dt, currentTime, this.lastHeadPose, poses);
+      }
+      this.lastPoses = poses;
+      return;
+    }
+
     // 2. Update Blade Tracker with filtered poses first
     this.blades.update(poses, this.width, this.height, currentTime, CONFIG.CANVAS.MIRROR);
 
@@ -404,6 +448,31 @@ export class GameEngine {
       // Layer 2: Galaga Engine (Starfield, Formation, Bullets, Fighter, HUD)
       this.gameCtx.clearRect(0, 0, w, h);
       this.galagaEngine.render(this.gameCtx);
+
+      // Layer 3: Clear blade canvas
+      this.bladeCtx.clearRect(0, 0, w, h);
+      return;
+    }
+
+    // Crossy Mode Render Pipeline
+    if (this.gameMode === CONFIG.MODES.CROSSY) {
+      // Layer 1: Subtle background webcam feed so player can check their pose framing
+      this.bgCtx.clearRect(0, 0, w, h);
+      if (this.video.readyState >= 2) {
+        this.bgCtx.save();
+        this.bgCtx.translate(w, 0);
+        this.bgCtx.scale(-1, 1);
+        this.bgCtx.globalAlpha = 0.25;
+        this.bgCtx.drawImage(this.video, 0, 0, w, h);
+        this.bgCtx.restore();
+      }
+      if (this.lastPoses) {
+        this.poseTracker.drawSkeletons(this.bgCtx, this.lastPoses, w, h, CONFIG.CANVAS.MIRROR);
+      }
+
+      // Layer 2: Crossy 2.5D Terrain, Vehicles, River Rafts & Chick Hero
+      this.gameCtx.clearRect(0, 0, w, h);
+      this.crossyEngine.render(this.gameCtx);
 
       // Layer 3: Clear blade canvas
       this.bladeCtx.clearRect(0, 0, w, h);

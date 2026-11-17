@@ -125,6 +125,13 @@ class App {
     };
 
     window.addEventListener('mousedown', (e) => {
+      // In Crossy mode, a tap/click triggers a forward hop cleanly
+      if (this.gameEngine && this.gameEngine.gameMode === 'CROSSY' && this.gameEngine.state === 'PLAYING') {
+        if (!e.target.closest('button')) {
+          this.gameEngine.crossyEngine.triggerHop('CLICK');
+        }
+        return;
+      }
       isDown = true;
       handlePointerMove(e.clientX, e.clientY);
     });
@@ -140,6 +147,12 @@ class App {
 
     // Touch support
     window.addEventListener('touchstart', (e) => {
+      if (this.gameEngine && this.gameEngine.gameMode === 'CROSSY' && this.gameEngine.state === 'PLAYING') {
+        if (!e.target.closest('button')) {
+          this.gameEngine.crossyEngine.triggerHop('TOUCH');
+        }
+        return;
+      }
       isDown = true;
       if (e.touches.length > 0) {
         handlePointerMove(e.touches[0].clientX, e.touches[0].clientY);
