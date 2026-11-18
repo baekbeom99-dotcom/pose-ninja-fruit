@@ -1078,6 +1078,133 @@ export class SoundManager {
       osc.stop(t + 0.19);
     });
   }
+
+  // --- Red Light, Green Light (무궁화 꽃이 피었습니다) Sound Effects ---
+
+  playRedLightSyllable(idx = 0) {
+    if (!this.ctx || this.isMuted) return;
+    this.resume();
+    const now = this.ctx.currentTime;
+    // Iconic haunting/playful cadence for 10 syllables: 무·궁·화·꽃·이·피·었·습·니·다
+    const notes = [440, 440, 523.25, 523.25, 440, 392, 440, 523.25, 493.88, 392];
+    const freq = notes[idx % notes.length] || 440;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = idx === 9 ? 'triangle' : 'sine';
+    osc.frequency.setValueAtTime(freq, now);
+    gain.gain.setValueAtTime(idx === 9 ? 0.22 : 0.15, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + (idx === 9 ? 0.22 : 0.14));
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.24);
+  }
+
+  playRedLightSnap() {
+    if (!this.ctx || this.isMuted) return;
+    this.resume();
+    const now = this.ctx.currentTime;
+    // Sharp mechanical doll head snap + crimson laser scanner hum
+    const click = this.ctx.createOscillator();
+    const cGain = this.ctx.createGain();
+    click.type = 'sawtooth';
+    click.frequency.setValueAtTime(920, now);
+    click.frequency.exponentialRampToValueAtTime(140, now + 0.11);
+    cGain.gain.setValueAtTime(0.24, now);
+    cGain.gain.exponentialRampToValueAtTime(0.001, now + 0.13);
+    click.connect(cGain);
+    cGain.connect(this.ctx.destination);
+    click.start(now);
+    click.stop(now + 0.14);
+
+    const hum = this.ctx.createOscillator();
+    const hGain = this.ctx.createGain();
+    hum.type = 'triangle';
+    hum.frequency.setValueAtTime(165, now + 0.04);
+    hum.frequency.linearRampToValueAtTime(220, now + 0.35);
+    hGain.gain.setValueAtTime(0.14, now + 0.04);
+    hGain.gain.exponentialRampToValueAtTime(0.001, now + 0.38);
+    hum.connect(hGain);
+    hGain.connect(this.ctx.destination);
+    hum.start(now + 0.04);
+    hum.stop(now + 0.40);
+  }
+
+  playRedLightDetected() {
+    if (!this.ctx || this.isMuted) return;
+    this.resume();
+    const now = this.ctx.currentTime;
+    // Dramatic laser lock siren + impact buzzer
+    [0, 0.14].forEach((offset, i) => {
+      const t = now + offset;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(i === 0 ? 780 : 540, t);
+      osc.frequency.exponentialRampToValueAtTime(110, t + 0.22);
+      gain.gain.setValueAtTime(0.28, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.24);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(t);
+      osc.stop(t + 0.25);
+    });
+  }
+
+  playRedLightTag() {
+    if (!this.ctx || this.isMuted) return;
+    this.resume();
+    const now = this.ctx.currentTime;
+    [523.25, 659.25, 783.99, 1046.5].forEach((freq, i) => {
+      const t = now + i * 0.045;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, t);
+      gain.gain.setValueAtTime(0.2, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(t);
+      osc.stop(t + 0.17);
+    });
+  }
+
+  playRedLightStep() {
+    if (!this.ctx || this.isMuted) return;
+    this.resume();
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(115, now);
+    osc.frequency.exponentialRampToValueAtTime(48, now + 0.06);
+    gain.gain.setValueAtTime(0.09, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.08);
+  }
+
+  playRedLightClear() {
+    if (!this.ctx || this.isMuted) return;
+    this.resume();
+    const now = this.ctx.currentTime;
+    [523.25, 659.25, 783.99, 1046.5, 1318.5].forEach((freq, i) => {
+      const t = now + i * 0.07;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, t);
+      gain.gain.setValueAtTime(0.2, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(t);
+      osc.stop(t + 0.26);
+    });
+  }
 }
 
 export const soundManager = new SoundManager();

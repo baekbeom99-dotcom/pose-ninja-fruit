@@ -51,6 +51,7 @@ export class UIManager {
     this.btnModeGalaga = document.getElementById('btn-mode-galaga');
     this.btnModeCrossy = document.getElementById('btn-mode-crossy');
     this.btnModePoop = document.getElementById('btn-mode-poop');
+    this.btnModeRedLight = document.getElementById('btn-mode-redlight');
     this.ultimatePanel = document.getElementById('ultimate-panel');
     this.instructionModeDesc = document.getElementById('instruction-mode-desc');
     this.instructionSpecial = document.getElementById('instruction-special');
@@ -80,7 +81,8 @@ export class UIManager {
       { btn: this.btnModeUfo, mode: 'UFO_FISH' },
       { btn: this.btnModeGalaga, mode: 'GALAGA' },
       { btn: this.btnModeCrossy, mode: 'CROSSY' },
-      { btn: this.btnModePoop, mode: 'POOP_DODGE' }
+      { btn: this.btnModePoop, mode: 'POOP_DODGE' },
+      { btn: this.btnModeRedLight, mode: 'RED_LIGHT' }
     ];
 
     tabs.forEach(({ btn, mode }) => {
@@ -157,7 +159,7 @@ export class UIManager {
   setGameMode(mode = 'CLASSIC') {
     this.selectedGameMode = mode;
 
-    [this.btnModeClassic, this.btnModeStrange, this.btnModeUfo, this.btnModeGalaga, this.btnModeCrossy, this.btnModePoop].forEach(btn => {
+    [this.btnModeClassic, this.btnModeStrange, this.btnModeUfo, this.btnModeGalaga, this.btnModeCrossy, this.btnModePoop, this.btnModeRedLight].forEach(btn => {
       if (btn) btn.classList.remove('active');
     });
 
@@ -236,6 +238,24 @@ export class UIManager {
         this.instructionTip2.innerHTML =
           '🖱️ <strong>마우스/터치 폴백</strong>: 카메라 없이도 마우스·손가락 좌우 이동으로 바로 플레이 가능합니다!';
       }
+    } else if (mode === 'RED_LIGHT') {
+      if (this.btnModeRedLight) this.btnModeRedLight.classList.add('active');
+      if (this.instructionModeDesc) {
+        this.instructionModeDesc.innerHTML =
+          '🌺 <strong>무궁화 꽃이 피었습니다</strong>: 제자리에서 힘차게 달리면 목표 지점(영희)이 점점 커지며 다가갑니다!';
+      }
+      if (this.instructionSpecial) {
+        this.instructionSpecial.innerHTML =
+          '👁️ <strong>붉은 눈동자 스캔</strong>: 구호가 끝나고 눈동자가 붉게 변하면 <strong>즉시 얼음!</strong> 움직임이 감지되면 탈락!';
+      }
+      if (this.instructionTip1) {
+        this.instructionTip1.innerHTML =
+          '🙌 <strong>만세 터치 & 반대방향 전력 질주</strong>: 목표 도착 후 <strong>만세</strong>로 술래를 터치하고 출발선까지 빠르게 도망치세요 (늦으면 잡힘)!';
+      }
+      if (this.instructionTip2) {
+        this.instructionTip2.innerHTML =
+          '🕹️ <strong>간편 조작 지원</strong>: <code>Space</code> 연타 또는 화면 터치·클릭으로도 달리기 및 만세 터치 가능!';
+      }
     } else {
       restoreFruitTips();
       if (this.btnModeClassic) this.btnModeClassic.classList.add('active');
@@ -248,7 +268,7 @@ export class UIManager {
           '⚡ <strong>필살기 (12개 절단 시)</strong>: 한글 자음(ㄱ, ㄴ, ㅅ, ㅇ) 포즈를 0.5초 유지하면 전멸기 발동!';
       }
     }
-    if (mode !== 'CROSSY' && mode !== 'POOP_DODGE') {
+    if (mode !== 'CROSSY' && mode !== 'POOP_DODGE' && mode !== 'RED_LIGHT') {
       restoreFruitTips();
     }
   }
@@ -259,7 +279,14 @@ export class UIManager {
   }
 
   updateHUDMode(twoPlayer = false, gameMode = 'CLASSIC') {
-    const hideFruitUltimate = gameMode === 'GALAGA' || gameMode === 'CROSSY' || gameMode === 'POOP_DODGE';
+    const hideFruitUltimate =
+      gameMode === 'GALAGA' ||
+      gameMode === 'CROSSY' ||
+      gameMode === 'POOP_DODGE' ||
+      gameMode === 'RED_LIGHT';
+    if (this.livesContainer) {
+      this.livesContainer.classList.toggle('hidden', gameMode === 'RED_LIGHT');
+    }
     if (this.soloScorePanel) this.soloScorePanel.classList.remove('hidden');
     if (this.ultimatePanel) {
       if (hideFruitUltimate) {

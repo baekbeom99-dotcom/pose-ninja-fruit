@@ -227,6 +227,7 @@ export const CONFIG = {
     UFO_FISH: 'UFO_FISH',
     GALAGA: 'GALAGA',
     CROSSY: 'CROSSY',
-    POOP_DODGE: 'POOP_DODGE'
+    POOP_DODGE: 'POOP_DODGE',
+    RED_LIGHT: 'RED_LIGHT'
   }
 };

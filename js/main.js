@@ -127,11 +127,27 @@ class App {
       }
     };
 
+    window.addEventListener('keydown', (e) => {
+      if (this.gameEngine && this.gameEngine.gameMode === 'RED_LIGHT' && this.gameEngine.state === 'PLAYING') {
+        if (e.code === 'Space' || e.code === 'ArrowUp') {
+          e.preventDefault();
+          this.gameEngine.redLightEngine.triggerManualStep();
+        }
+      }
+    });
+
     window.addEventListener('mousedown', (e) => {
       // In Crossy mode, a tap/click triggers a forward hop cleanly
       if (this.gameEngine && this.gameEngine.gameMode === 'CROSSY' && this.gameEngine.state === 'PLAYING') {
         if (!e.target.closest('button')) {
           this.gameEngine.crossyEngine.triggerHop('CLICK');
+        }
+        return;
+      }
+      // In Red Light mode, tap/click simulates a running step or Manse tag
+      if (this.gameEngine && this.gameEngine.gameMode === 'RED_LIGHT' && this.gameEngine.state === 'PLAYING') {
+        if (!e.target.closest('button')) {
+          this.gameEngine.redLightEngine.triggerManualStep();
         }
         return;
       }
@@ -153,6 +169,12 @@ class App {
       if (this.gameEngine && this.gameEngine.gameMode === 'CROSSY' && this.gameEngine.state === 'PLAYING') {
         if (!e.target.closest('button')) {
           this.gameEngine.crossyEngine.triggerHop('TOUCH');
+        }
+        return;
+      }
+      if (this.gameEngine && this.gameEngine.gameMode === 'RED_LIGHT' && this.gameEngine.state === 'PLAYING') {
+        if (!e.target.closest('button')) {
+          this.gameEngine.redLightEngine.triggerManualStep();
         }
         return;
       }
