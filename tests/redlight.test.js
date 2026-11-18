@@ -1,6 +1,7 @@
 import { CONFIG } from '../js/config.js';
 import { RedLightPoseController } from '../js/game/redlight/redLightPoseController.js';
 import {
+  CHANT_RHYTHMS,
   CHANT_SYLLABLES,
   RedLightEngine,
   RedLightPhase
@@ -238,6 +239,46 @@ function runTests() {
     renderErr = e;
   }
   assert(!renderErr, 'All 6 RedLightEngine phases render cleanly without errors');
+
+  // Test varied chant rhythm timings (Normal, Syncopated, Accelerando, Suspense, Turbo)
+  engine.start();
+  assert(
+    engine.chantRhythm.id === 'NORMAL',
+    'Round 1 chant #1 starts cleanly on NORMAL straight beat'
+  );
+  const gap0 = engine.chantTimes[1] - engine.chantTimes[0];
+  const gap5 = engine.chantTimes[6] - engine.chantTimes[5];
+  assert(Math.abs(gap0 - gap5) < 0.01, 'NORMAL rhythm spaces all 10 syllables evenly');
+
+  engine._enterGreenLight('SYNCOPATED');
+  const syncGaps = [];
+  for (let i = 0; i < 9; i++) {
+    syncGaps.push(engine.chantTimes[i + 1] - engine.chantTimes[i]);
+  }
+  const syncRatio = Math.max(...syncGaps) / Math.min(...syncGaps);
+  assert(syncRatio > 2.2, `SYNCOPATED rhythm creates strong off-beat variance (ratio=${syncRatio.toFixed(2)})`);
+
+  engine._enterGreenLight('ACCELERANDO');
+  const openGap = engine.chantTimes[1] - engine.chantTimes[0];
+  const tailGap = engine.chantTimes[8] - engine.chantTimes[7];
+  assert(openGap > tailGap * 4, 'ACCELERANDO opens slow then accelerates sharply toward "피었습니다!"');
+
+  engine._enterGreenLight('TURBO');
+  const turboDur = engine.chantDuration;
+  engine._enterGreenLight('NORMAL');
+  const normalDur = engine.chantDuration;
+  assert(
+    Object.keys(CHANT_RHYTHMS).length >= 5 && turboDur < normalDur * 0.78,
+    `TURBO chant is significantly shorter (${turboDur.toFixed(2)}s vs NORMAL ${normalDur.toFixed(2)}s)`
+  );
+
+  // Verify random selection across subsequent chants uses multiple distinct rhythms
+  const seenRhythms = new Set();
+  for (let i = 0; i < 18; i++) {
+    engine._enterGreenLight();
+    seenRhythms.add(engine.chantRhythm.id);
+  }
+  assert(seenRhythms.size >= 3, `Subsequent chants mix multiple rhythms cleanly (${[...seenRhythms].join(', ')})`);
 
   console.log(`\nRed Light Tests Complete: ${passed}/${total} passed.`);
   if (passed !== total) {

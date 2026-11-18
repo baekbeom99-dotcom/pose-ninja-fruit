@@ -16,6 +16,41 @@ import { RedLightPoseController } from './redLightPoseController.js';
 
 export const CHANT_SYLLABLES = ['무', '궁', '화', '꽃', '이', '피', '었', '습', '니', '다!'];
 
+export const CHANT_RHYTHMS = {
+  NORMAL: {
+    id: 'NORMAL',
+    label: '🎵 정박자',
+    weights: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+    durationScale: [0.95, 1.15]
+  },
+  SYNCOPATED: {
+    id: 'SYNCOPATED',
+    label: '⚡ 엇박자',
+    weights: [1.45, 0.45, 1.35, 0.45, 1.4, 0.55, 1.25, 0.4, 0.4, 0.65],
+    durationScale: [0.85, 1.1]
+  },
+  ACCELERANDO: {
+    id: 'ACCELERANDO',
+    label: '🚀 느리다 급발진',
+    weights: [1.75, 1.65, 1.45, 0.6, 0.45, 0.35, 0.3, 0.25, 0.22, 0.28],
+    durationScale: [0.9, 1.15]
+  },
+  SUSPENSE: {
+    id: 'SUSPENSE',
+    label: '⏳ 멈칫 엇박',
+    weights: [0.45, 0.45, 0.45, 0.5, 0.55, 1.85, 1.65, 0.45, 0.35, 0.45],
+    durationScale: [0.95, 1.2]
+  },
+  TURBO: {
+    id: 'TURBO',
+    label: '🔥 기습 초고속',
+    weights: [0.8, 0.8, 0.8, 0.8, 0.8, 0.75, 0.7, 0.65, 0.6, 0.65],
+    durationScale: [0.52, 0.65]
+  }
+};
+
+export const CHANT_RHYTHM_IDS = Object.keys(CHANT_RHYTHMS);
+
 export const RedLightPhase = {
   GREEN_LIGHT: 'GREEN_LIGHT',
   RED_LIGHT: 'RED_LIGHT',
@@ -51,7 +86,11 @@ export class RedLightEngine {
     // Approach progress (0 = start line, 1 = right in front of Young-hee)
     this.distance = 0;
     this.chantProgress = 0;
+    this.chantElapsed = 0;
     this.chantDuration = 3.4;
+    this.chantTimes = [];
+    this.chantCount = 0;
+    this.chantRhythm = CHANT_RHYTHMS.NORMAL;
     this.lastSyllableIdx = -1;
     this.redTimer = 0;
     this.redDuration = 2.2;
@@ -126,19 +165,49 @@ export class RedLightEngine {
     this.escapeProgress = 0;
     this.chaserProgress = -0.14;
     this.bestDistancePct = 0;
+    this.chantCount = 0;
     this.failReason = null;
     this.poseController.clearFreezeCheck();
 
     this._enterGreenLight();
   }
 
-  _enterGreenLight() {
+  _pickChantRhythm() {
+    if (this.round === 1 && this.chantCount === 0) {
+      return CHANT_RHYTHMS.NORMAL;
+    }
+    const prevId = this.chantRhythm ? this.chantRhythm.id : null;
+    const pool = CHANT_RHYTHM_IDS.filter((id) => id !== prevId || id === 'NORMAL' || id === 'SYNCOPATED');
+    const chosenId = pool[Math.floor(Math.random() * pool.length)] || 'NORMAL';
+    return CHANT_RHYTHMS[chosenId];
+  }
+
+  _enterGreenLight(rhythmOverride = null) {
     this.phase = RedLightPhase.GREEN_LIGHT;
+    const rhythm =
+      (rhythmOverride && CHANT_RHYTHMS[rhythmOverride]) || this._pickChantRhythm();
+    this.chantRhythm = rhythm;
+    this.chantCount++;
     this.chantProgress = 0;
+    this.chantElapsed = 0;
     this.lastSyllableIdx = -1;
-    // Slightly faster and spicier pace as rounds progress
-    const baseDur = Math.max(1.9, 3.5 - (this.round - 1) * 0.28);
-    this.chantDuration = baseDur * (0.85 + Math.random() * 0.3);
+
+    // Pace tightens gradually with rounds while varying cleanly by rhythm profile
+    const baseDur = Math.max(2.0, 3.6 - (this.round - 1) * 0.24);
+    const [sMin, sMax] = rhythm.durationScale;
+    const scale = sMin + Math.random() * (sMax - sMin);
+    this.chantDuration = baseDur * scale;
+
+    // Build exact cumulative syllable timestamps so syncopated/accelerando beats are truly uneven
+    const weights = rhythm.weights;
+    const totalW = weights.reduce((sum, w) => sum + w, 0);
+    const times = [];
+    let acc = 0;
+    for (let i = 0; i < weights.length; i++) {
+      times.push((acc / totalW) * this.chantDuration);
+      acc += weights[i];
+    }
+    this.chantTimes = times;
     this.poseController.clearFreezeCheck();
   }
 
@@ -309,14 +378,23 @@ export class RedLightEngine {
     }
 
     if (this.phase === RedLightPhase.GREEN_LIGHT) {
-      // Advance chant syllables 0..9
-      this.chantProgress += safeDt / this.chantDuration;
-      const sylIdx = Math.min(CHANT_SYLLABLES.length - 1, Math.floor(this.chantProgress * CHANT_SYLLABLES.length));
-      if (sylIdx > this.lastSyllableIdx) {
-        this.lastSyllableIdx = sylIdx;
-        if (this.sound && typeof this.sound.playRedLightSyllable === 'function') {
-          this.sound.playRedLightSyllable(sylIdx);
+      // Advance chant elapsed & fire syllables according to active rhythm schedule (normal / syncopated / turbo / etc.)
+      this.chantElapsed += safeDt;
+      this.chantProgress = Math.min(1.0, this.chantElapsed / Math.max(0.1, this.chantDuration));
+
+      let targetIdx = 0;
+      for (let i = 0; i < this.chantTimes.length; i++) {
+        if (this.chantElapsed >= this.chantTimes[i]) {
+          targetIdx = i;
         }
+      }
+      if (targetIdx > this.lastSyllableIdx) {
+        for (let s = this.lastSyllableIdx + 1; s <= targetIdx; s++) {
+          if (this.sound && typeof this.sound.playRedLightSyllable === 'function') {
+            this.sound.playRedLightSyllable(s);
+          }
+        }
+        this.lastSyllableIdx = targetIdx;
       }
 
       // Advance forward toward Young-hee when running in place (longer 100m course ~13s sprint)
@@ -765,7 +843,16 @@ export class RedLightEngine {
     if (this.phase === RedLightPhase.GREEN_LIGHT) {
       const activeCount = Math.min(CHANT_SYLLABLES.length, this.lastSyllableIdx + 1);
       const spoken = CHANT_SYLLABLES.slice(0, Math.max(1, activeCount)).join(' ');
+      const rhythmTag = this.chantRhythm ? this.chantRhythm.label : '🎵 정박자';
+
       ctx.textAlign = 'center';
+      ctx.font = '800 13px system-ui, sans-serif';
+      ctx.lineWidth = 3.5;
+      ctx.strokeStyle = 'rgba(15, 23, 42, 0.88)';
+      ctx.strokeText(rhythmTag, w * 0.5, bannerY - 30);
+      ctx.fillStyle = this.chantRhythm && this.chantRhythm.id !== 'NORMAL' ? '#fde047' : '#bae6fd';
+      ctx.fillText(rhythmTag, w * 0.5, bannerY - 30);
+
       ctx.font = '900 28px system-ui, sans-serif';
       ctx.lineWidth = 5;
       ctx.strokeStyle = 'rgba(15, 23, 42, 0.88)';
