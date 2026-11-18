@@ -1223,6 +1223,157 @@ export class SoundManager {
       osc.stop(t + 0.26);
     });
   }
+
+  // --- Umbrella Mode (우산 씌워주기) Sound Effects ---
+
+  playUmbrellaHome() {
+    if (!this.ctx || this.isMuted) return;
+    this.resume();
+    const now = this.ctx.currentTime;
+    [587.33, 739.99, 880, 1174.66].forEach((freq, i) => {
+      const t = now + i * 0.06;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, t);
+      gain.gain.setValueAtTime(0.16, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(t);
+      osc.stop(t + 0.24);
+    });
+  }
+
+  playUmbrellaCry() {
+    if (!this.ctx || this.isMuted) return;
+    this.resume();
+    const now = this.ctx.currentTime;
+    [0, 0.14].forEach((offset, i) => {
+      const t = now + offset;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(i === 0 ? 520 : 410, t);
+      osc.frequency.exponentialRampToValueAtTime(240, t + 0.14);
+      gain.gain.setValueAtTime(0.18, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(t);
+      osc.stop(t + 0.17);
+    });
+  }
+
+  playUmbrellaShelter() {
+    if (!this.ctx || this.isMuted) return;
+    this.resume();
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(440, now);
+    osc.frequency.exponentialRampToValueAtTime(660, now + 0.08);
+    gain.gain.setValueAtTime(0.08, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.1);
+  }
+
+  // --- Seesaw Breakout Mode (벽돌깨기) Sound Effects ---
+
+  playBreakoutPaddle() {
+    if (!this.ctx || this.isMuted) return;
+    this.resume();
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(320, now);
+    osc.frequency.exponentialRampToValueAtTime(520, now + 0.07);
+    gain.gain.setValueAtTime(0.18, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.09);
+  }
+
+  playBreakoutBrick(row = 0) {
+    if (!this.ctx || this.isMuted) return;
+    this.resume();
+    const now = this.ctx.currentTime;
+    const scale = [880, 783.99, 698.46, 659.25, 587.33, 523.25];
+    const freq = scale[Math.abs(row) % scale.length] || 660;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, now);
+    osc.frequency.exponentialRampToValueAtTime(freq * 1.18, now + 0.09);
+    gain.gain.setValueAtTime(0.16, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.11);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.12);
+  }
+
+  playBreakoutPowerup() {
+    if (!this.ctx || this.isMuted) return;
+    this.resume();
+    const now = this.ctx.currentTime;
+    [523.25, 783.99, 1046.5].forEach((freq, i) => {
+      const t = now + i * 0.045;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, t);
+      gain.gain.setValueAtTime(0.18, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(t);
+      osc.stop(t + 0.16);
+    });
+  }
+
+  playBreakoutMiss() {
+    if (!this.ctx || this.isMuted) return;
+    this.resume();
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(240, now);
+    osc.frequency.exponentialRampToValueAtTime(95, now + 0.25);
+    gain.gain.setValueAtTime(0.18, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.27);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.28);
+  }
+
+  playBreakoutClear() {
+    if (!this.ctx || this.isMuted) return;
+    this.resume();
+    const now = this.ctx.currentTime;
+    [523.25, 659.25, 783.99, 1046.5, 1318.5].forEach((freq, i) => {
+      const t = now + i * 0.065;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, t);
+      gain.gain.setValueAtTime(0.2, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(t);
+      osc.stop(t + 0.26);
+    });
+  }
 }
 
 export const soundManager = new SoundManager();

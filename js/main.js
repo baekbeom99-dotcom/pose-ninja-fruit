@@ -114,6 +114,14 @@ class App {
         this.gameEngine.lastHeadPose = { x: normalizedX, y: y / Math.max(1, this.gameEngine.height) };
       }
 
+      if (this.gameEngine && this.gameEngine.gameMode === 'UMBRELLA') {
+        this.gameEngine.umbrellaEngine.setPointerFallback(x, y, true);
+      }
+
+      if (this.gameEngine && this.gameEngine.gameMode === 'BREAKOUT') {
+        this.gameEngine.breakoutEngine.setPointerX(x);
+      }
+
       if (!isDown) return;
       const now = performance.now();
       // Inject into P1 Right Blade as pointer emulation
@@ -134,7 +142,23 @@ class App {
           this.gameEngine.redLightEngine.triggerManualStep();
         }
       }
+      if (this.gameEngine && this.gameEngine.gameMode === 'BREAKOUT' && this.gameEngine.state === 'PLAYING') {
+        if (e.code === 'ArrowLeft' || e.code === 'KeyA') {
+          this.gameEngine.breakoutEngine.adjustManualAngle(-0.08);
+        } else if (e.code === 'ArrowRight' || e.code === 'KeyD') {
+          this.gameEngine.breakoutEngine.adjustManualAngle(0.08);
+        } else if (e.code === 'Space') {
+          e.preventDefault();
+          this.gameEngine.breakoutEngine.launchStuckBalls();
+        }
+      }
     });
+
+    window.addEventListener('wheel', (e) => {
+      if (this.gameEngine && this.gameEngine.gameMode === 'BREAKOUT' && this.gameEngine.state === 'PLAYING') {
+        this.gameEngine.breakoutEngine.adjustManualAngle(Math.sign(e.deltaY) * 0.06);
+      }
+    }, { passive: true });
 
     window.addEventListener('mousedown', (e) => {
       // In Crossy mode, a tap/click triggers a forward hop cleanly

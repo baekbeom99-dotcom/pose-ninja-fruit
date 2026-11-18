@@ -12,6 +12,8 @@ import { GalagaEngine } from './galaga/galagaEngine.js';
 import { CrossyEngine } from './crossy/crossyEngine.js';
 import { PoopEngine } from './poop/poopEngine.js';
 import { RedLightEngine } from './redlight/redLightEngine.js';
+import { UmbrellaEngine } from './umbrella/umbrellaEngine.js';
+import { BreakoutEngine } from './breakout/breakoutEngine.js';
 import { soundManager } from '../audio/soundManager.js';
 
 export const GameState = {
@@ -106,6 +108,30 @@ export class GameEngine {
       this.p1Score = score;
     };
     this.redLightEngine.onLivesChanged = (lives) => {
+      this.lives = lives;
+    };
+
+    // Umbrella Mode Subsystem ("우산 씌워주기")
+    this.umbrellaEngine = new UmbrellaEngine(this.width, this.height, this.ui, soundManager);
+    this.umbrellaEngine.onGameOver = () => {
+      this.triggerGameOver();
+    };
+    this.umbrellaEngine.onScore = (score) => {
+      this.p1Score = score;
+    };
+    this.umbrellaEngine.onLivesChanged = (lives) => {
+      this.lives = lives;
+    };
+
+    // Seesaw Breakout Mode Subsystem ("벽돌깨기")
+    this.breakoutEngine = new BreakoutEngine(this.width, this.height, this.ui, soundManager);
+    this.breakoutEngine.onGameOver = () => {
+      this.triggerGameOver();
+    };
+    this.breakoutEngine.onScore = (score) => {
+      this.p1Score = score;
+    };
+    this.breakoutEngine.onLivesChanged = (lives) => {
       this.lives = lives;
     };
 
@@ -224,6 +250,12 @@ export class GameEngine {
       if (this.redLightEngine) {
         this.redLightEngine.resize(w, h);
       }
+      if (this.umbrellaEngine) {
+        this.umbrellaEngine.resize(w, h);
+      }
+      if (this.breakoutEngine) {
+        this.breakoutEngine.resize(w, h);
+      }
     };
 
     window.addEventListener('resize', resize);
@@ -256,11 +288,30 @@ export class GameEngine {
       this.redLightEngine.stop();
       this.redLightEngine.reset();
     }
+    if (this.umbrellaEngine) {
+      this.umbrellaEngine.stop();
+      this.umbrellaEngine.reset();
+    }
+    if (this.breakoutEngine) {
+      this.breakoutEngine.stop();
+      this.breakoutEngine.reset();
+    }
     this.fruitManager.reset();
     this.particles.clear();
     this.ui.updateScores(0, 0, this.isTwoPlayerMode);
     this.ui.updateChargingProgress(0);
     this.ui.updateUltimateGauge(0, this.ultimateThreshold, false, this.currentConsonantPose);
+  }
+
+  _getCustomEnginesMap() {
+    return {
+      [CONFIG.MODES.GALAGA]: this.galagaEngine,
+      [CONFIG.MODES.CROSSY]: this.crossyEngine,
+      [CONFIG.MODES.POOP_DODGE]: this.poopEngine,
+      [CONFIG.MODES.RED_LIGHT]: this.redLightEngine,
+      [CONFIG.MODES.UMBRELLA]: this.umbrellaEngine,
+      [CONFIG.MODES.BREAKOUT]: this.breakoutEngine
+    };
   }
 
   startNewGame(twoPlayer = false, gameMode = 'CLASSIC') {
@@ -270,68 +321,29 @@ export class GameEngine {
     this.p2Score = 0;
     this.lives = CONFIG.GAME.START_LIVES;
 
-    if (this.gameMode === CONFIG.MODES.GALAGA) {
-      this.crossyEngine.stop();
-      this.poopEngine.stop();
-      this.redLightEngine.stop();
-      this.state = GameState.PLAYING;
-      this.galagaEngine.start();
-      this.ui.updateHUDMode(false, this.gameMode);
-      this.ui.updateScores(0, 0, false);
-      this.ui.updateLives(this.lives, CONFIG.GAME.MAX_LIVES);
-      this.ui.hideStartModal();
-      this.ui.hideGameOverModal();
-      return;
-    }
+    const customEngines = this._getCustomEnginesMap();
+    const activeCustom = customEngines[this.gameMode];
+    Object.values(customEngines).forEach((eng) => {
+      if (eng && eng !== activeCustom) eng.stop();
+    });
 
-    if (this.gameMode === CONFIG.MODES.CROSSY) {
-      soundManager.stopGalagaBGM();
-      this.galagaEngine.stop();
-      this.poopEngine.stop();
-      this.redLightEngine.stop();
+    if (activeCustom) {
+      if (this.gameMode !== CONFIG.MODES.GALAGA) {
+        soundManager.stopGalagaBGM();
+      }
       this.state = GameState.PLAYING;
-      this.crossyEngine.start();
+      activeCustom.start();
       this.ui.updateHUDMode(false, this.gameMode);
       this.ui.updateScores(0, 0, false);
-      this.ui.updateLives(this.lives, CONFIG.GAME.MAX_LIVES);
-      this.ui.hideStartModal();
-      this.ui.hideGameOverModal();
-      return;
-    }
-
-    if (this.gameMode === CONFIG.MODES.POOP_DODGE) {
-      soundManager.stopGalagaBGM();
-      this.galagaEngine.stop();
-      this.crossyEngine.stop();
-      this.redLightEngine.stop();
-      this.state = GameState.PLAYING;
-      this.poopEngine.start();
-      this.ui.updateHUDMode(false, this.gameMode);
-      this.ui.updateScores(0, 0, false);
-      this.ui.updateLives(this.lives, CONFIG.GAME.MAX_LIVES);
-      this.ui.hideStartModal();
-      this.ui.hideGameOverModal();
-      return;
-    }
-
-    if (this.gameMode === CONFIG.MODES.RED_LIGHT) {
-      soundManager.stopGalagaBGM();
-      this.galagaEngine.stop();
-      this.crossyEngine.stop();
-      this.poopEngine.stop();
-      this.state = GameState.PLAYING;
-      this.redLightEngine.start();
-      this.ui.updateHUDMode(false, this.gameMode);
-      this.ui.updateScores(0, 0, false);
+      if (this.gameMode !== CONFIG.MODES.RED_LIGHT) {
+        this.ui.updateLives(this.lives, CONFIG.GAME.MAX_LIVES);
+      }
       this.ui.hideStartModal();
       this.ui.hideGameOverModal();
       return;
     }
 
     soundManager.stopGalagaBGM();
-    this.crossyEngine.stop();
-    this.poopEngine.stop();
-    this.redLightEngine.stop();
 
     const isDocStrange = this.gameMode === CONFIG.MODES.DOCTOR_STRANGE;
     this.blades.setMode(this.isTwoPlayerMode);
@@ -467,6 +479,24 @@ export class GameEngine {
       return;
     }
 
+    // Umbrella Mode Update Loop
+    if (this.gameMode === CONFIG.MODES.UMBRELLA) {
+      if (this.state === GameState.PLAYING) {
+        this.umbrellaEngine.update(dt, currentTime, poses);
+      }
+      this.lastPoses = poses;
+      return;
+    }
+
+    // Seesaw Breakout Mode Update Loop
+    if (this.gameMode === CONFIG.MODES.BREAKOUT) {
+      if (this.state === GameState.PLAYING) {
+        this.breakoutEngine.update(dt, currentTime, poses);
+      }
+      this.lastPoses = poses;
+      return;
+    }
+
     // 2. Update Blade Tracker with filtered poses first
     this.blades.update(poses, this.width, this.height, currentTime, CONFIG.CANVAS.MIRROR);
 
@@ -525,92 +555,25 @@ export class GameEngine {
     const w = this.width;
     const h = this.height;
 
-    // Galaga Mode Render Pipeline
-    if (this.gameMode === CONFIG.MODES.GALAGA) {
-      // Layer 1: Background Video (Subtle dark opacity so starfield shines)
+    // Custom Modes Shared Render Pipeline (Subtle webcam + skeleton overlay behind engine canvas)
+    const customEngines = this._getCustomEnginesMap();
+    const activeCustom = customEngines[this.gameMode];
+    if (activeCustom) {
       this.bgCtx.clearRect(0, 0, w, h);
       if (this.video.readyState >= 2) {
         this.bgCtx.save();
         this.bgCtx.translate(w, 0);
         this.bgCtx.scale(-1, 1);
-        this.bgCtx.globalAlpha = 0.28;
+        this.bgCtx.globalAlpha = this.gameMode === CONFIG.MODES.CROSSY ? 0.25 : 0.28;
         this.bgCtx.drawImage(this.video, 0, 0, w, h);
         this.bgCtx.restore();
       }
-
-      // Layer 2: Galaga Engine (Starfield, Formation, Bullets, Fighter, HUD)
-      this.gameCtx.clearRect(0, 0, w, h);
-      this.galagaEngine.render(this.gameCtx);
-
-      // Layer 3: Clear blade canvas
-      this.bladeCtx.clearRect(0, 0, w, h);
-      return;
-    }
-
-    // Crossy Mode Render Pipeline
-    if (this.gameMode === CONFIG.MODES.CROSSY) {
-      // Layer 1: Subtle background webcam feed so player can check their pose framing
-      this.bgCtx.clearRect(0, 0, w, h);
-      if (this.video.readyState >= 2) {
-        this.bgCtx.save();
-        this.bgCtx.translate(w, 0);
-        this.bgCtx.scale(-1, 1);
-        this.bgCtx.globalAlpha = 0.25;
-        this.bgCtx.drawImage(this.video, 0, 0, w, h);
-        this.bgCtx.restore();
-      }
-      if (this.lastPoses) {
-        this.poseTracker.drawSkeletons(this.bgCtx, this.lastPoses, w, h, CONFIG.CANVAS.MIRROR);
-      }
-
-      // Layer 2: Crossy 2.5D Terrain, Vehicles, River Rafts & Chick Hero
-      this.gameCtx.clearRect(0, 0, w, h);
-      this.crossyEngine.render(this.gameCtx);
-
-      // Layer 3: Clear blade canvas
-      this.bladeCtx.clearRect(0, 0, w, h);
-      return;
-    }
-
-    // Poop Dodge Mode Render Pipeline
-    if (this.gameMode === CONFIG.MODES.POOP_DODGE) {
-      this.bgCtx.clearRect(0, 0, w, h);
-      if (this.video.readyState >= 2) {
-        this.bgCtx.save();
-        this.bgCtx.translate(w, 0);
-        this.bgCtx.scale(-1, 1);
-        this.bgCtx.globalAlpha = 0.28;
-        this.bgCtx.drawImage(this.video, 0, 0, w, h);
-        this.bgCtx.restore();
-      }
-      if (this.lastPoses) {
+      if (this.gameMode !== CONFIG.MODES.GALAGA && this.lastPoses) {
         this.poseTracker.drawSkeletons(this.bgCtx, this.lastPoses, w, h, CONFIG.CANVAS.MIRROR);
       }
 
       this.gameCtx.clearRect(0, 0, w, h);
-      this.poopEngine.render(this.gameCtx);
-
-      this.bladeCtx.clearRect(0, 0, w, h);
-      return;
-    }
-
-    // Red Light, Green Light Render Pipeline
-    if (this.gameMode === CONFIG.MODES.RED_LIGHT) {
-      this.bgCtx.clearRect(0, 0, w, h);
-      if (this.video.readyState >= 2) {
-        this.bgCtx.save();
-        this.bgCtx.translate(w, 0);
-        this.bgCtx.scale(-1, 1);
-        this.bgCtx.globalAlpha = 0.28;
-        this.bgCtx.drawImage(this.video, 0, 0, w, h);
-        this.bgCtx.restore();
-      }
-      if (this.lastPoses) {
-        this.poseTracker.drawSkeletons(this.bgCtx, this.lastPoses, w, h, CONFIG.CANVAS.MIRROR);
-      }
-
-      this.gameCtx.clearRect(0, 0, w, h);
-      this.redLightEngine.render(this.gameCtx);
+      activeCustom.render(this.gameCtx);
 
       this.bladeCtx.clearRect(0, 0, w, h);
       return;

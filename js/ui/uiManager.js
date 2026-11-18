@@ -52,6 +52,8 @@ export class UIManager {
     this.btnModeCrossy = document.getElementById('btn-mode-crossy');
     this.btnModePoop = document.getElementById('btn-mode-poop');
     this.btnModeRedLight = document.getElementById('btn-mode-redlight');
+    this.btnModeUmbrella = document.getElementById('btn-mode-umbrella');
+    this.btnModeBreakout = document.getElementById('btn-mode-breakout');
     this.ultimatePanel = document.getElementById('ultimate-panel');
     this.instructionModeDesc = document.getElementById('instruction-mode-desc');
     this.instructionSpecial = document.getElementById('instruction-special');
@@ -82,7 +84,9 @@ export class UIManager {
       { btn: this.btnModeGalaga, mode: 'GALAGA' },
       { btn: this.btnModeCrossy, mode: 'CROSSY' },
       { btn: this.btnModePoop, mode: 'POOP_DODGE' },
-      { btn: this.btnModeRedLight, mode: 'RED_LIGHT' }
+      { btn: this.btnModeRedLight, mode: 'RED_LIGHT' },
+      { btn: this.btnModeUmbrella, mode: 'UMBRELLA' },
+      { btn: this.btnModeBreakout, mode: 'BREAKOUT' }
     ];
 
     tabs.forEach(({ btn, mode }) => {
@@ -159,7 +163,17 @@ export class UIManager {
   setGameMode(mode = 'CLASSIC') {
     this.selectedGameMode = mode;
 
-    [this.btnModeClassic, this.btnModeStrange, this.btnModeUfo, this.btnModeGalaga, this.btnModeCrossy, this.btnModePoop, this.btnModeRedLight].forEach(btn => {
+    [
+      this.btnModeClassic,
+      this.btnModeStrange,
+      this.btnModeUfo,
+      this.btnModeGalaga,
+      this.btnModeCrossy,
+      this.btnModePoop,
+      this.btnModeRedLight,
+      this.btnModeUmbrella,
+      this.btnModeBreakout
+    ].forEach(btn => {
       if (btn) btn.classList.remove('active');
     });
 
@@ -256,6 +270,42 @@ export class UIManager {
         this.instructionTip2.innerHTML =
           '🕹️ <strong>간편 조작 지원</strong>: <code>Space</code> 연타 또는 화면 터치·클릭으로도 달리기 및 만세 터치 가능!';
       }
+    } else if (mode === 'UMBRELLA') {
+      if (this.btnModeUmbrella) this.btnModeUmbrella.classList.add('active');
+      if (this.instructionModeDesc) {
+        this.instructionModeDesc.innerHTML =
+          '☔ <strong>우산 게임</strong>: 쏟아지는 소낙비 속에서 <strong>손바닥 아래 안전 영역</strong>으로 학교(오른쪽)의 아이들을 집(왼쪽)까지 데려다주세요!';
+      }
+      if (this.instructionSpecial) {
+        this.instructionSpecial.innerHTML =
+          '🎒 <strong>제각각 불규칙한 걸음</strong>: 아이마다 걷는 속도와 리듬이 불규칙하게 변하므로 끝까지 손으로 잘 가려줘야 합니다!';
+      }
+      if (this.instructionTip1) {
+        this.instructionTip1.innerHTML =
+          '😭 <strong>비 맞으면 울며 복귀</strong>: 손바닥 아래를 벗어나 소낙비 영역에 젖으면 울면서 학교로 되돌아가고 하트가 1개 줄어듭니다!';
+      }
+      if (this.instructionTip2) {
+        this.instructionTip2.innerHTML =
+          '🖱️ <strong>마우스/터치 폴백</strong>: 카메라 없이도 마우스·손가락을 아이 머리 위로 움직여 우산 역할을 할 수 있습니다!';
+      }
+    } else if (mode === 'BREAKOUT') {
+      if (this.btnModeBreakout) this.btnModeBreakout.classList.add('active');
+      if (this.instructionModeDesc) {
+        this.instructionModeDesc.innerHTML =
+          '🧱 <strong>벽돌깨기 (시소 반사)</strong>: 양손(또는 양 어깨/머리)의 X축 위치로 패들을 옮기고 <strong>양 손목 높이 차이</strong>로 시소를 기울여 반사각을 정밀 제어하세요!';
+      }
+      if (this.instructionSpecial) {
+        this.instructionSpecial.innerHTML =
+          '📐 <strong>정밀 각도 컨트롤</strong>: 점선 반사 가이드를 참고해 좁은 틈과 단단한 철벽돌(2타)을 노려 격파하세요!';
+      }
+      if (this.instructionTip1) {
+        this.instructionTip1.innerHTML =
+          '⚡ <strong>파워업 아이템</strong>: <code>x3</code> 멀티볼 · <code>↔</code> 넓은 시소 패들 · <code>♥</code> 생명 회복 보너스를 받아보세요!';
+      }
+      if (this.instructionTip2) {
+        this.instructionTip2.innerHTML =
+          '🕹️ <strong>간편 조작 지원</strong>: 마우스 좌우 이동 + 휠(또는 <code>A</code>/<code>D</code> · <code>←</code>/<code>→</code> 키)로 기울기 조절, <code>Space</code>로 공 발사!';
+      }
     } else {
       restoreFruitTips();
       if (this.btnModeClassic) this.btnModeClassic.classList.add('active');
@@ -268,7 +318,13 @@ export class UIManager {
           '⚡ <strong>필살기 (12개 절단 시)</strong>: 한글 자음(ㄱ, ㄴ, ㅅ, ㅇ) 포즈를 0.5초 유지하면 전멸기 발동!';
       }
     }
-    if (mode !== 'CROSSY' && mode !== 'POOP_DODGE' && mode !== 'RED_LIGHT') {
+    if (
+      mode !== 'CROSSY' &&
+      mode !== 'POOP_DODGE' &&
+      mode !== 'RED_LIGHT' &&
+      mode !== 'UMBRELLA' &&
+      mode !== 'BREAKOUT'
+    ) {
       restoreFruitTips();
     }
   }
@@ -283,7 +339,9 @@ export class UIManager {
       gameMode === 'GALAGA' ||
       gameMode === 'CROSSY' ||
       gameMode === 'POOP_DODGE' ||
-      gameMode === 'RED_LIGHT';
+      gameMode === 'RED_LIGHT' ||
+      gameMode === 'UMBRELLA' ||
+      gameMode === 'BREAKOUT';
     if (this.livesContainer) {
       this.livesContainer.classList.toggle('hidden', gameMode === 'RED_LIGHT');
     }
