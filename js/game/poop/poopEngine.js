@@ -15,7 +15,7 @@ export class PoopEngine {
     this.sound = sound || soundManager;
 
     this.floorOffset = 46;
-    this.player = new PoopPlayer(width * 0.5, this.getFloorY() - 26);
+    this.player = new PoopPlayer(width * 0.5, this.getFloorY() - 36);
 
     this.drops = [];
     this.particles = [];
@@ -46,7 +46,7 @@ export class PoopEngine {
     this.width = width;
     this.height = height;
     if (this.player) {
-      this.player.y = this.getFloorY() - this.player.radius;
+      this.player.y = this.getFloorY() - this.player.radius * 1.06;
     }
   }
 
@@ -65,7 +65,7 @@ export class PoopEngine {
     this.dustTimer = 0;
     this.shakeTimer = 0;
 
-    this.player.reset(this.width * 0.5, this.getFloorY() - this.player.radius);
+    this.player.reset(this.width * 0.5, this.getFloorY() - this.player.radius * 1.06);
 
     if (this.ui) {
       this.ui.updateScores(0, 0, false);
@@ -194,7 +194,7 @@ export class PoopEngine {
     if (headPose && typeof headPose.x === 'number') {
       targetX = (1.0 - headPose.x) * this.width;
     }
-    const groundY = this.getFloorY() - this.player.radius;
+    const groundY = this.getFloorY() - this.player.radius * 1.06;
     this.player.update(safeDt, targetX, this.width, groundY);
 
     // Foot dust puffs when running fast
@@ -563,6 +563,8 @@ export class PoopEngine {
 
   _renderPlayer(ctx) {
     const p = this.player;
+    const r = p.radius; // 34 (+30% larger chibi ninja runner)
+    const s = r / 26;   // ~1.308 overall proportional visual scale
     ctx.save();
 
     if (p.invulnerableTimer > 0 && Math.floor(p.invulnerableTimer * 12) % 2 === 0) {
@@ -570,12 +572,12 @@ export class PoopEngine {
     }
 
     // Ground Shadow
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.38)';
     ctx.beginPath();
-    ctx.ellipse(p.x, this.getFloorY() + 3, p.radius * 0.95, 7, 0, 0, Math.PI * 2);
+    ctx.ellipse(p.x, this.getFloorY() + 3, r * 0.92, 8 * s, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Active Umbrella Bubble Shield
+    // Active Umbrella Bubble Shield + Overhead Parasol
     if (p.shieldTimer > 0) {
       ctx.save();
       ctx.strokeStyle = '#38bdf8';
@@ -584,81 +586,188 @@ export class PoopEngine {
       ctx.shadowColor = '#38bdf8';
       ctx.shadowBlur = 18;
       ctx.beginPath();
-      ctx.arc(p.x, p.y - 6, p.radius + 16, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y - 6 * s, r + 18, 0, Math.PI * 2);
       ctx.fill();
+      ctx.stroke();
+
+      // Canopy umbrella dome overhead
+      ctx.fillStyle = '#0ea5e9';
+      ctx.beginPath();
+      ctx.arc(p.x, p.y - 28 * s, r * 1.15, Math.PI, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#e0f2fe';
+      ctx.lineWidth = 2;
       ctx.stroke();
       ctx.restore();
     }
 
-    ctx.translate(p.x, p.y);
+    const bob = Math.abs(Math.sin(p.runAnim)) * 3.5 * s * (Math.abs(p.vx) > 40 ? 1 : 0);
+    ctx.translate(p.x, p.y - bob);
     ctx.rotate(p.tilt);
 
-    const r = p.radius;
-    const legSwing = Math.sin(p.runAnim) * 6;
+    const legSwing = Math.sin(p.runAnim) * 8 * s * Math.min(1, Math.abs(p.vx) / 140);
+    const armSwing = -legSwing * 0.85;
+    const lookBias = Math.max(-2.5, Math.min(2.5, p.vx / 260)) * s;
+    const tailWave = Math.sin(this.elapsedTime * 11) * 4 * s - Math.sign(p.vx) * 5 * s;
 
-    // Legs
-    ctx.strokeStyle = '#fb923c';
-    ctx.lineWidth = 5;
+    // 1. Dynamic Flowing Headband Ribbon Tails (behind head/neck)
+    ctx.strokeStyle = '#ef4444';
+    ctx.lineWidth = 4.5 * s;
     ctx.lineCap = 'round';
     ctx.beginPath();
-    ctx.moveTo(-8, r * 0.45);
-    ctx.lineTo(-10 + legSwing, r * 0.95);
-    ctx.moveTo(8, r * 0.45);
-    ctx.lineTo(10 - legSwing, r * 0.95);
+    ctx.moveTo(11 * s, -17 * s);
+    ctx.quadraticCurveTo(21 * s + tailWave * 0.4, -19 * s, 26 * s + tailWave, -11 * s);
+    ctx.moveTo(10 * s, -15 * s);
+    ctx.quadraticCurveTo(18 * s + tailWave * 0.3, -12 * s, 22 * s + tailWave * 0.8, -5 * s);
     ctx.stroke();
 
-    // Cute Hero Body & Ninja Headband
-    ctx.fillStyle = '#fde68a';
+    // 2. Running Legs & Sneakers
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#1e293b';
+    ctx.lineWidth = 5 * s;
     ctx.beginPath();
-    ctx.arc(0, -4, r * 0.85, 0, Math.PI * 2);
+    ctx.moveTo(-7 * s, 10 * s);
+    ctx.lineTo(-9 * s + legSwing, 23 * s);
+    ctx.moveTo(7 * s, 10 * s);
+    ctx.lineTo(9 * s - legSwing, 23 * s);
+    ctx.stroke();
+
+    // Shoes (white soles + sky trim)
+    [
+      { x: -9 * s + legSwing, dir: -1 },
+      { x: 9 * s - legSwing, dir: 1 }
+    ].forEach((shoe) => {
+      ctx.fillStyle = '#0284c7';
+      ctx.beginPath();
+      ctx.ellipse(shoe.x + shoe.dir * 2 * s, 24 * s, 7 * s, 4 * s, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(shoe.x - 5 * s, 25.5 * s, 11 * s, 2.5 * s);
+    });
+
+    // 3. Back Arm
+    ctx.strokeStyle = '#fde047';
+    ctx.lineWidth = 5 * s;
+    ctx.beginPath();
+    ctx.moveTo(-11 * s, 2 * s);
+    ctx.lineTo(-19 * s - armSwing * 0.5, 9 * s + armSwing * 0.4);
+    ctx.moveTo(11 * s, 2 * s);
+    ctx.lineTo(19 * s + armSwing * 0.5, 9 * s - armSwing * 0.4);
+    ctx.stroke();
+
+    // 4. Stylized Ninja Tunic Torso (navy with cyan sash belt)
+    ctx.fillStyle = '#1e3a8a';
+    ctx.strokeStyle = '#0f172a';
+    ctx.lineWidth = 2 * s;
+    ctx.beginPath();
+    ctx.roundRect(-12 * s, -2 * s, 24 * s, 16 * s, 6 * s);
     ctx.fill();
-    ctx.lineWidth = 2.5;
+    ctx.stroke();
+
+    // Cyan belt sash & chest emblem
+    ctx.fillStyle = '#38bdf8';
+    ctx.fillRect(-12 * s, 7 * s, 24 * s, 4 * s);
+    ctx.fillStyle = '#facc15';
+    ctx.beginPath();
+    ctx.arc(0, 9 * s, 2.8 * s, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 5. Chibi Character Head (warm gradient + crisp outline)
+    const headGrad = ctx.createRadialGradient(-4 * s, -18 * s, 3 * s, 0, -14 * s, 19 * s);
+    headGrad.addColorStop(0, '#fef9c3');
+    headGrad.addColorStop(0.65, '#fde047');
+    headGrad.addColorStop(1, '#f59e0b');
+    ctx.fillStyle = headGrad;
+    ctx.beginPath();
+    ctx.arc(0, -14 * s, 16.5 * s, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.lineWidth = 2.2 * s;
     ctx.strokeStyle = '#0f172a';
     ctx.stroke();
 
-    // Red headband
-    ctx.fillStyle = '#ef4444';
-    ctx.fillRect(-r * 0.84, -r * 0.56, r * 1.68, 7);
+    // Spiky Dark Hair Tufts poking above headband
+    ctx.fillStyle = '#0f172a';
+    ctx.beginPath();
+    ctx.moveTo(-12 * s, -22 * s);
+    ctx.lineTo(-14 * s, -32 * s);
+    ctx.lineTo(-5 * s, -27 * s);
+    ctx.lineTo(0, -35 * s);
+    ctx.lineTo(6 * s, -27 * s);
+    ctx.lineTo(14 * s, -31 * s);
+    ctx.lineTo(12 * s, -22 * s);
+    ctx.closePath();
+    ctx.fill();
 
-    // Expressive eyes looking upward at incoming drops
+    // Crimson Ninja Headband + Metal Emblem Plate
+    ctx.fillStyle = '#ef4444';
+    ctx.beginPath();
+    ctx.roundRect(-16 * s, -24 * s, 32 * s, 7 * s, 2.5 * s);
+    ctx.fill();
+    ctx.strokeStyle = '#7f1d1d';
+    ctx.lineWidth = 1.4 * s;
+    ctx.stroke();
+
+    ctx.fillStyle = '#e2e8f0';
+    ctx.fillRect(-5 * s, -23 * s, 10 * s, 5 * s);
+
+    // Rosy Cheeks
+    ctx.fillStyle = 'rgba(244, 63, 94, 0.42)';
+    ctx.beginPath();
+    ctx.ellipse(-9 * s + lookBias * 0.5, -10 * s, 3.2 * s, 2 * s, 0, 0, Math.PI * 2);
+    ctx.ellipse(9 * s + lookBias * 0.5, -10 * s, 3.2 * s, 2 * s, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 6. Expressive Anime Eyes + Catchlights
+    ctx.strokeStyle = '#0f172a';
     ctx.fillStyle = '#0f172a';
     if (p.expression === 'OUCH') {
-      // Dizzy X eyes
-      ctx.lineWidth = 2.5;
+      ctx.lineWidth = 2.4 * s;
       ctx.beginPath();
-      ctx.moveTo(-11, -10);
-      ctx.lineTo(-5, -4);
-      ctx.moveTo(-5, -10);
-      ctx.lineTo(-11, -4);
-      ctx.moveTo(5, -10);
-      ctx.lineTo(11, -4);
-      ctx.moveTo(11, -10);
-      ctx.lineTo(5, -4);
+      ctx.moveTo(-9 * s, -15 * s);
+      ctx.lineTo(-4 * s, -10 * s);
+      ctx.moveTo(-4 * s, -15 * s);
+      ctx.lineTo(-9 * s, -10 * s);
+      ctx.moveTo(4 * s, -15 * s);
+      ctx.lineTo(9 * s, -10 * s);
+      ctx.moveTo(9 * s, -15 * s);
+      ctx.lineTo(4 * s, -10 * s);
       ctx.stroke();
     } else if (p.expression === 'HAPPY') {
-      ctx.lineWidth = 2.5;
+      ctx.lineWidth = 2.4 * s;
       ctx.beginPath();
-      ctx.arc(-8, -6, 4, Math.PI, 0);
-      ctx.arc(8, -6, 4, Math.PI, 0);
+      ctx.arc(-6.5 * s, -12 * s, 3.5 * s, Math.PI, 0);
+      ctx.arc(6.5 * s, -12 * s, 3.5 * s, Math.PI, 0);
       ctx.stroke();
     } else {
       ctx.beginPath();
-      ctx.arc(-8, -8, 3.5, 0, Math.PI * 2);
-      ctx.arc(8, -8, 3.5, 0, Math.PI * 2);
+      ctx.ellipse(-6.5 * s + lookBias, -13 * s, 2.8 * s, 3.6 * s, 0, 0, Math.PI * 2);
+      ctx.ellipse(6.5 * s + lookBias, -13 * s, 2.8 * s, 3.6 * s, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Sparkling eye catchlights
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(-7.3 * s + lookBias, -14.3 * s, 1.1 * s, 0, Math.PI * 2);
+      ctx.arc(5.7 * s + lookBias, -14.3 * s, 1.1 * s, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    // Mouth
+    // 7. Expressive Mouth
+    ctx.fillStyle = '#dc2626';
+    ctx.strokeStyle = '#0f172a';
+    ctx.lineWidth = 1.8 * s;
     ctx.beginPath();
     if (p.expression === 'OUCH') {
-      ctx.arc(0, 6, 4, 0, Math.PI * 2);
+      ctx.arc(0, -5 * s, 3.5 * s, 0, Math.PI * 2);
       ctx.fill();
+      ctx.stroke();
     } else if (p.expression === 'HAPPY') {
-      ctx.arc(0, 2, 6, 0, Math.PI);
+      ctx.arc(lookBias * 0.4, -7 * s, 5 * s, 0, Math.PI);
+      ctx.fill();
       ctx.stroke();
     } else {
-      ctx.moveTo(-5, 4);
-      ctx.lineTo(5, 4);
+      ctx.moveTo(-4 * s + lookBias * 0.5, -6 * s);
+      ctx.quadraticCurveTo(lookBias * 0.5, -4.5 * s, 4 * s + lookBias * 0.5, -6 * s);
       ctx.stroke();
     }
 

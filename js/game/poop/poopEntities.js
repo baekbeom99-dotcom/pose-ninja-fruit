@@ -32,32 +32,32 @@ export class FallingDrop {
     this.rotation = 0;
 
     if (type === DropType.POOP_GIANT) {
-      this.radius = 34;
+      this.radius = 44; // +30% (was 34)
       this.vy = 185 + level * 22;
       this.gravity = 240;
       this.points = 3;
       this.warningTimer = 0.65; // Hovers with warning badge briefly before plunging
     } else if (type === DropType.POOP_FAST) {
-      this.radius = 20;
+      this.radius = 26; // +30% (was 20)
       this.vy = 320 + level * 32;
       this.gravity = 320;
       this.points = 2;
       this.warningTimer = 0;
     } else if (type === DropType.TOILET_PAPER) {
-      this.radius = 22;
+      this.radius = 29; // +30% (was 22)
       this.vy = 200 + level * 12;
       this.gravity = 60;
       this.points = 15;
       this.warningTimer = 0;
     } else if (type === DropType.UMBRELLA || type === DropType.HEART) {
-      this.radius = 22;
+      this.radius = 29; // +30% (was 22)
       this.vy = 190 + level * 10;
       this.gravity = 50;
       this.points = 5;
       this.warningTimer = 0;
     } else {
       // POOP_NORMAL
-      this.radius = 22;
+      this.radius = 29; // +30% (was 22)
       this.vy = 220 + level * 26 + Math.random() * 65;
       this.gravity = 260;
       this.points = 1;
@@ -95,7 +95,7 @@ export class PoopPlayer {
     this.x = startX;
     this.targetX = startX;
     this.y = groundY;
-    this.radius = 26;
+    this.radius = 34; // +30% (was 26)
     this.vx = 0;
     this.tilt = 0;
     this.smoothFactor = 0.2;

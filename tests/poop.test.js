@@ -20,6 +20,7 @@ function runTests() {
   assert(CONFIG.MODES.POOP_DODGE === 'POOP_DODGE', 'CONFIG.MODES registers POOP_DODGE mode');
 
   const p = new PoopPlayer(640, 650);
+  assert(p.radius >= 34, `Player radius scaled +30% (${p.radius}px >= 34px)`);
   p.update(0.05, 900, 1280, 650);
   assert(p.x > 640 && p.x < 900, 'Player smoothly interpolates toward targetX');
   p.update(0.05, -200, 1280, 650);
@@ -27,7 +28,13 @@ function runTests() {
   p.update(0.05, 5000, 1280, 650);
   assert(p.targetX <= 1280 - p.radius - 14, 'Player targetX clamped to right boundary');
 
+  const normal = new FallingDrop(300, 12, DropType.POOP_NORMAL, 1);
   const giant = new FallingDrop(300, 12, DropType.POOP_GIANT, 2);
+  const fast = new FallingDrop(300, 12, DropType.POOP_FAST, 3);
+  assert(
+    normal.radius >= 29 && giant.radius >= 44 && fast.radius >= 26,
+    `Falling drops scaled +30% (normal=${normal.radius}, giant=${giant.radius}, fast=${fast.radius})`
+  );
   const startY = giant.y;
   giant.update(0.1, 1280);
   assert(giant.y === startY && giant.warningTimer > 0, 'Giant poop pauses briefly for warning cue before plunging');
