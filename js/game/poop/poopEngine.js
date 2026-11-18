@@ -13,7 +13,8 @@ import {
   DropType,
   FallingDrop,
   POOP_SPRITE_IDS,
-  PoopPlayer
+  PoopPlayer,
+  isHazardType
 } from './poopEntities.js';
 
 export class PoopEngine {
@@ -139,13 +140,42 @@ export class PoopEngine {
     }
   }
 
+  isXInSafeZone(x, extraPad = 0) {
+    if (!this.stormState) return false;
+    return Math.abs(x - this.stormState.safeX) <= this.stormState.safeHalfW + extraPad;
+  }
+
+  _pickXOutsideSafeZone(margin, pad = 40) {
+    if (!this.stormState) {
+      return margin + Math.random() * Math.max(60, this.width - margin * 2);
+    }
+    const safeLeft = this.stormState.safeX - this.stormState.safeHalfW - pad;
+    const safeRight = this.stormState.safeX + this.stormState.safeHalfW + pad;
+    const segments = [];
+    if (safeLeft > margin + 8) {
+      segments.push([margin, safeLeft]);
+    }
+    if (safeRight < this.width - margin - 8) {
+      segments.push([safeRight, this.width - margin]);
+    }
+    if (segments.length === 0) {
+      return Math.random() < 0.5 ? margin : this.width - margin;
+    }
+    const widths = segments.map(([a, b]) => b - a);
+    const total = widths.reduce((sum, w) => sum + w, 0);
+    let pick = Math.random() * total;
+    for (let i = 0; i < segments.length; i++) {
+      if (pick <= widths[i] || i === segments.length - 1) {
+        const [a, b] = segments[i];
+        return a + Math.random() * (b - a);
+      }
+      pick -= widths[i];
+    }
+    return segments[0][0];
+  }
+
   _spawnDrop(forcedType = null, forcedX = null, forcedVx = 0) {
     const margin = 44;
-    const x =
-      forcedX != null
-        ? Math.max(margin, Math.min(this.width - margin, forcedX))
-        : margin + Math.random() * Math.max(60, this.width - margin * 2);
-
     let type = forcedType;
     let vx = forcedVx;
 
@@ -178,6 +208,25 @@ export class PoopEngine {
       }
     }
 
+    const hazard = isHazardType(type);
+    const dropPad =
+      type === DropType.POOP_ELEPHANT ? 72 : type === DropType.POOP_GIANT ? 48 : 34;
+
+    let x;
+    if (forcedX != null) {
+      x = Math.max(margin, Math.min(this.width - margin, forcedX));
+    } else if (this.stormState && hazard) {
+      // Never spawn hazardous poops inside or overlapping Safe Zone (before & after activation)
+      x = this._pickXOutsideSafeZone(margin, dropPad);
+    } else {
+      x = margin + Math.random() * Math.max(60, this.width - margin * 2);
+    }
+
+    // Prevent horizontal drift of fast poops into the Safe Zone while storm protection is active
+    if (this.stormState && hazard) {
+      vx = 0;
+    }
+
     const drop = new FallingDrop(x, 12, type, this.level, vx);
     this.drops.push(drop);
     return drop;
@@ -185,6 +234,7 @@ export class PoopEngine {
 
   /**
    * Starts a Poop Storm Alarm announcing a Safe Zone before carpet-bombing all other columns.
+   * Clears existing falling hazards inside the Safe Zone and keeps it hazard-free before and after activation.
    */
   triggerPoopStorm(safeXOverride = null) {
     const margin = 120;
@@ -201,6 +251,19 @@ export class PoopEngine {
       safeHalfW
     };
 
+    // Purge any mid-air hazardous poops inside the Safe Zone column so it is immediately safe
+    for (let i = this.drops.length - 1; i >= 0; i--) {
+      const d = this.drops[i];
+      if (!d.isHazardous) continue;
+      if (Math.abs(d.x - safeX) <= safeHalfW + d.radius + 10) {
+        this._spawnBurst(d.x, d.y, '#4ade80', 8, 120);
+        this.drops.splice(i, 1);
+      } else if (d.vx !== 0) {
+        // Stop diagonal fast poops outside the Safe Zone from drifting sideways into it
+        d.vx = 0;
+      }
+    }
+
     if (this.sound && typeof this.sound.playPoopStormAlarm === 'function') {
       this.sound.playPoopStormAlarm();
     }
@@ -212,8 +275,8 @@ export class PoopEngine {
     const startX = 44;
     const endX = this.width - 44;
     for (let cx = startX; cx <= endX; cx += step) {
-      if (Math.abs(cx - safeX) <= safeHalfW) {
-        // Leave Safe Zone completely clear of storm poops!
+      if (Math.abs(cx - safeX) <= safeHalfW + 30) {
+        // Leave Safe Zone completely clear of storm poops (including edge radius)
         continue;
       }
       const d = new FallingDrop(cx, 10, DropType.POOP_NORMAL, this.level, 0);
@@ -347,7 +410,11 @@ export class PoopEngine {
     }
 
     // 2. Anti-Camping Enforcement: prevent standing in the same spot >= 3 seconds
-    if (Math.abs(this.player.x - this.campAnchorX) <= 52) {
+    //    Pause enforcement while sheltering inside active Safe Zone (before & after barrage)
+    if (this.stormState && this.isXInSafeZone(this.player.x, 30)) {
+      this.campTimer = 0;
+      this.campWarned = false;
+    } else if (Math.abs(this.player.x - this.campAnchorX) <= 52) {
       this.campTimer += safeDt;
       if (this.campTimer >= 2.0 && !this.campWarned) {
         this.campWarned = true;
@@ -372,7 +439,7 @@ export class PoopEngine {
         this._executeStormBarrage(this.stormState.safeX, this.stormState.safeHalfW);
         this.stormState = {
           phase: 'POST',
-          timer: 0.9,
+          timer: 2.5,
           safeX: this.stormState.safeX,
           safeHalfW: this.stormState.safeHalfW
         };
@@ -674,8 +741,17 @@ export class PoopEngine {
         122
       );
     } else {
-      ctx.fillStyle = 'rgba(34, 197, 94, 0.12)';
+      const postAlpha = Math.min(1, timer / 0.8);
+      ctx.globalAlpha = postAlpha;
+      ctx.fillStyle = 'rgba(34, 197, 94, 0.16)';
       ctx.fillRect(leftSafe, 0, rightSafe - leftSafe, floorY);
+      ctx.strokeStyle = 'rgba(74, 222, 128, 0.75)';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(leftSafe, 4, rightSafe - leftSafe, floorY - 4);
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#86efac';
+      ctx.font = '800 18px system-ui, sans-serif';
+      ctx.fillText(`🛡️ SAFE ZONE (${timer.toFixed(1)}s)`, safeX, floorY - 22);
     }
     ctx.restore();
   }

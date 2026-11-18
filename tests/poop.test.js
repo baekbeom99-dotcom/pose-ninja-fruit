@@ -163,24 +163,59 @@ function runTests() {
   }
   assert(engine.icePatches.length === 0, 'Elephant poop ice patch disappears after 5 seconds');
 
-  // Test Poop Storm Alarm & Safe Zone Bombardment
-  engine.drops = [];
+  // Test Poop Storm Alarm, Pre/Post Safe Zone Protection & Bombardment
+  engine.drops = [
+    new FallingDrop(500, 120, DropType.POOP_NORMAL, 2),
+    new FallingDrop(200, 120, DropType.POOP_FAST, 3, 180)
+  ];
   engine.spawnTimer = 99;
+  engine.player.x = 500;
+  engine.player.targetX = 500;
+  engine.campAnchorX = 500;
+  engine.campTimer = 2.4;
   engine.triggerPoopStorm(500);
   assert(
     engine.stormState && engine.stormState.phase === 'WARNING' && engine.stormState.safeX === 500 && sfxLog.includes('ALARM'),
     'Poop Storm triggers alarm SFX and sets Safe Zone in advance'
   );
-  // Advance past 2.2s warning window to execute carpet barrage
+  assert(
+    engine.drops.every(d => Math.abs(d.x - 500) > engine.stormState.safeHalfW),
+    'Existing falling hazards inside Safe Zone are purged immediately when storm warning activates'
+  );
+
+  // Spawn 40 hazardous poops during WARNING (before activation) & verify none enter Safe Zone
+  for (let k = 0; k < 40; k++) {
+    engine._spawnDrop(k % 2 === 0 ? DropType.POOP_NORMAL : DropType.POOP_FAST, null, 150);
+  }
+  const safeHalfW = engine.stormState.safeHalfW;
+  assert(
+    engine.drops.every(d => !d.isHazardous || (Math.abs(d.x - 500) > safeHalfW && d.vx === 0)),
+    'No hazardous poop spawns inside Safe Zone or drifts sideways into it during WARNING phase'
+  );
+
+  // Clear temporary warning drops & advance 2.5s past barrage into POST safety window while player stays at x=500
+  engine.drops = [];
   for (let i = 0; i < 25; i++) {
     engine.update(0.1, 0, null);
   }
-  const safeHalfW = engine.stormState ? engine.stormState.safeHalfW : 80;
+  assert(
+    engine.stormState && engine.stormState.phase === 'POST' && engine.stormState.timer > 1.5,
+    'Poop Storm enters POST protection window (~2.5s) after barrage fires'
+  );
   const stormDropsOutsideSafe = engine.drops.filter(d => Math.abs(d.x - 500) > safeHalfW);
-  const stormDropsInsideSafe = engine.drops.filter(d => Math.abs(d.x - 500) <= safeHalfW);
+  const stormDropsInsideSafe = engine.drops.filter(d => d.isHazardous && Math.abs(d.x - 500) <= safeHalfW);
   assert(
     stormDropsOutsideSafe.length >= 6 && stormDropsInsideSafe.length === 0,
     'Poop Storm drops carpet barrage across all columns EXCEPT the Safe Zone'
+  );
+
+  // Spawn 40 more hazardous poops during POST window (after activation) & check anti-camp stays paused in Safe Zone
+  for (let k = 0; k < 40; k++) {
+    engine._spawnDrop(DropType.POOP_ELEPHANT, null, 0);
+  }
+  assert(
+    engine.drops.every(d => !d.isHazardous || Math.abs(d.x - 500) > safeHalfW),
+    'Safe Zone stays hazard-free during POST window after barrage activation as well'
   );
 
   // Test Umbrella Shield + Heart + GameOver (reset state after storm)
