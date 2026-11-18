@@ -99,7 +99,11 @@ export class RedLightEngine {
     // Reverse escape run progress (0 = at Young-hee, 1 = safe back across start gate)
     this.escapeProgress = 0;
     this.chaserProgress = -0.14;
-    this.chaseSpeed = 0.135;
+    this.playerSpeed = 0;
+    this.peakEscapeSpeed = 0.142;
+    this.chaseSpeed = 0.142 * 0.90;
+    this.chaserStride = 0;
+    this.chaserStepTimer = 0;
 
     this.phaseTimer = 0;
     this.failReason = null; // 'MOTION' | 'TAG_TIMEOUT' | 'CAUGHT_ESCAPE'
@@ -232,9 +236,13 @@ export class RedLightEngine {
 
   _enterEscapeRun() {
     this.phase = RedLightPhase.ESCAPE_RUN;
-    this.escapeProgress = 0.12; // Small head-start burst upon tagging
-    this.chaserProgress = -0.10;
-    this.chaseSpeed = Math.min(0.145, 0.072 + (this.round - 1) * 0.01);
+    this.escapeProgress = 0.14; // Razor-thin ~14m head-start!
+    this.chaserProgress = 0.0;
+    this.playerSpeed = 0;
+    this.peakEscapeSpeed = 0.142;
+    this.chaseSpeed = this.peakEscapeSpeed * 0.90;
+    this.chaserStride = 0;
+    this.chaserStepTimer = 0;
     this._addScore(50);
     this._spawnBurst(this.width * 0.5, this.height * 0.45, '#facc15', 22, 260);
     this._spawnFloatingText('💥 터치 성공! 뒤돌아 전력 질주!!', this.width * 0.5, this.height * 0.30, '#4ade80', 1.3);
@@ -435,14 +443,35 @@ export class RedLightEngine {
         this._triggerCaughtFail('TAG_TIMEOUT');
       }
     } else if (this.phase === RedLightPhase.ESCAPE_RUN) {
-      // Reverse sprint back to start gate! Too slow -> Young-hee catches up!
-      if (this.runIntensity > 0.08) {
-        const escapeRate = 0.135 * this.runIntensity;
-        this.escapeProgress = Math.min(1.0, this.escapeProgress + escapeRate * safeDt);
-      }
+      // Thrilling 90%-speed pursuit: Young-hee runs at 90% of player's sprint speed & surges if player slows down!
+      const baseEscapeRate = 0.142;
+      const currentSpeed = this.runIntensity > 0.08 ? baseEscapeRate * this.runIntensity : 0;
+      this.playerSpeed = currentSpeed;
+      this.escapeProgress = Math.min(1.0, this.escapeProgress + currentSpeed * safeDt);
 
-      // Young-hee sprints forward toward player
+      if (currentSpeed > this.peakEscapeSpeed) {
+        this.peakEscapeSpeed = currentSpeed;
+      }
+      const baseChase = this.peakEscapeSpeed * 0.90;
+      const roundMult = 1 + Math.min(0.24, (this.round - 1) * 0.04);
+      const slowPenaltySurge = currentSpeed < baseChase * 0.82 ? 1.42 : 1.0;
+      this.chaseSpeed = baseChase * roundMult * slowPenaltySurge;
+
       this.chaserProgress += this.chaseSpeed * safeDt;
+      this.chaserStride += safeDt * (10 + slowPenaltySurge * 4);
+
+      const gap = this.escapeProgress - this.chaserProgress;
+      const proximity = Math.max(0, Math.min(1, 1 - gap / 0.24));
+      this.chaserStepTimer -= safeDt;
+      if (this.chaserStepTimer <= 0) {
+        this.chaserStepTimer = Math.max(0.14, 0.34 - proximity * 0.18);
+        if (this.sound && typeof this.sound.playRedLightChaserStep === 'function') {
+          this.sound.playRedLightChaserStep(proximity);
+        }
+      }
+      if (gap < 0.11 && this.shakeTimer <= 0.02) {
+        this.shakeTimer = 0.08;
+      }
 
       if (this.escapeProgress >= 1.0) {
         // Round Victory!
@@ -497,11 +526,17 @@ export class RedLightEngine {
     // 1. 1st-Person Perspective Squid Game Field (semi-transparent to keep webcam silhouette subtle underneath)
     this._renderField(ctx, w, h, horizonY);
 
-    // 2. Render active target ahead (Young-hee doll OR Reverse Safe Start Gate during Escape!)
+    // 2. Render active target ahead (Young-hee doll OR Reverse Safe Start Gate + Thrilling Chaser Effects!)
     if (this.phase === RedLightPhase.ESCAPE_RUN || this.phase === RedLightPhase.ROUND_CLEAR) {
+      const gap = this.escapeProgress - this.chaserProgress;
       this._renderEscapeGate(ctx, w, h, horizonY);
-      this._renderSpeedLines(ctx, w, h, this.runIntensity);
-      this._renderChaseRadar(ctx, w, h);
+      this._renderChaserShadow(ctx, w, h, horizonY, gap);
+      this._renderSpeedLines(ctx, w, h, Math.max(this.runIntensity, 0.45));
+      if (this.phase === RedLightPhase.ESCAPE_RUN) {
+        this._renderDangerHands(ctx, w, h, gap);
+        this._renderRearviewMirror(ctx, w, h, gap);
+        this._renderChaseRadar(ctx, w, h);
+      }
     } else {
       this._renderYoungHee(ctx, w, h, horizonY);
       if (this.phase === RedLightPhase.GREEN_LIGHT && this.runIntensity > 0.25) {
@@ -774,54 +809,187 @@ export class RedLightEngine {
     ctx.restore();
   }
 
-  _renderChaseRadar(ctx, w, h) {
-    const barW = Math.min(460, w * 0.62);
-    const barH = 16;
-    const x0 = (w - barW) * 0.5;
-    const y0 = 136;
+  _renderChaserShadow(ctx, w, h, horizonY, gap) {
+    const proximity = Math.max(0, Math.min(1, 1 - gap / 0.28));
+    if (proximity <= 0.05) return;
 
-    const gap = this.escapeProgress - this.chaserProgress;
-    if (gap < 0.18) {
-      // Danger red vignette pulsing when Young-hee is right behind!
-      ctx.save();
-      ctx.fillStyle = `rgba(239, 68, 68, ${0.22 * (1 - gap / 0.18)})`;
-      ctx.fillRect(0, 0, w, h);
-      ctx.restore();
-    }
+    const cx = w * 0.5 + Math.sin(this.chaserStride) * (10 + 18 * proximity);
+    const tipY = h - (h - horizonY) * (0.28 + 0.42 * proximity);
+    const bodyW = w * (0.14 + 0.22 * proximity);
 
     ctx.save();
-    ctx.fillStyle = 'rgba(15, 23, 42, 0.72)';
+    ctx.fillStyle = `rgba(15, 23, 42, ${0.18 + 0.34 * proximity})`;
+
+    // Looming torso & head shadow stretching up the sandy floor from behind player
     ctx.beginPath();
-    ctx.roundRect(x0 - 14, y0 - 26, barW + 28, 56, 14);
+    ctx.moveTo(cx - bodyW * 0.9, h);
+    ctx.lineTo(cx - bodyW * 0.35, tipY + 46);
+    ctx.lineTo(cx + bodyW * 0.35, tipY + 46);
+    ctx.lineTo(cx + bodyW * 0.9, h);
+    ctx.closePath();
+    ctx.fill();
+
+    // Head + Twin Pigtails shadow
+    ctx.beginPath();
+    ctx.arc(cx, tipY + 26, bodyW * 0.26, 0, Math.PI * 2);
+    ctx.arc(cx - bodyW * 0.28, tipY + 34, bodyW * 0.12, 0, Math.PI * 2);
+    ctx.arc(cx + bodyW * 0.28, tipY + 34, bodyW * 0.12, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Outstretched reaching shadow arms
+    ctx.lineWidth = Math.max(8, bodyW * 0.13);
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = `rgba(15, 23, 42, ${0.18 + 0.34 * proximity})`;
+    ctx.beginPath();
+    ctx.moveTo(cx - bodyW * 0.24, tipY + 52);
+    ctx.lineTo(cx - bodyW * 0.65, tipY - 8 * proximity);
+    ctx.moveTo(cx + bodyW * 0.24, tipY + 52);
+    ctx.lineTo(cx + bodyW * 0.65, tipY - 8 * proximity);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  _renderDangerHands(ctx, w, h, gap) {
+    if (gap >= 0.15) return;
+    const urgency = Math.max(0, Math.min(1, 1 - gap / 0.15));
+    const lunge = Math.sin(this.chaserStride * 1.4) * 14 * urgency;
+
+    ctx.save();
+    // Pulsing crimson peripheral danger vignette
+    const pulse = 0.65 + 0.35 * Math.sin(this.chaserStride * 2.2);
+    ctx.fillStyle = `rgba(220, 38, 38, ${0.32 * urgency * pulse})`;
+    ctx.fillRect(0, 0, w, h);
+
+    // Reaching shadowy hands creeping in from bottom-left & bottom-right corners
+    ctx.fillStyle = `rgba(15, 23, 42, ${0.55 * urgency})`;
+    [-1, 1].forEach((side) => {
+      const baseX = side < 0 ? 0 : w;
+      const reachX = baseX - side * (70 * urgency + lunge);
+      const reachY = h - 90 * urgency;
+      ctx.beginPath();
+      ctx.arc(reachX, reachY, 34, 0, Math.PI * 2);
+      ctx.fill();
+      for (let f = -1; f <= 2; f++) {
+        ctx.beginPath();
+        ctx.ellipse(reachX - side * 14, reachY - 22 + f * 12, 22, 6, side * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    });
+    ctx.restore();
+  }
+
+  _renderRearviewMirror(ctx, w, h, gap) {
+    const mirrorW = 196;
+    const mirrorH = 88;
+    const mx = w * 0.5;
+    const my = 128;
+    const proximity = Math.max(0, Math.min(1, 1 - gap / 0.25));
+
+    ctx.save();
+    // Mirror chrome frame
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+    ctx.beginPath();
+    ctx.roundRect(mx - mirrorW * 0.5 - 5, my - mirrorH * 0.5 - 5, mirrorW + 10, mirrorH + 10, 22);
+    ctx.fill();
+    ctx.strokeStyle = gap < 0.14 ? '#ef4444' : '#94a3b8';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    // Clip interior rearview glass
+    ctx.beginPath();
+    ctx.roundRect(mx - mirrorW * 0.5, my - mirrorH * 0.5, mirrorW, mirrorH, 18);
+    ctx.clip();
+
+    // Rearview mini sky & track
+    ctx.fillStyle = '#fca5a5';
+    ctx.fillRect(mx - mirrorW * 0.5, my - mirrorH * 0.5, mirrorW, mirrorH * 0.45);
+    ctx.fillStyle = '#d6b384';
+    ctx.fillRect(mx - mirrorW * 0.5, my - mirrorH * 0.05, mirrorW, mirrorH * 0.55);
+
+    // Looming Young-hee inside rearview mirror growing bigger & bouncing fiercely as gap narrows!
+    const bounceY = Math.abs(Math.sin(this.chaserStride)) * (5 + 6 * proximity);
+    const swayX = Math.sin(this.chaserStride * 0.5) * (6 + 8 * proximity);
+    const dollH = mirrorH * (0.48 + 0.92 * proximity);
+    const dollW = dollH * (537 / 462);
+    const dx = mx + swayX - dollW * 0.5;
+    const dy = my + mirrorH * 0.48 - dollH * 0.88 - bounceY;
+
+    const spriteReady = this.dollImg && this.dollImg.complete && this.dollImg.naturalWidth > 0;
+    if (spriteReady) {
+      ctx.drawImage(this.dollImg, dx, dy, dollW, dollH);
+    } else {
+      ctx.fillStyle = '#f8dece';
+      ctx.beginPath();
+      ctx.arc(mx + swayX, dy + dollH * 0.38, dollW * 0.25, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Glowing crimson eyes in the rearview mirror
+    [DOLL_LEFT_EYE, DOLL_RIGHT_EYE].forEach((eye) => {
+      const ex = dx + eye.x * dollW;
+      const ey = dy + eye.y * dollH;
+      ctx.fillStyle = '#ef4444';
+      ctx.beginPath();
+      ctx.arc(ex, ey, Math.max(2.2, dollW * 0.032), 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    // Subtle "백미러" tag
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.72)';
+    ctx.fillRect(mx - 36, my - mirrorH * 0.5, 72, 16);
+    ctx.fillStyle = '#fca5a5';
+    ctx.font = '800 10px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('🔙 후방 추격', mx, my - mirrorH * 0.5 + 12);
+
+    ctx.restore();
+  }
+
+  _renderChaseRadar(ctx, w, h) {
+    const barW = Math.min(460, w * 0.62);
+    const barH = 14;
+    const x0 = (w - barW) * 0.5;
+    const y0 = 204;
+
+    const gap = this.escapeProgress - this.chaserProgress;
+    const gapM = Math.max(0, Math.round(gap * 100));
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.76)';
+    ctx.beginPath();
+    ctx.roundRect(x0 - 14, y0 - 24, barW + 28, 52, 14);
     ctx.fill();
 
     // Track rail
     ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
     ctx.beginPath();
-    ctx.roundRect(x0, y0, barW, barH, 8);
+    ctx.roundRect(x0, y0, barW, barH, 7);
     ctx.fill();
 
     // Safe Finish Flag
     ctx.fillStyle = '#4ade80';
     ctx.beginPath();
-    ctx.arc(x0 + barW, y0 + barH * 0.5, 11, 0, Math.PI * 2);
+    ctx.arc(x0 + barW, y0 + barH * 0.5, 10, 0, Math.PI * 2);
     ctx.fill();
 
     // Chaser marker
     const chaserX = x0 + Math.max(0, Math.min(1, this.chaserProgress)) * barW;
     const playerX = x0 + Math.max(0, Math.min(1, this.escapeProgress)) * barW;
 
-    ctx.font = '900 18px system-ui, sans-serif';
+    ctx.font = '900 17px system-ui, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('🏃', playerX, y0 + 13);
-    ctx.fillText('👹', chaserX, y0 + 13);
+    ctx.fillText('🏃', playerX, y0 + 12);
+    ctx.fillText('👹', chaserX, y0 + 12);
 
-    ctx.font = '800 13px system-ui, sans-serif';
-    ctx.fillStyle = gap < 0.18 ? '#fca5a5' : '#fde047';
+    ctx.font = '800 12.5px system-ui, sans-serif';
+    ctx.fillStyle = gap < 0.14 ? '#fca5a5' : '#fde047';
     ctx.fillText(
-      gap < 0.18 ? '😱 영희가 바로 뒤에! 더 빨리 달리세요!!' : '💨 제자리 전력 질주로 출발선까지 도망치세요!',
+      gap < 0.14
+        ? `😱 영희 거리 ${gapM}m! 멈추면 바로 잡힙니다!!`
+        : `💨 추격 거리 ${gapM}m (영희 속도 90% 추적 중!)`,
       w * 0.5,
-      y0 - 8
+      y0 - 7
     );
     ctx.restore();
   }

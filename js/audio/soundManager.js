@@ -1187,6 +1187,24 @@ export class SoundManager {
     osc.stop(now + 0.08);
   }
 
+  playRedLightChaserStep(proximity = 0.5) {
+    if (!this.ctx || this.isMuted) return;
+    this.resume();
+    const now = this.ctx.currentTime;
+    const prox = Math.max(0.15, Math.min(1, proximity));
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(88 + prox * 28, now);
+    osc.frequency.exponentialRampToValueAtTime(34, now + 0.11);
+    gain.gain.setValueAtTime(0.10 + prox * 0.18, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.13);
+  }
+
   playRedLightClear() {
     if (!this.ctx || this.isMuted) return;
     this.resume();

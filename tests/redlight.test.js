@@ -90,6 +90,7 @@ function runTests() {
     playRedLightDetected: () => sfxLog.push('DETECT'),
     playRedLightTag: () => sfxLog.push('TAG'),
     playRedLightStep: () => sfxLog.push('STEP'),
+    playRedLightChaserStep: () => sfxLog.push('CHASE_STEP'),
     playRedLightClear: () => sfxLog.push('CLEAR')
   };
 
@@ -165,8 +166,9 @@ function runTests() {
     'Manse gesture touches Young-hee and triggers reverse ESCAPE_RUN chase'
   );
 
-  // Sprint rapidly in ESCAPE_RUN to beat Young-hee back to the Start Safe Gate
+  // Sprint rapidly in ESCAPE_RUN: verify Young-hee stays right behind at 90% speed & beats player if slowed!
   const prevEsc = engine.escapeProgress;
+  let checkedRatio = false;
   for (let i = 0; i < 160 && engine.phase === RedLightPhase.ESCAPE_RUN; i++) {
     const sprintPose = makePose({
       noseY: 0.25 + (i % 2 === 0 ? -0.06 : 0.06),
@@ -174,10 +176,14 @@ function runTests() {
       armShift: i % 2 === 0 ? 0.20 : -0.20
     });
     engine.update(0.05, 0, sprintPose);
+    if (i === 18 && engine.playerSpeed > 0.10) {
+      checkedRatio = Math.abs(engine.chaseSpeed / engine.playerSpeed - 0.90) < 0.04;
+    }
   }
+  assert(checkedRatio, 'Young-hee chase speed locks closely at ~90% of player sprint speed');
   assert(
-    engine.escapeProgress > prevEsc && engine.phase === RedLightPhase.ROUND_CLEAR && sfxLog.includes('CLEAR') && lastScore > 200,
-    'Fast reverse sprinting clears ROUND 1 before chaser catches up'
+    engine.escapeProgress > prevEsc && engine.phase === RedLightPhase.ROUND_CLEAR && sfxLog.includes('CLEAR') && sfxLog.includes('CHASE_STEP') && lastScore > 200,
+    'Fast reverse sprinting clears ROUND 1 while chaser footsteps play right behind'
   );
 
   // Advance round clear -> Round 2 starts
@@ -208,6 +214,7 @@ function runTests() {
     rotate() {},
     beginPath() {},
     closePath() {},
+    clip() {},
     arc() {},
     ellipse() {},
     moveTo() {},
@@ -224,6 +231,7 @@ function runTests() {
     set fillStyle(_) {},
     set strokeStyle(_) {},
     set lineWidth(_) {},
+    set lineCap(_) {},
     set lineJoin(_) {},
     set globalAlpha(_) {},
     set font(_) {},
