@@ -226,6 +226,7 @@ export const CONFIG = {
     DOCTOR_STRANGE: 'DOCTOR_STRANGE',
     UFO_FISH: 'UFO_FISH',
     GALAGA: 'GALAGA',
-    CROSSY: 'CROSSY'
+    CROSSY: 'CROSSY',
+    POOP_DODGE: 'POOP_DODGE'
   }
 };

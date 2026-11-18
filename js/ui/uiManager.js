@@ -50,6 +50,7 @@ export class UIManager {
     this.btnModeUfo = document.getElementById('btn-mode-ufo');
     this.btnModeGalaga = document.getElementById('btn-mode-galaga');
     this.btnModeCrossy = document.getElementById('btn-mode-crossy');
+    this.btnModePoop = document.getElementById('btn-mode-poop');
     this.ultimatePanel = document.getElementById('ultimate-panel');
     this.instructionModeDesc = document.getElementById('instruction-mode-desc');
     this.instructionSpecial = document.getElementById('instruction-special');
@@ -78,7 +79,8 @@ export class UIManager {
       { btn: this.btnModeStrange, mode: 'DOCTOR_STRANGE' },
       { btn: this.btnModeUfo, mode: 'UFO_FISH' },
       { btn: this.btnModeGalaga, mode: 'GALAGA' },
-      { btn: this.btnModeCrossy, mode: 'CROSSY' }
+      { btn: this.btnModeCrossy, mode: 'CROSSY' },
+      { btn: this.btnModePoop, mode: 'POOP_DODGE' }
     ];
 
     tabs.forEach(({ btn, mode }) => {
@@ -155,7 +157,7 @@ export class UIManager {
   setGameMode(mode = 'CLASSIC') {
     this.selectedGameMode = mode;
 
-    [this.btnModeClassic, this.btnModeStrange, this.btnModeUfo, this.btnModeGalaga, this.btnModeCrossy].forEach(btn => {
+    [this.btnModeClassic, this.btnModeStrange, this.btnModeUfo, this.btnModeGalaga, this.btnModeCrossy, this.btnModePoop].forEach(btn => {
       if (btn) btn.classList.remove('active');
     });
 
@@ -216,6 +218,24 @@ export class UIManager {
         this.instructionTip2.innerHTML =
           '🕹️ <strong>간편 조작 지원</strong>: <code>Space</code> / <code>↑</code> 키 또는 화면 클릭/터치로도 바로 점프 가능!';
       }
+    } else if (mode === 'POOP_DODGE') {
+      if (this.btnModePoop) this.btnModePoop.classList.add('active');
+      if (this.instructionModeDesc) {
+        this.instructionModeDesc.innerHTML =
+          '💩 <strong>똥피하기 모드</strong>: 머리를 좌우로 움직여 <strong>캐릭터 X 위치</strong>를 조종하고 쏟아지는 똥을 피하세요!';
+      }
+      if (this.instructionSpecial) {
+        this.instructionSpecial.innerHTML =
+          '🧻 <strong>보너스 휴지 & 우산 보호막</strong>: 🧻 두루마리 휴지(<code>+15점</code>)와 ☂️ 무적 우산(5.5초 방어 & 반사!)을 챙기세요!';
+      }
+      if (this.instructionTip1) {
+        this.instructionTip1.innerHTML =
+          '👑 <strong>왕똥 & 사선탄 주의</strong>: 레벨이 오를수록 경고 후 떨어지는 거대 왕똥과 대각선 고속탄이 등장합니다!';
+      }
+      if (this.instructionTip2) {
+        this.instructionTip2.innerHTML =
+          '🖱️ <strong>마우스/터치 폴백</strong>: 카메라 없이도 마우스·손가락 좌우 이동으로 바로 플레이 가능합니다!';
+      }
     } else {
       restoreFruitTips();
       if (this.btnModeClassic) this.btnModeClassic.classList.add('active');
@@ -228,7 +248,7 @@ export class UIManager {
           '⚡ <strong>필살기 (12개 절단 시)</strong>: 한글 자음(ㄱ, ㄴ, ㅅ, ㅇ) 포즈를 0.5초 유지하면 전멸기 발동!';
       }
     }
-    if (mode !== 'CROSSY') {
+    if (mode !== 'CROSSY' && mode !== 'POOP_DODGE') {
       restoreFruitTips();
     }
   }
@@ -239,7 +259,7 @@ export class UIManager {
   }
 
   updateHUDMode(twoPlayer = false, gameMode = 'CLASSIC') {
-    const hideFruitUltimate = gameMode === 'GALAGA' || gameMode === 'CROSSY';
+    const hideFruitUltimate = gameMode === 'GALAGA' || gameMode === 'CROSSY' || gameMode === 'POOP_DODGE';
     if (this.soloScorePanel) this.soloScorePanel.classList.remove('hidden');
     if (this.ultimatePanel) {
       if (hideFruitUltimate) {

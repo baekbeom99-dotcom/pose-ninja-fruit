@@ -10,6 +10,7 @@ import { ParticleSystem } from './particleSystem.js';
 import { GestureDetector, CONSONANT_POSES } from './gestureDetector.js';
 import { GalagaEngine } from './galaga/galagaEngine.js';
 import { CrossyEngine } from './crossy/crossyEngine.js';
+import { PoopEngine } from './poop/poopEngine.js';
 import { soundManager } from '../audio/soundManager.js';
 
 export const GameState = {
@@ -80,6 +81,18 @@ export class GameEngine {
       this.p1Score = score;
     };
     this.crossyEngine.onLivesChanged = (lives) => {
+      this.lives = lives;
+    };
+
+    // Poop Dodge Mode Subsystem
+    this.poopEngine = new PoopEngine(this.width, this.height, this.ui, soundManager);
+    this.poopEngine.onGameOver = () => {
+      this.triggerGameOver();
+    };
+    this.poopEngine.onScore = (score) => {
+      this.p1Score = score;
+    };
+    this.poopEngine.onLivesChanged = (lives) => {
       this.lives = lives;
     };
 
@@ -192,6 +205,9 @@ export class GameEngine {
       if (this.crossyEngine) {
         this.crossyEngine.resize(w, h);
       }
+      if (this.poopEngine) {
+        this.poopEngine.resize(w, h);
+      }
     };
 
     window.addEventListener('resize', resize);
@@ -216,6 +232,10 @@ export class GameEngine {
       this.crossyEngine.stop();
       this.crossyEngine.reset();
     }
+    if (this.poopEngine) {
+      this.poopEngine.stop();
+      this.poopEngine.reset();
+    }
     this.fruitManager.reset();
     this.particles.clear();
     this.ui.updateScores(0, 0, this.isTwoPlayerMode);
@@ -232,6 +252,7 @@ export class GameEngine {
 
     if (this.gameMode === CONFIG.MODES.GALAGA) {
       this.crossyEngine.stop();
+      this.poopEngine.stop();
       this.state = GameState.PLAYING;
       this.galagaEngine.start();
       this.ui.updateHUDMode(false, this.gameMode);
@@ -245,6 +266,7 @@ export class GameEngine {
     if (this.gameMode === CONFIG.MODES.CROSSY) {
       soundManager.stopGalagaBGM();
       this.galagaEngine.stop();
+      this.poopEngine.stop();
       this.state = GameState.PLAYING;
       this.crossyEngine.start();
       this.ui.updateHUDMode(false, this.gameMode);
@@ -255,8 +277,23 @@ export class GameEngine {
       return;
     }
 
+    if (this.gameMode === CONFIG.MODES.POOP_DODGE) {
+      soundManager.stopGalagaBGM();
+      this.galagaEngine.stop();
+      this.crossyEngine.stop();
+      this.state = GameState.PLAYING;
+      this.poopEngine.start();
+      this.ui.updateHUDMode(false, this.gameMode);
+      this.ui.updateScores(0, 0, false);
+      this.ui.updateLives(this.lives, CONFIG.GAME.MAX_LIVES);
+      this.ui.hideStartModal();
+      this.ui.hideGameOverModal();
+      return;
+    }
+
     soundManager.stopGalagaBGM();
     this.crossyEngine.stop();
+    this.poopEngine.stop();
 
     const isDocStrange = this.gameMode === CONFIG.MODES.DOCTOR_STRANGE;
     this.blades.setMode(this.isTwoPlayerMode);
@@ -374,6 +411,15 @@ export class GameEngine {
       return;
     }
 
+    // Poop Dodge Mode Update Loop
+    if (this.gameMode === CONFIG.MODES.POOP_DODGE) {
+      if (this.state === GameState.PLAYING) {
+        this.poopEngine.update(dt, currentTime, this.lastHeadPose);
+      }
+      this.lastPoses = poses;
+      return;
+    }
+
     // 2. Update Blade Tracker with filtered poses first
     this.blades.update(poses, this.width, this.height, currentTime, CONFIG.CANVAS.MIRROR);
 
@@ -475,6 +521,28 @@ export class GameEngine {
       this.crossyEngine.render(this.gameCtx);
 
       // Layer 3: Clear blade canvas
+      this.bladeCtx.clearRect(0, 0, w, h);
+      return;
+    }
+
+    // Poop Dodge Mode Render Pipeline
+    if (this.gameMode === CONFIG.MODES.POOP_DODGE) {
+      this.bgCtx.clearRect(0, 0, w, h);
+      if (this.video.readyState >= 2) {
+        this.bgCtx.save();
+        this.bgCtx.translate(w, 0);
+        this.bgCtx.scale(-1, 1);
+        this.bgCtx.globalAlpha = 0.28;
+        this.bgCtx.drawImage(this.video, 0, 0, w, h);
+        this.bgCtx.restore();
+      }
+      if (this.lastPoses) {
+        this.poseTracker.drawSkeletons(this.bgCtx, this.lastPoses, w, h, CONFIG.CANVAS.MIRROR);
+      }
+
+      this.gameCtx.clearRect(0, 0, w, h);
+      this.poopEngine.render(this.gameCtx);
+
       this.bladeCtx.clearRect(0, 0, w, h);
       return;
     }

@@ -278,6 +278,12 @@
   box-shadow: 0 0 22px rgba(74, 222, 128, 0.6);
 }
 
+.game-mode-tab[data-mode="POOP_DODGE"].active {
+  background: linear-gradient(135deg, rgba(146, 64, 14, 0.94) 0%, rgba(217, 119, 6, 0.94) 100%);
+  border-color: #facc15;
+  box-shadow: 0 0 22px rgba(250, 204, 21, 0.55);
+}
+
 /* Mode Selection on Start Screen */
 .mode-select-container {
   display: flex;

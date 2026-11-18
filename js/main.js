@@ -105,8 +105,11 @@ class App {
     let isDown = false;
 
     const handlePointerMove = (x, y) => {
-      // In Galaga mode, mouse position maps to head position (whether mouse is down or just moving)
-      if (this.gameEngine && this.gameEngine.gameMode === 'GALAGA') {
+      // In Galaga / Poop Dodge modes, mouse position maps to head position (even without dragging)
+      if (
+        this.gameEngine &&
+        (this.gameEngine.gameMode === 'GALAGA' || this.gameEngine.gameMode === 'POOP_DODGE')
+      ) {
         const normalizedX = 1.0 - (x / Math.max(1, this.gameEngine.width));
         this.gameEngine.lastHeadPose = { x: normalizedX, y: y / Math.max(1, this.gameEngine.height) };
       }
