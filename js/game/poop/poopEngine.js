@@ -17,6 +17,8 @@ import {
   isHazardType
 } from './poopEntities.js';
 
+export const POOP_SCENE_THEMES = ['PARK', 'BEACH', 'CHERRY_BLOSSOM', 'SUNSET_MEADOW'];
+
 export class PoopEngine {
   constructor(width = 1280, height = 720, ui = null, sound = null) {
     this.width = width;
@@ -30,6 +32,7 @@ export class PoopEngine {
     // Preload 033-038 walk sprite sheets in browser environments
     this.spriteCache = {};
     this.selectedSpriteId = POOP_SPRITE_IDS[0];
+    this.sceneTheme = POOP_SCENE_THEMES[0];
     this._initSprites();
 
     this.drops = [];
@@ -79,6 +82,13 @@ export class PoopEngine {
     return this.selectedSpriteId;
   }
 
+  _pickRandomScene() {
+    const candidates = POOP_SCENE_THEMES.filter((t) => t !== this.sceneTheme);
+    const pool = candidates.length > 0 ? candidates : POOP_SCENE_THEMES;
+    this.sceneTheme = pool[Math.floor(Math.random() * pool.length)];
+    return this.sceneTheme;
+  }
+
   getFloorY() {
     return Math.max(180, this.height - this.floorOffset);
   }
@@ -115,6 +125,7 @@ export class PoopEngine {
     this.stormState = null;
 
     this._pickRandomSpriteId();
+    this._pickRandomScene();
     this.player.reset(this.width * 0.5, this.getFloorY() - this.player.radius * 1.06);
 
     if (this.ui) {
@@ -635,21 +646,17 @@ export class PoopEngine {
       ctx.translate((Math.random() - 0.5) * mag, (Math.random() - 0.5) * mag);
     }
 
-    // 1. Dark Atmospheric Arena Overlay
-    const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
-    bgGrad.addColorStop(0, 'rgba(15, 23, 42, 0.55)');
-    bgGrad.addColorStop(1, 'rgba(30, 41, 59, 0.72)');
-    ctx.fillStyle = bgGrad;
-    ctx.fillRect(0, 0, w, h);
+    // 1. Light Pastel Scenic Background (preserves subtle webcam visibility underneath)
+    const groundColors = this._renderScenicBackground(ctx, w, h, floorY);
 
-    // 2. Poop Storm Safe Zone Highlight / Danger Columns (when alarm active)
+    // 2. Poop Storm Safe Zone Highlight / Danger Columns (borderless!)
     this._renderStormZones(ctx, floorY);
 
-    // 3. Ground Platform Line
-    ctx.fillStyle = '#334155';
+    // 3. Soft Pastel Ground Platform Line
+    ctx.fillStyle = groundColors.base;
     ctx.fillRect(0, floorY, w, h - floorY);
-    ctx.fillStyle = '#64748b';
-    ctx.fillRect(0, floorY, w, 4);
+    ctx.fillStyle = groundColors.trim;
+    ctx.fillRect(0, floorY, w, 5);
 
     // 4. Slippery Ice Patches & Floor Splats
     this._renderIcePatches(ctx, floorY);
@@ -691,9 +698,11 @@ export class PoopEngine {
       ctx.globalAlpha = alpha;
       ctx.font = `900 ${Math.round(20 * ft.scale)}px system-ui, sans-serif`;
       ctx.textAlign = 'center';
+      ctx.lineJoin = 'round';
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = 'rgba(15, 23, 42, 0.85)';
+      ctx.strokeText(ft.text, ft.x, ft.y);
       ctx.fillStyle = ft.color;
-      ctx.shadowColor = 'rgba(0,0,0,0.85)';
-      ctx.shadowBlur = 8;
       ctx.fillText(ft.text, ft.x, ft.y);
       ctx.restore();
     }
@@ -704,6 +713,249 @@ export class PoopEngine {
     ctx.restore();
   }
 
+  _drawSoftCloud(ctx, cx, cy, scale = 1.0) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(scale, scale);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.58)';
+    ctx.beginPath();
+    ctx.arc(0, 0, 26, 0, Math.PI * 2);
+    ctx.arc(24, -6, 20, 0, Math.PI * 2);
+    ctx.arc(-22, -4, 18, 0, Math.PI * 2);
+    ctx.arc(42, 4, 14, 0, Math.PI * 2);
+    ctx.arc(-38, 5, 13, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  _drawRollingHill(ctx, w, floorY, peakHeight, crestRatio, color) {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(0, floorY);
+    ctx.quadraticCurveTo(w * crestRatio, floorY - peakHeight, w, floorY);
+    ctx.lineTo(w, floorY);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  _renderScenicBackground(ctx, w, h, floorY) {
+    const palettes = {
+      PARK: {
+        skyTop: 'rgba(186, 230, 253, 0.56)',
+        skyBot: 'rgba(224, 242, 254, 0.44)',
+        sunColor: 'rgba(254, 240, 138, 0.72)',
+        hillBack: 'rgba(134, 239, 172, 0.38)',
+        hillFront: 'rgba(110, 231, 183, 0.46)',
+        base: 'rgba(134, 239, 172, 0.78)',
+        trim: 'rgba(74, 222, 128, 0.85)'
+      },
+      BEACH: {
+        skyTop: 'rgba(207, 250, 254, 0.56)',
+        skyBot: 'rgba(254, 249, 195, 0.46)',
+        sunColor: 'rgba(253, 224, 71, 0.68)',
+        hillBack: 'rgba(125, 211, 252, 0.42)',
+        hillFront: 'rgba(56, 189, 248, 0.34)',
+        base: 'rgba(253, 230, 138, 0.82)',
+        trim: 'rgba(252, 211, 77, 0.88)'
+      },
+      CHERRY_BLOSSOM: {
+        skyTop: 'rgba(252, 231, 243, 0.58)',
+        skyBot: 'rgba(255, 241, 242, 0.46)',
+        sunColor: 'rgba(254, 205, 211, 0.72)',
+        hillBack: 'rgba(221, 214, 254, 0.42)',
+        hillFront: 'rgba(251, 207, 232, 0.48)',
+        base: 'rgba(251, 207, 232, 0.80)',
+        trim: 'rgba(244, 114, 182, 0.68)'
+      },
+      SUNSET_MEADOW: {
+        skyTop: 'rgba(254, 215, 170, 0.56)',
+        skyBot: 'rgba(254, 249, 195, 0.46)',
+        sunColor: 'rgba(253, 186, 116, 0.75)',
+        hillBack: 'rgba(216, 180, 254, 0.35)',
+        hillFront: 'rgba(190, 242, 100, 0.42)',
+        base: 'rgba(253, 224, 71, 0.68)',
+        trim: 'rgba(163, 230, 53, 0.78)'
+      }
+    };
+
+    const theme = palettes[this.sceneTheme] ? this.sceneTheme : 'PARK';
+    const pal = palettes[theme];
+
+    // Soft pastel sky gradient
+    const skyGrad = ctx.createLinearGradient(0, 0, 0, floorY);
+    skyGrad.addColorStop(0, pal.skyTop);
+    skyGrad.addColorStop(1, pal.skyBot);
+    ctx.fillStyle = skyGrad;
+    ctx.fillRect(0, 0, w, floorY);
+
+    ctx.save();
+    // Gentle sun / pastel orb
+    const sunX = theme === 'SUNSET_MEADOW' ? w * 0.78 : w * 0.84;
+    const sunY = theme === 'SUNSET_MEADOW' ? floorY * 0.42 : h * 0.16;
+    ctx.fillStyle = pal.sunColor;
+    ctx.beginPath();
+    ctx.arc(sunX, sunY, 36, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Gently drifting pastel clouds
+    const t = this.elapsedTime || 0;
+    const cloudDrift1 = ((t * 14) % (w + 180)) - 90;
+    const cloudDrift2 = ((t * 9 + w * 0.45) % (w + 180)) - 90;
+    this._drawSoftCloud(ctx, cloudDrift1, h * 0.17, 0.95);
+    this._drawSoftCloud(ctx, cloudDrift2, h * 0.25, 0.78);
+
+    // Distant & foreground hills (or sea strip for BEACH)
+    if (theme === 'BEACH') {
+      const seaY = floorY - 38;
+      ctx.fillStyle = pal.hillBack;
+      ctx.fillRect(0, seaY, w, 38);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+      ctx.fillRect(0, floorY - 7, w, 4);
+
+      // Pastel beach trees & striped umbrella
+      this._drawPalmTree(ctx, w * 0.10, floorY, 1.0);
+      this._drawPalmTree(ctx, w * 0.90, floorY, -0.9);
+      this._drawBeachUmbrella(ctx, w * 0.24, floorY);
+    } else {
+      this._drawRollingHill(ctx, w, floorY, floorY * 0.24, 0.28, pal.hillBack);
+      this._drawRollingHill(ctx, w, floorY, floorY * 0.18, 0.74, pal.hillFront);
+
+      if (theme === 'PARK') {
+        this._drawPastelTree(ctx, w * 0.11, floorY, '#86efac', '#4ade80', 1.0);
+        this._drawPastelTree(ctx, w * 0.88, floorY, '#bbf7d0', '#86efac', 0.85);
+        this._drawPastelFence(ctx, w * 0.17, floorY, 4);
+      } else if (theme === 'CHERRY_BLOSSOM') {
+        this._drawPastelTree(ctx, w * 0.12, floorY, '#fbcfe8', '#f9a8d4', 1.05);
+        this._drawPastelTree(ctx, w * 0.87, floorY, '#fce7f3', '#fbcfe8', 0.92);
+        // Gently falling pastel petals
+        ctx.fillStyle = 'rgba(249, 168, 212, 0.65)';
+        for (let i = 0; i < 10; i++) {
+          const px = ((i * w * 0.11 + t * (18 + (i % 3) * 7) + Math.sin(t + i) * 18) % w);
+          const py = ((i * 53 + t * (26 + (i % 4) * 6)) % Math.max(80, floorY - 20));
+          ctx.beginPath();
+          ctx.ellipse(px, py, 5, 2.8, t + i, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      } else if (theme === 'SUNSET_MEADOW') {
+        this._drawWindmill(ctx, w * 0.14, floorY, t);
+        this._drawPastelTree(ctx, w * 0.88, floorY, '#bef264', '#a3e635', 0.9);
+        // Distant hot air balloon
+        const bx = w * 0.66 + Math.sin(t * 0.4) * 18;
+        const by = h * 0.28 + Math.cos(t * 0.6) * 8;
+        ctx.fillStyle = 'rgba(251, 146, 60, 0.55)';
+        ctx.beginPath();
+        ctx.arc(bx, by, 14, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(120, 53, 15, 0.45)';
+        ctx.fillRect(bx - 4, by + 16, 8, 5);
+      }
+    }
+
+    ctx.restore();
+    return { base: pal.base, trim: pal.trim };
+  }
+
+  _drawPastelTree(ctx, x, floorY, canopyLight, canopyMid, scale = 1.0) {
+    ctx.save();
+    ctx.translate(x, floorY);
+    ctx.scale(scale, scale);
+    ctx.fillStyle = 'rgba(180, 130, 95, 0.62)';
+    ctx.fillRect(-7, -70, 14, 70);
+    ctx.fillStyle = canopyMid;
+    ctx.beginPath();
+    ctx.arc(0, -82, 34, 0, Math.PI * 2);
+    ctx.arc(-22, -66, 22, 0, Math.PI * 2);
+    ctx.arc(22, -66, 22, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = canopyLight;
+    ctx.beginPath();
+    ctx.arc(-6, -88, 22, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  _drawPastelFence(ctx, startX, floorY, posts = 4) {
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.52)';
+    const gap = 20;
+    ctx.fillRect(startX, floorY - 20, posts * gap, 4);
+    ctx.fillRect(startX, floorY - 10, posts * gap, 4);
+    for (let i = 0; i <= posts; i++) {
+      ctx.fillRect(startX + i * gap, floorY - 28, 6, 28);
+    }
+  }
+
+  _drawPalmTree(ctx, x, floorY, dir = 1) {
+    ctx.save();
+    ctx.translate(x, floorY);
+    ctx.scale(dir, 1);
+    ctx.strokeStyle = 'rgba(180, 130, 90, 0.58)';
+    ctx.lineWidth = 10;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.quadraticCurveTo(18, -55, 34, -108);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(74, 222, 128, 0.62)';
+    [-0.9, -0.3, 0.35, 0.95].forEach((ang) => {
+      ctx.save();
+      ctx.translate(34, -108);
+      ctx.rotate(ang);
+      ctx.beginPath();
+      ctx.ellipse(22, 0, 26, 7, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    });
+    ctx.restore();
+  }
+
+  _drawBeachUmbrella(ctx, x, floorY) {
+    ctx.save();
+    ctx.translate(x, floorY);
+    ctx.strokeStyle = 'rgba(148, 163, 184, 0.65)';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(0, -68);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(251, 113, 133, 0.62)';
+    ctx.beginPath();
+    ctx.arc(0, -64, 34, Math.PI, 0);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  _drawWindmill(ctx, x, floorY, time) {
+    ctx.save();
+    ctx.translate(x, floorY);
+    ctx.fillStyle = 'rgba(248, 250, 252, 0.68)';
+    ctx.beginPath();
+    ctx.moveTo(-22, 0);
+    ctx.lineTo(-12, -92);
+    ctx.lineTo(12, -92);
+    ctx.lineTo(22, 0);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = 'rgba(248, 113, 113, 0.55)';
+    ctx.beginPath();
+    ctx.moveTo(-16, -92);
+    ctx.lineTo(0, -114);
+    ctx.lineTo(16, -92);
+    ctx.closePath();
+    ctx.fill();
+    // Rotating blades
+    ctx.save();
+    ctx.translate(0, -84);
+    ctx.rotate(time * 0.45);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
+    for (let i = 0; i < 4; i++) {
+      ctx.rotate(Math.PI / 2);
+      ctx.fillRect(-3, 0, 6, 42);
+    }
+    ctx.restore();
+    ctx.restore();
+  }
+
   _renderStormZones(ctx, floorY) {
     if (!this.stormState) return;
     const { phase, timer, safeX, safeHalfW } = this.stormState;
@@ -711,46 +963,46 @@ export class PoopEngine {
     const rightSafe = Math.min(this.width, safeX + safeHalfW);
 
     ctx.save();
+    ctx.lineJoin = 'round';
     if (phase === 'WARNING') {
       const blink = Math.floor(timer * 8) % 2 === 0;
       // Danger red columns everywhere except Safe Zone
-      ctx.fillStyle = blink ? 'rgba(239, 68, 68, 0.22)' : 'rgba(239, 68, 68, 0.12)';
+      ctx.fillStyle = blink ? 'rgba(239, 68, 68, 0.24)' : 'rgba(239, 68, 68, 0.13)';
       ctx.fillRect(0, 0, leftSafe, floorY);
       ctx.fillRect(rightSafe, 0, Math.max(0, this.width - rightSafe), floorY);
 
-      // Glowing Green Safe Sanctuary Pillar
-      ctx.fillStyle = 'rgba(34, 197, 94, 0.22)';
+      // Glowing Green Safe Sanctuary Pillar (borderless!)
+      ctx.fillStyle = 'rgba(34, 197, 94, 0.28)';
       ctx.fillRect(leftSafe, 0, rightSafe - leftSafe, floorY);
-      ctx.strokeStyle = '#4ade80';
-      ctx.lineWidth = 3;
-      ctx.strokeRect(leftSafe, 4, rightSafe - leftSafe, floorY - 4);
 
       ctx.textAlign = 'center';
-      ctx.fillStyle = '#86efac';
       ctx.font = '900 20px system-ui, sans-serif';
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = 'rgba(15, 23, 42, 0.8)';
+      ctx.strokeText('🛡️ SAFE ZONE', safeX, floorY - 22);
+      ctx.fillStyle = '#dcfce7';
       ctx.fillText('🛡️ SAFE ZONE', safeX, floorY - 22);
 
       // Urgent Banner below Hearts (no HUD overlap)
-      ctx.fillStyle = blink ? '#facc15' : '#ef4444';
       ctx.font = '900 26px system-ui, sans-serif';
-      ctx.shadowColor = 'rgba(0,0,0,0.85)';
-      ctx.shadowBlur = 10;
-      ctx.fillText(
-        `🚨 똥 폭격 경보! 초록 안전구역으로 대피! (${timer.toFixed(1)}s)`,
-        this.width * 0.5,
-        122
-      );
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = 'rgba(15, 23, 42, 0.85)';
+      const bannerText = `🚨 똥 폭격 경보! 초록 안전구역으로 대피! (${timer.toFixed(1)}s)`;
+      ctx.strokeText(bannerText, this.width * 0.5, 122);
+      ctx.fillStyle = blink ? '#facc15' : '#ef4444';
+      ctx.fillText(bannerText, this.width * 0.5, 122);
     } else {
       const postAlpha = Math.min(1, timer / 0.8);
       ctx.globalAlpha = postAlpha;
-      ctx.fillStyle = 'rgba(34, 197, 94, 0.16)';
+      // Soft green sanctuary glow after barrage (borderless!)
+      ctx.fillStyle = 'rgba(34, 197, 94, 0.22)';
       ctx.fillRect(leftSafe, 0, rightSafe - leftSafe, floorY);
-      ctx.strokeStyle = 'rgba(74, 222, 128, 0.75)';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(leftSafe, 4, rightSafe - leftSafe, floorY - 4);
       ctx.textAlign = 'center';
-      ctx.fillStyle = '#86efac';
       ctx.font = '800 18px system-ui, sans-serif';
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = 'rgba(15, 23, 42, 0.78)';
+      ctx.strokeText(`🛡️ SAFE ZONE (${timer.toFixed(1)}s)`, safeX, floorY - 22);
+      ctx.fillStyle = '#dcfce7';
       ctx.fillText(`🛡️ SAFE ZONE (${timer.toFixed(1)}s)`, safeX, floorY - 22);
     }
     ctx.restore();
@@ -1077,28 +1329,35 @@ export class PoopEngine {
     const h = this.height;
 
     ctx.save();
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = 'rgba(15, 23, 42, 0.82)';
 
     ctx.textAlign = 'left';
+    let leftText = `🙂 머리 좌우 이동 · 캐릭터 #${this.selectedSpriteId}`;
+    let leftColor = '#f8fafc';
+    let leftFont = '800 13px system-ui, sans-serif';
     if (this.player.shieldTimer > 0) {
-      ctx.fillStyle = '#38bdf8';
-      ctx.font = '900 15px system-ui, sans-serif';
-      ctx.fillText(`☂️ SHIELD: ${this.player.shieldTimer.toFixed(1)}s`, 24, h - 24);
+      leftText = `☂️ SHIELD: ${this.player.shieldTimer.toFixed(1)}s`;
+      leftColor = '#38bdf8';
+      leftFont = '900 15px system-ui, sans-serif';
     } else if (this.player.isOnIce) {
-      ctx.fillStyle = '#7dd3fc';
-      ctx.font = '900 14px system-ui, sans-serif';
-      ctx.fillText('❄️ 빙판 위! 미끄러짐 주의!', 24, h - 22);
-    } else {
-      ctx.fillStyle = '#94a3b8';
-      ctx.font = '700 13px system-ui, sans-serif';
-      ctx.fillText(`🙂 머리 좌우 이동 · 캐릭터 #${this.selectedSpriteId}`, 24, h - 22);
+      leftText = '❄️ 빙판 위! 미끄러짐 주의!';
+      leftColor = '#7dd3fc';
+      leftFont = '900 14px system-ui, sans-serif';
     }
+    ctx.font = leftFont;
+    ctx.lineWidth = 3.5;
+    ctx.strokeText(leftText, 24, h - 22);
+    ctx.fillStyle = leftColor;
+    ctx.fillText(leftText, 24, h - 22);
 
     ctx.textAlign = 'right';
-    ctx.fillStyle = '#facc15';
     ctx.font = '900 16px system-ui, sans-serif';
-    ctx.shadowColor = 'rgba(0,0,0,0.85)';
-    ctx.shadowBlur = 6;
-    ctx.fillText(`LVL ${this.level} · DODGED ${this.dodgedCount}`, w - 24, h - 24);
+    ctx.lineWidth = 4;
+    const rightText = `LVL ${this.level} · DODGED ${this.dodgedCount}`;
+    ctx.strokeText(rightText, w - 24, h - 24);
+    ctx.fillStyle = '#fde047';
+    ctx.fillText(rightText, w - 24, h - 24);
 
     ctx.restore();
   }

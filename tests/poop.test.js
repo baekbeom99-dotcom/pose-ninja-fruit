@@ -5,7 +5,7 @@ import {
   POOP_SPRITE_IDS,
   PoopPlayer
 } from '../js/game/poop/poopEntities.js';
-import { PoopEngine } from '../js/game/poop/poopEngine.js';
+import { POOP_SCENE_THEMES, PoopEngine } from '../js/game/poop/poopEngine.js';
 
 let passed = 0;
 let total = 0;
@@ -242,6 +242,66 @@ function runTests() {
   engine.drops = [new FallingDrop(engine.player.x, engine.player.y - 5, DropType.POOP_NORMAL, 1)];
   engine.update(0.02, 0, null);
   assert(engine.lives === 0 && engine.state === 'GAMEOVER' && gameOverCalled === true, 'GameOver triggers cleanly at 0 lives');
+
+  // Test varied pastel scenery rotation & borderless Safe Zone render
+  const theme1 = engine.sceneTheme;
+  engine.start();
+  const theme2 = engine.sceneTheme;
+  assert(
+    POOP_SCENE_THEMES.length >= 4 && POOP_SCENE_THEMES.includes(theme2) && theme2 !== theme1,
+    `Scenic background rotates randomly across pastel themes (${theme1} -> ${theme2})`
+  );
+
+  let strokeRectCalled = 0;
+  const mockCtx = {
+    save() {},
+    restore() {},
+    translate() {},
+    rotate() {},
+    scale() {},
+    beginPath() {},
+    closePath() {},
+    arc() {},
+    ellipse() {},
+    moveTo() {},
+    lineTo() {},
+    quadraticCurveTo() {},
+    fill() {},
+    stroke() {},
+    fillRect() {},
+    roundRect() {},
+    strokeText() {},
+    fillText() {},
+    strokeRect() { strokeRectCalled++; },
+    createLinearGradient() { return { addColorStop() {} }; },
+    set fillStyle(_) {},
+    set strokeStyle(_) {},
+    set lineWidth(_) {},
+    set lineCap(_) {},
+    set lineJoin(_) {},
+    set globalAlpha(_) {},
+    set font(_) {},
+    set textAlign(_) {},
+    set shadowColor(_) {},
+    set shadowBlur(_) {}
+  };
+  let renderError = null;
+  try {
+    engine.triggerPoopStorm(520);
+    for (const scene of POOP_SCENE_THEMES) {
+      engine.sceneTheme = scene;
+      engine.stormState.phase = 'WARNING';
+      engine.render(mockCtx);
+      engine.stormState.phase = 'POST';
+      engine.render(mockCtx);
+    }
+  } catch (e) {
+    renderError = e;
+  }
+  assert(
+    !renderError && strokeRectCalled === 0,
+    'All 4 pastel scenic backgrounds render cleanly and Safe Zone has zero border strokeRect'
+  );
 
   console.log(`\nPoop Dodge Tests Complete: ${passed}/${total} passed.`);
   if (passed !== total) {
