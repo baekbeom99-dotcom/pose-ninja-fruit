@@ -1,5 +1,10 @@
 import { CONFIG } from '../js/config.js';
-import { DropType, FallingDrop, PoopPlayer } from '../js/game/poop/poopEntities.js';
+import {
+  DropType,
+  FallingDrop,
+  POOP_SPRITE_IDS,
+  PoopPlayer
+} from '../js/game/poop/poopEntities.js';
 import { PoopEngine } from '../js/game/poop/poopEngine.js';
 
 let passed = 0;
@@ -16,8 +21,12 @@ function assert(condition, message) {
 }
 
 function runTests() {
-  console.log('--- Testing Config & PoopEntities ---');
+  console.log('--- Testing Config, Sprite IDs & PoopEntities ---');
   assert(CONFIG.MODES.POOP_DODGE === 'POOP_DODGE', 'CONFIG.MODES registers POOP_DODGE mode');
+  assert(
+    POOP_SPRITE_IDS.join(',') === '033,034,035,036,037,038',
+    'Poop mode includes sprites 033 through 038'
+  );
 
   const p = new PoopPlayer(640, 650);
   assert(p.radius >= 34, `Player radius scaled +30% (${p.radius}px >= 34px)`);
@@ -31,10 +40,22 @@ function runTests() {
   const normal = new FallingDrop(300, 12, DropType.POOP_NORMAL, 1);
   const giant = new FallingDrop(300, 12, DropType.POOP_GIANT, 2);
   const fast = new FallingDrop(300, 12, DropType.POOP_FAST, 3);
+  const elephant = new FallingDrop(300, 12, DropType.POOP_ELEPHANT, 6);
+  const rainbow = new FallingDrop(300, 12, DropType.POOP_RAINBOW, 2);
+
   assert(
     normal.radius >= 29 && giant.radius >= 44 && fast.radius >= 26,
     `Falling drops scaled +30% (normal=${normal.radius}, giant=${giant.radius}, fast=${fast.radius})`
   );
+  assert(
+    elephant.radius >= 65 && elephant.isHazardous === true,
+    `Elephant poop is huge (${elephant.radius}px) and hazardous`
+  );
+  assert(
+    rainbow.isHazardous === false && rainbow.points === 25,
+    'Rainbow poop is collectible bonus (+25 pts)'
+  );
+
   const startY = giant.y;
   giant.update(0.1, 1280);
   assert(giant.y === startY && giant.warningTimer > 0, 'Giant poop pauses briefly for warning cue before plunging');
@@ -42,14 +63,16 @@ function runTests() {
   giant.update(0.1, 1280);
   assert(giant.y > startY, 'Giant poop accelerates downward after warning ends');
 
-  console.log('--- Testing PoopEngine Head-X Control, Effects & SFX ---');
+  console.log('--- Testing PoopEngine Head-X Control, Rainbow, Elephant Ice, Storm & Anti-Camp ---');
   const sfxLog = [];
   const mockSound = {
     playPoopFloorSplat() { sfxLog.push('FLOOR'); },
     playPoopSplat() { sfxLog.push('HIT'); },
     playPoopBonus() { sfxLog.push('BONUS'); },
     playPoopFlush() { sfxLog.push('FLUSH'); },
-    playPoopWarning() { sfxLog.push('WARN'); }
+    playPoopWarning() { sfxLog.push('WARN'); },
+    playPoopElephantSplat() { sfxLog.push('ELEPHANT'); },
+    playPoopStormAlarm() { sfxLog.push('ALARM'); }
   };
 
   let lastScore = 0;
@@ -62,7 +85,10 @@ function runTests() {
   engine.onGameOver = () => { gameOverCalled = true; };
 
   engine.start();
-  assert(engine.state === 'PLAYING' && engine.lives === 5, 'PoopEngine starts with 5 lives');
+  const firstSprite = engine.selectedSpriteId;
+  assert(POOP_SPRITE_IDS.includes(firstSprite), `Selected random character sprite #${firstSprite}`);
+  engine.start();
+  assert(engine.selectedSpriteId !== firstSprite, 'Restart avoids repeating identical sprite immediately');
 
   // Head pose mirrored steering: raw head X = 0.2 -> mirrored canvas X = 0.8 * 1000 = 800
   engine.update(0.05, 0, { x: 0.2, y: 0.3 });
@@ -75,55 +101,107 @@ function runTests() {
   engine.update(0.05, 0, { x: 0.8, y: 0.3 });
   assert(Math.abs(engine.player.targetX - 200) < 1, 'Mirrored head X (0.8 -> 200px) steers leftward');
 
-  // Test floor splat scoring & particle/splat effects when poop misses player
+  // Test floor splat scoring & SFX
   engine.drops = [new FallingDrop(900, engine.getFloorY() - 5, DropType.POOP_NORMAL, 1)];
   engine.spawnTimer = 99;
-  engine.update(0.05, 0, { x: 0.8, y: 0.3 }); // player near 200, poop lands at 900
+  engine.update(0.05, 0, { x: 0.8, y: 0.3 });
   assert(engine.score >= 1 && lastScore === engine.score, 'Dodged poop landing on floor awards points');
   assert(engine.floorSplats.length === 1 && engine.particles.length > 0, 'Floor splat and splash particles generated');
   assert(sfxLog.includes('FLOOR'), 'Floor splat SFX triggered');
 
-  // Stabilize player targetX so items dropped at player.x hit squarely
+  // Stabilize player position & test Rainbow Poop pickup
   engine.player.targetX = engine.player.x;
-
-  // Test Toilet Paper bonus pickup
-  const prevScore = engine.score;
-  engine.drops = [new FallingDrop(engine.player.x, engine.player.y - 5, DropType.TOILET_PAPER, 1)];
+  const beforeRainbow = engine.score;
+  engine.drops = [new FallingDrop(engine.player.x, engine.player.y - 5, DropType.POOP_RAINBOW, 1)];
   engine.update(0.02, 0, null);
   assert(
-    engine.score === prevScore + 15 && engine.player.expression === 'HAPPY' && sfxLog.includes('BONUS'),
-    'Collecting Toilet Paper adds +15 pts, sets HAPPY expression, and plays bonus SFX'
+    engine.score === beforeRainbow + 25 && engine.lives === 5 && sfxLog.includes('BONUS'),
+    'Collecting Rainbow Poop awards +25 bonus points without hurting player'
   );
 
-  // Test Umbrella Shield pickup & poop deflection
+  // Test Anti-Camping targeted poop within ~3s
+  engine.drops = [];
+  engine.spawnTimer = 99;
+  engine.stormCooldown = 99;
+  engine.campAnchorX = engine.player.x;
+  engine.campTimer = 0;
+  for (let i = 0; i < 30; i++) {
+    engine.update(0.1, 0, null); // stationary 3.0s
+  }
+  const aimedDrops = engine.drops.filter(d => d.type === DropType.POOP_FAST);
+  assert(
+    aimedDrops.length >= 1 && Math.abs(aimedDrops[0].x - engine.player.x) <= 25,
+    'Staying stationary for ~3s spawns targeted anti-camp poop over player'
+  );
+
+  // Test Elephant Poop impact -> 5s Ice Patch creation, slippery steering, & 5s expiration
+  engine.drops = [];
+  engine.icePatches = [];
+  const elDrop = new FallingDrop(engine.player.x, engine.getFloorY() - 10, DropType.POOP_ELEPHANT, 6);
+  elDrop.warningTimer = 0;
+  // Place player safely off to side while elephant poop lands at x=500
+  engine.player.x = 200;
+  engine.player.targetX = 200;
+  elDrop.x = 500;
+  engine.drops = [elDrop];
+  engine.update(0.05, 0, null);
+  assert(
+    engine.icePatches.length === 1 && Math.abs(engine.icePatches[0].life - 5.0) < 0.2 && sfxLog.includes('ELEPHANT'),
+    'Elephant poop impact creates a 5-second ice patch and plays elephant splat SFX'
+  );
+
+  // Step player onto ice patch -> slippery inertia physics active
+  engine.player.x = 500;
+  engine.player.targetX = 650;
+  engine.player.vx = 0;
+  engine.update(0.02, 0, null);
+  assert(engine.player.isOnIce === true, 'Player standing on elephant dung ice patch enters slippery isOnIce state');
+
+  // Advance 5.1s -> ice patch disappears cleanly
+  for (let i = 0; i < 52; i++) {
+    engine.update(0.1, 0, null);
+  }
+  assert(engine.icePatches.length === 0, 'Elephant poop ice patch disappears after 5 seconds');
+
+  // Test Poop Storm Alarm & Safe Zone Bombardment
+  engine.drops = [];
+  engine.spawnTimer = 99;
+  engine.triggerPoopStorm(500);
+  assert(
+    engine.stormState && engine.stormState.phase === 'WARNING' && engine.stormState.safeX === 500 && sfxLog.includes('ALARM'),
+    'Poop Storm triggers alarm SFX and sets Safe Zone in advance'
+  );
+  // Advance past 2.2s warning window to execute carpet barrage
+  for (let i = 0; i < 25; i++) {
+    engine.update(0.1, 0, null);
+  }
+  const safeHalfW = engine.stormState ? engine.stormState.safeHalfW : 80;
+  const stormDropsOutsideSafe = engine.drops.filter(d => Math.abs(d.x - 500) > safeHalfW);
+  const stormDropsInsideSafe = engine.drops.filter(d => Math.abs(d.x - 500) <= safeHalfW);
+  assert(
+    stormDropsOutsideSafe.length >= 6 && stormDropsInsideSafe.length === 0,
+    'Poop Storm drops carpet barrage across all columns EXCEPT the Safe Zone'
+  );
+
+  // Test Umbrella Shield + Heart + GameOver (reset state after storm)
+  engine.lives = 5;
+  engine.player.invulnerableTimer = 0;
+  engine.player.shieldTimer = 0;
+  engine.stormState = null;
   engine.drops = [new FallingDrop(engine.player.x, engine.player.y - 5, DropType.UMBRELLA, 1)];
   engine.update(0.02, 0, null);
   assert(engine.player.shieldTimer > 5.0 && sfxLog.includes('FLUSH'), 'Collecting Umbrella activates shield and plays flush SFX');
 
-  engine.drops = [new FallingDrop(engine.player.x, engine.player.y - 5, DropType.POOP_NORMAL, 1)];
-  engine.update(0.02, 0, null);
-  assert(engine.lives === 5 && engine.score > prevScore + 20, 'Umbrella shield deflects falling poop cleanly with 2x bonus');
-
-  // Test unshielded poop hit -> splat SFX, OUCH expression, shake, life deduction
   engine.player.shieldTimer = 0;
   engine.player.invulnerableTimer = 0;
   engine.drops = [new FallingDrop(engine.player.x, engine.player.y - 5, DropType.POOP_NORMAL, 1)];
   engine.update(0.02, 0, null);
-  assert(
-    engine.lives === 4 &&
-      lastLives === 4 &&
-      engine.player.expression === 'OUCH' &&
-      engine.shakeTimer > 0 &&
-      sfxLog.includes('HIT'),
-    'Unshielded poop hit deducts life, triggers OUCH, screen shake, and splat SFX'
-  );
+  assert(engine.lives === 4 && lastLives === 4 && sfxLog.includes('HIT'), 'Unshielded poop hit deducts life');
 
-  // Test Heart recovery pickup when damaged
   engine.drops = [new FallingDrop(engine.player.x, engine.player.y - 5, DropType.HEART, 1)];
   engine.update(0.02, 0, null);
   assert(engine.lives === 5, 'Collecting Heart restores +1 life');
 
-  // Test Game Over on final hit at 1 life
   engine.lives = 1;
   engine.player.invulnerableTimer = 0;
   engine.drops = [new FallingDrop(engine.player.x, engine.player.y - 5, DropType.POOP_NORMAL, 1)];

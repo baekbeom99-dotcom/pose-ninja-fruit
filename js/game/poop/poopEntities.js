@@ -1,12 +1,17 @@
 /**
  * Poop Dodge Mode Entities
- * Head-X controlled character and varied falling poops / bonus items.
+ * Head-X controlled character (with 033-038 sprites & slippery ice physics),
+ * varied falling poops (Normal, Giant, Fast, Elephant, Rainbow), and bonus items.
  */
+
+export const POOP_SPRITE_IDS = ['033', '034', '035', '036', '037', '038'];
 
 export const DropType = {
   POOP_NORMAL: 'POOP_NORMAL',
   POOP_GIANT: 'POOP_GIANT',
   POOP_FAST: 'POOP_FAST',
+  POOP_ELEPHANT: 'POOP_ELEPHANT',
+  POOP_RAINBOW: 'POOP_RAINBOW',
   TOILET_PAPER: 'TOILET_PAPER',
   UMBRELLA: 'UMBRELLA',
   HEART: 'HEART'
@@ -16,7 +21,8 @@ export function isHazardType(type) {
   return (
     type === DropType.POOP_NORMAL ||
     type === DropType.POOP_GIANT ||
-    type === DropType.POOP_FAST
+    type === DropType.POOP_FAST ||
+    type === DropType.POOP_ELEPHANT
   );
 }
 
@@ -31,17 +37,31 @@ export class FallingDrop {
     this.wobblePhase = Math.random() * Math.PI * 2;
     this.rotation = 0;
 
-    if (type === DropType.POOP_GIANT) {
+    if (type === DropType.POOP_ELEPHANT) {
+      // Huge mega elephant poop (unlocked past Lv5)
+      this.radius = 68;
+      this.vy = 160 + level * 14;
+      this.gravity = 220;
+      this.points = 5;
+      this.warningTimer = 0.75;
+    } else if (type === DropType.POOP_GIANT) {
       this.radius = 44; // +30% (was 34)
       this.vy = 185 + level * 22;
       this.gravity = 240;
       this.points = 3;
-      this.warningTimer = 0.65; // Hovers with warning badge briefly before plunging
+      this.warningTimer = 0.65;
     } else if (type === DropType.POOP_FAST) {
       this.radius = 26; // +30% (was 20)
       this.vy = 320 + level * 32;
       this.gravity = 320;
       this.points = 2;
+      this.warningTimer = 0;
+    } else if (type === DropType.POOP_RAINBOW) {
+      // Collectible Rainbow Poop awarding bonus points
+      this.radius = 31;
+      this.vy = 195 + level * 12;
+      this.gravity = 65;
+      this.points = 25;
       this.warningTimer = 0;
     } else if (type === DropType.TOILET_PAPER) {
       this.radius = 29; // +30% (was 22)
@@ -102,9 +122,11 @@ export class PoopPlayer {
 
     this.invulnerableTimer = 0;
     this.shieldTimer = 0;
+    this.isOnIce = false;
     this.expression = 'NORMAL'; // 'NORMAL', 'HAPPY', 'OUCH'
     this.expressionTimer = 0;
     this.runAnim = 0;
+    this.walkFrame = 0;
   }
 
   reset(startX, groundY) {
@@ -115,9 +137,11 @@ export class PoopPlayer {
     this.tilt = 0;
     this.invulnerableTimer = 0;
     this.shieldTimer = 0;
+    this.isOnIce = false;
     this.expression = 'NORMAL';
     this.expressionTimer = 0;
     this.runAnim = 0;
+    this.walkFrame = 0;
   }
 
   setExpression(expr, duration = 0.75) {
@@ -125,24 +149,45 @@ export class PoopPlayer {
     this.expressionTimer = duration;
   }
 
-  update(dt, targetX, canvasWidth = 1280, groundY = 660) {
+  update(dt, targetX, canvasWidth = 1280, groundY = 660, onIce = false) {
     const minX = this.radius + 14;
     const maxX = Math.max(minX, canvasWidth - this.radius - 14);
     this.y = groundY;
+    this.isOnIce = !!onIce;
 
     if (targetX !== undefined && targetX !== null && !Number.isNaN(targetX)) {
       this.targetX = Math.max(minX, Math.min(maxX, targetX));
     }
 
+    const safeDt = Math.max(0.001, Math.min(dt || 0.016, 0.1));
     const prevX = this.x;
-    const blend = 1 - Math.exp(-12 * Math.min(dt || 0.016, 0.1));
-    this.x += (this.targetX - this.x) * blend;
-    this.x = Math.max(minX, Math.min(maxX, this.x));
 
-    const safeDt = Math.max(0.001, dt || 0.016);
-    this.vx = (this.x - prevX) / safeDt;
+    if (this.isOnIce) {
+      // Slippery ice momentum: sluggish traction causes overshooting & sliding!
+      const desiredDiff = this.targetX - this.x;
+      const iceAccel = desiredDiff * 16;
+      const damp = Math.pow(0.28, safeDt); // preserves sliding inertia across frames
+      this.vx = this.vx * damp + iceAccel * safeDt * 3.8;
+      this.vx = Math.max(-920, Math.min(920, this.vx));
+      this.x += this.vx * safeDt;
+      if (this.x < minX) {
+        this.x = minX;
+        this.vx *= -0.35;
+      } else if (this.x > maxX) {
+        this.x = maxX;
+        this.vx *= -0.35;
+      }
+    } else {
+      const blend = 1 - Math.exp(-12 * safeDt);
+      this.x += (this.targetX - this.x) * blend;
+      this.x = Math.max(minX, Math.min(maxX, this.x));
+      this.vx = (this.x - prevX) / safeDt;
+    }
+
     this.tilt = Math.max(-0.28, Math.min(0.28, this.vx / 950));
-    this.runAnim += Math.abs(this.x - prevX) * 0.22;
+    const moved = Math.abs(this.x - prevX);
+    this.runAnim += moved * 0.22;
+    this.walkFrame = (this.walkFrame + moved * 0.055) % 4;
 
     if (this.invulnerableTimer > 0) {
       this.invulnerableTimer = Math.max(0, this.invulnerableTimer - dt);

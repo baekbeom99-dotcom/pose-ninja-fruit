@@ -1,11 +1,20 @@
 /**
  * Poop Dodge Mode Core Engine ("💩 똥피하기")
- * Head X-axis controlled dodge game with escalating waves, giant/angled poops,
- * toilet paper & umbrella shield power-ups, splat puddles, particles, and SFX.
+ * Features:
+ *   - Head X-axis controlled dodge with 033-038 sprite characters selected randomly
+ *   - Anti-camping targeted poop spawn if player stays in one spot ~3s
+ *   - Collectible Rainbow Poop (+25 bonus points)
+ *   - Past Lv5: Huge Elephant Poops leaving 5s slippery ice patches that hinder steering
+ *   - Periodic Poop Storm Alarm highlighting Safe Zone before carpet-bombing all other columns
  */
 
 import { soundManager } from '../../audio/soundManager.js';
-import { DropType, FallingDrop, PoopPlayer } from './poopEntities.js';
+import {
+  DropType,
+  FallingDrop,
+  POOP_SPRITE_IDS,
+  PoopPlayer
+} from './poopEntities.js';
 
 export class PoopEngine {
   constructor(width = 1280, height = 720, ui = null, sound = null) {
@@ -14,12 +23,18 @@ export class PoopEngine {
     this.ui = ui;
     this.sound = sound || soundManager;
 
-    this.floorOffset = 46;
+    this.floorOffset = 52;
     this.player = new PoopPlayer(width * 0.5, this.getFloorY() - 36);
+
+    // Preload 033-038 walk sprite sheets in browser environments
+    this.spriteCache = {};
+    this.selectedSpriteId = POOP_SPRITE_IDS[0];
+    this._initSprites();
 
     this.drops = [];
     this.particles = [];
     this.floorSplats = [];
+    this.icePatches = [];
     this.floatingTexts = [];
 
     this.score = 0;
@@ -33,9 +48,34 @@ export class PoopEngine {
     this.shakeTimer = 0;
     this.state = 'IDLE'; // 'IDLE', 'PLAYING', 'GAMEOVER'
 
+    // Anti-camping tracker (prevent staying in same X spot >= 3s)
+    this.campAnchorX = width * 0.5;
+    this.campTimer = 0;
+    this.campWarned = false;
+
+    // Periodic Poop Storm with Safe Zone Alarm
+    this.stormCooldown = 14.0;
+    this.stormState = null; // { phase: 'WARNING'|'POST', timer, safeX, safeHalfW }
+
     this.onScore = () => {};
     this.onLivesChanged = () => {};
     this.onGameOver = () => {};
+  }
+
+  _initSprites() {
+    if (typeof Image === 'undefined') return;
+    POOP_SPRITE_IDS.forEach((id) => {
+      const img = new Image();
+      img.src = `assets/sprites/poop/${id}_walk.png`;
+      this.spriteCache[id] = img;
+    });
+  }
+
+  _pickRandomSpriteId() {
+    const candidates = POOP_SPRITE_IDS.filter((id) => id !== this.selectedSpriteId);
+    const pool = candidates.length > 0 ? candidates : POOP_SPRITE_IDS;
+    this.selectedSpriteId = pool[Math.floor(Math.random() * pool.length)];
+    return this.selectedSpriteId;
   }
 
   getFloorY() {
@@ -54,6 +94,7 @@ export class PoopEngine {
     this.drops = [];
     this.particles = [];
     this.floorSplats = [];
+    this.icePatches = [];
     this.floatingTexts = [];
 
     this.score = 0;
@@ -65,6 +106,14 @@ export class PoopEngine {
     this.dustTimer = 0;
     this.shakeTimer = 0;
 
+    this.campAnchorX = this.width * 0.5;
+    this.campTimer = 0;
+    this.campWarned = false;
+
+    this.stormCooldown = 14.0;
+    this.stormState = null;
+
+    this._pickRandomSpriteId();
     this.player.reset(this.width * 0.5, this.getFloorY() - this.player.radius * 1.06);
 
     if (this.ui) {
@@ -90,29 +139,38 @@ export class PoopEngine {
     }
   }
 
-  _spawnDrop(forcedType = null, forcedX = null) {
-    const margin = 40;
-    const x = forcedX != null
-      ? Math.max(margin, Math.min(this.width - margin, forcedX))
-      : margin + Math.random() * Math.max(60, this.width - margin * 2);
+  _spawnDrop(forcedType = null, forcedX = null, forcedVx = 0) {
+    const margin = 44;
+    const x =
+      forcedX != null
+        ? Math.max(margin, Math.min(this.width - margin, forcedX))
+        : margin + Math.random() * Math.max(60, this.width - margin * 2);
 
     let type = forcedType;
-    let vx = 0;
+    let vx = forcedVx;
 
     if (!type) {
       const roll = Math.random();
-      if (roll < 0.05) {
+      if (roll < 0.055) {
+        type = DropType.POOP_RAINBOW;
+      } else if (roll < 0.095) {
         type = DropType.TOILET_PAPER;
-      } else if (roll < 0.085) {
+      } else if (roll < 0.125) {
         type = DropType.UMBRELLA;
-      } else if (roll < 0.105 && this.lives < this.maxLives) {
+      } else if (roll < 0.145 && this.lives < this.maxLives) {
         type = DropType.HEART;
-      } else if (this.level >= 2 && roll < 0.22) {
+      } else if (this.level > 5 && roll < 0.25) {
+        // Unlocked past Lv5: huge Elephant Poop!
+        type = DropType.POOP_ELEPHANT;
+        if (this.sound && typeof this.sound.playPoopWarning === 'function') {
+          this.sound.playPoopWarning();
+        }
+      } else if (this.level >= 2 && roll < 0.34) {
         type = DropType.POOP_GIANT;
         if (this.sound && typeof this.sound.playPoopWarning === 'function') {
           this.sound.playPoopWarning();
         }
-      } else if (this.level >= 3 && roll < 0.38) {
+      } else if (this.level >= 3 && roll < 0.48) {
         type = DropType.POOP_FAST;
         vx = (Math.random() < 0.5 ? -1 : 1) * (80 + Math.random() * 110);
       } else {
@@ -123,6 +181,55 @@ export class PoopEngine {
     const drop = new FallingDrop(x, 12, type, this.level, vx);
     this.drops.push(drop);
     return drop;
+  }
+
+  /**
+   * Starts a Poop Storm Alarm announcing a Safe Zone before carpet-bombing all other columns.
+   */
+  triggerPoopStorm(safeXOverride = null) {
+    const margin = 120;
+    const safeHalfW = Math.max(76, Math.min(100, this.width * 0.08));
+    const safeX =
+      safeXOverride != null
+        ? Math.max(margin, Math.min(this.width - margin, safeXOverride))
+        : margin + Math.random() * Math.max(80, this.width - margin * 2);
+
+    this.stormState = {
+      phase: 'WARNING',
+      timer: 2.2,
+      safeX,
+      safeHalfW
+    };
+
+    if (this.sound && typeof this.sound.playPoopStormAlarm === 'function') {
+      this.sound.playPoopStormAlarm();
+    }
+    return this.stormState;
+  }
+
+  _executeStormBarrage(safeX, safeHalfW) {
+    const step = 80;
+    const startX = 44;
+    const endX = this.width - 44;
+    for (let cx = startX; cx <= endX; cx += step) {
+      if (Math.abs(cx - safeX) <= safeHalfW) {
+        // Leave Safe Zone completely clear of storm poops!
+        continue;
+      }
+      const d = new FallingDrop(cx, 10, DropType.POOP_NORMAL, this.level, 0);
+      d.vy = 320 + this.level * 18;
+      this.drops.push(d);
+    }
+  }
+
+  isPointOnIce(x) {
+    for (let i = 0; i < this.icePatches.length; i++) {
+      const ip = this.icePatches[i];
+      if (ip.life > 0 && Math.abs(x - ip.x) <= ip.halfWidth) {
+        return true;
+      }
+    }
+    return false;
   }
 
   _spawnBurst(x, y, color, count = 12, speed = 180) {
@@ -156,6 +263,25 @@ export class PoopEngine {
 
   _spawnFloorSplat(x, drop) {
     const floorY = this.getFloorY();
+    if (drop.type === DropType.POOP_ELEPHANT) {
+      // Elephant poop impact creates a 5-second slippery ice patch & heavy shake!
+      this.shakeTimer = Math.max(this.shakeTimer, 0.45);
+      this.icePatches.push({
+        x,
+        y: floorY,
+        halfWidth: 145,
+        life: 5.0,
+        maxLife: 5.0
+      });
+      this._spawnBurst(x, floorY - 6, '#38bdf8', 16, 210);
+      this._spawnBurst(x, floorY - 6, '#78350f', 12, 160);
+      this._spawnFloatingText('❄️ 빙판 생성 (5초)!', x, floorY - 36, '#7dd3fc', 1.15);
+      if (this.sound && typeof this.sound.playPoopElephantSplat === 'function') {
+        this.sound.playPoopElephantSplat();
+      }
+      return;
+    }
+
     this.floorSplats.push({
       x,
       y: floorY,
@@ -179,26 +305,31 @@ export class PoopEngine {
 
     this.elapsedTime += safeDt;
 
-    // Level escalation every 14 seconds
-    const nextLevel = 1 + Math.floor(this.elapsedTime / 14);
+    // Level escalates smoothly every 10s (reaches past Lv5 around 50s -> unlocks Elephant Poop)
+    const nextLevel = 1 + Math.floor(this.elapsedTime / 10);
     if (nextLevel > this.level) {
       this.level = nextLevel;
-      this._spawnFloatingText(`🔥 LEVEL ${this.level}!`, this.width * 0.5, this.height * 0.34, '#facc15', 1.4);
+      const lvlMsg =
+        this.level === 6
+          ? '🐘 LEVEL 6! 코끼리 똥 + 빙판 등장!'
+          : `🔥 LEVEL ${this.level}!`;
+      this._spawnFloatingText(lvlMsg, this.width * 0.5, this.height * 0.34, '#facc15', 1.35);
       if (this.sound && typeof this.sound.playPoopBonus === 'function') {
         this.sound.playPoopBonus();
       }
     }
 
-    // 1. Update player horizontal X from mirrored head pose X
+    // 1. Update player horizontal X from mirrored head pose X (and apply Ice slip physics)
     let targetX = this.player.targetX;
     if (headPose && typeof headPose.x === 'number') {
       targetX = (1.0 - headPose.x) * this.width;
     }
     const groundY = this.getFloorY() - this.player.radius * 1.06;
-    this.player.update(safeDt, targetX, this.width, groundY);
+    const onIce = this.isPointOnIce(this.player.x);
+    this.player.update(safeDt, targetX, this.width, groundY, onIce);
 
-    // Foot dust puffs when running fast
-    if (Math.abs(this.player.vx) > 220) {
+    // Running dust or ice frost puffs
+    if (Math.abs(this.player.vx) > 200) {
       this.dustTimer -= safeDt;
       if (this.dustTimer <= 0) {
         this.dustTimer = 0.08;
@@ -208,35 +339,73 @@ export class PoopEngine {
           vx: -this.player.vx * 0.18,
           vy: -35 - Math.random() * 25,
           radius: 4 + Math.random() * 3,
-          color: 'rgba(226, 232, 240, 0.7)',
+          color: onIce ? 'rgba(125, 211, 252, 0.85)' : 'rgba(226, 232, 240, 0.7)',
           life: 0.32,
           maxLife: 0.32
         });
       }
     }
 
-    // 2. Spawn falling poops & items
+    // 2. Anti-Camping Enforcement: prevent standing in the same spot >= 3 seconds
+    if (Math.abs(this.player.x - this.campAnchorX) <= 52) {
+      this.campTimer += safeDt;
+      if (this.campTimer >= 2.0 && !this.campWarned) {
+        this.campWarned = true;
+        this._spawnFloatingText('⚠️ 한 자리 오래 금지!', this.player.x, this.player.y - 60, '#fb923c', 1.0);
+      }
+      if (this.campTimer >= 2.65) {
+        this.campTimer = 0;
+        this.campWarned = false;
+        const aimX = this.player.x + (Math.random() - 0.5) * 20;
+        this._spawnDrop(DropType.POOP_FAST, aimX, 0);
+      }
+    } else {
+      this.campAnchorX = this.player.x;
+      this.campTimer = 0;
+      this.campWarned = false;
+    }
+
+    // 3. Periodic Poop Storm Alarm & Safe Zone Curtain Drop
+    if (this.stormState) {
+      this.stormState.timer -= safeDt;
+      if (this.stormState.phase === 'WARNING' && this.stormState.timer <= 0) {
+        this._executeStormBarrage(this.stormState.safeX, this.stormState.safeHalfW);
+        this.stormState = {
+          phase: 'POST',
+          timer: 0.9,
+          safeX: this.stormState.safeX,
+          safeHalfW: this.stormState.safeHalfW
+        };
+      } else if (this.stormState.phase === 'POST' && this.stormState.timer <= 0) {
+        this.stormState = null;
+        this.stormCooldown = 16.0 + Math.random() * 5.0;
+      }
+    } else {
+      this.stormCooldown -= safeDt;
+      if (this.stormCooldown <= 0 && this.level >= 2) {
+        this.triggerPoopStorm();
+      }
+    }
+
+    // 4. Regular falling drops spawner
     this.spawnTimer -= safeDt;
     if (this.spawnTimer <= 0) {
       this._spawnDrop();
-      // Tighter interval as level rises, minimum 0.24s
-      const baseInterval = Math.max(0.24, 0.82 - (this.level - 1) * 0.075);
+      const baseInterval = Math.max(0.24, 0.80 - (this.level - 1) * 0.068);
       this.spawnTimer = baseInterval * (0.75 + Math.random() * 0.45);
     }
 
-    // 3. Update drops & check collisions / floor splats
+    // 5. Update drops & check collisions / floor splats
     const floorY = this.getFloorY();
     for (let i = this.drops.length - 1; i >= 0; i--) {
       const drop = this.drops[i];
       drop.update(safeDt, this.width);
 
-      // Player collision check
       if (this.player.collidesWith(drop)) {
         if (!drop.isHazardous) {
           drop.isDead = true;
           this._handleBonusPickup(drop);
         } else if (this.player.shieldTimer > 0) {
-          // Shield deflects poop safely!
           drop.isDead = true;
           this.dodgedCount++;
           this._addScore(drop.points * 2);
@@ -252,17 +421,20 @@ export class PoopEngine {
         }
       }
 
-      // Floor hit check
       if (!drop.isDead && drop.y + drop.radius >= floorY) {
         drop.isDead = true;
         if (drop.isHazardous) {
           this.dodgedCount++;
           this._addScore(drop.points);
           this._spawnFloorSplat(drop.x, drop);
-          this._spawnFloatingText(`+${drop.points}`, drop.x, floorY - 22, '#a3e635', 0.9);
-          if (this.sound && typeof this.sound.playPoopFloorSplat === 'function') {
-            this.sound.playPoopFloorSplat();
+          if (drop.type !== DropType.POOP_ELEPHANT) {
+            this._spawnFloatingText(`+${drop.points}`, drop.x, floorY - 22, '#a3e635', 0.9);
+            if (this.sound && typeof this.sound.playPoopFloorSplat === 'function') {
+              this.sound.playPoopFloorSplat();
+            }
           }
+        } else if (drop.type === DropType.POOP_RAINBOW) {
+          this._spawnBurst(drop.x, floorY - 6, '#f472b6', 8, 120);
         } else {
           this._spawnBurst(drop.x, floorY - 6, '#e2e8f0', 6, 90);
         }
@@ -276,7 +448,16 @@ export class PoopEngine {
 
   _handleBonusPickup(drop) {
     this.player.setExpression('HAPPY', 0.8);
-    if (drop.type === DropType.TOILET_PAPER) {
+    if (drop.type === DropType.POOP_RAINBOW) {
+      this._addScore(drop.points);
+      ['#ef4444', '#facc15', '#4ade80', '#38bdf8', '#d946ef'].forEach((c) => {
+        this._spawnBurst(drop.x, drop.y, c, 4, 210);
+      });
+      this._spawnFloatingText(`🌈 무지개 똥 +${drop.points}!`, drop.x, drop.y - 22, '#fde047', 1.3);
+      if (this.sound && typeof this.sound.playPoopBonus === 'function') {
+        this.sound.playPoopBonus();
+      }
+    } else if (drop.type === DropType.TOILET_PAPER) {
       this._addScore(drop.points);
       this._spawnBurst(drop.x, drop.y, '#f8fafc', 16, 220);
       this._spawnBurst(drop.x, drop.y, '#facc15', 10, 180);
@@ -321,6 +502,10 @@ export class PoopEngine {
     this.player.setExpression('OUCH', 1.2);
     this.shakeTimer = 0.42;
 
+    if (drop.type === DropType.POOP_ELEPHANT) {
+      this._spawnFloorSplat(drop.x, drop);
+    }
+
     this._spawnBurst(this.player.x, this.player.y - 10, '#78350f', 20, 260);
     this._spawnBurst(this.player.x, this.player.y - 10, '#84cc16', 10, 170);
     this._spawnFloatingText('💩 앗! -1 ❤️', this.player.x, this.player.y - 44, '#ef4444', 1.3);
@@ -338,6 +523,13 @@ export class PoopEngine {
   _updateEffects(dt) {
     if (this.shakeTimer > 0) {
       this.shakeTimer = Math.max(0, this.shakeTimer - dt);
+    }
+
+    for (let i = this.icePatches.length - 1; i >= 0; i--) {
+      this.icePatches[i].life -= dt;
+      if (this.icePatches[i].life <= 0) {
+        this.icePatches.splice(i, 1);
+      }
     }
 
     for (let i = this.floorSplats.length - 1; i >= 0; i--) {
@@ -376,20 +568,25 @@ export class PoopEngine {
       ctx.translate((Math.random() - 0.5) * mag, (Math.random() - 0.5) * mag);
     }
 
-    // 1. Dark Atmospheric Arena Overlay over subtle webcam feed
+    // 1. Dark Atmospheric Arena Overlay
     const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
     bgGrad.addColorStop(0, 'rgba(15, 23, 42, 0.55)');
     bgGrad.addColorStop(1, 'rgba(30, 41, 59, 0.72)');
     ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, w, h);
 
-    // 2. Ground Platform Line
+    // 2. Poop Storm Safe Zone Highlight / Danger Columns (when alarm active)
+    this._renderStormZones(ctx, floorY);
+
+    // 3. Ground Platform Line
     ctx.fillStyle = '#334155';
     ctx.fillRect(0, floorY, w, h - floorY);
     ctx.fillStyle = '#64748b';
     ctx.fillRect(0, floorY, w, 4);
 
-    // 3. Floor Poop Splats
+    // 4. Slippery Ice Patches & Floor Splats
+    this._renderIcePatches(ctx, floorY);
+
     for (const sp of this.floorSplats) {
       const alpha = Math.max(0, sp.life / sp.maxLife) * 0.75;
       ctx.save();
@@ -401,15 +598,15 @@ export class PoopEngine {
       ctx.restore();
     }
 
-    // 4. Falling Poops & Bonus Items
+    // 5. Falling Poops & Bonus Items
     for (const drop of this.drops) {
       this._renderDrop(ctx, drop);
     }
 
-    // 5. Player Character
+    // 6. Player Character (033-038 Sprite or procedural fallback)
     this._renderPlayer(ctx);
 
-    // 6. Particles & Floating Popups
+    // 7. Particles & Floating Popups
     for (const p of this.particles) {
       const alpha = Math.max(0, p.life / p.maxLife);
       ctx.save();
@@ -434,22 +631,103 @@ export class PoopEngine {
       ctx.restore();
     }
 
-    // 7. Bottom HUD (Shield bar bottom-left, Level/Dodged badge bottom-right -> zero top HUD overlap)
+    // 8. Bottom HUD
     this._renderHUD(ctx);
 
     ctx.restore();
   }
 
+  _renderStormZones(ctx, floorY) {
+    if (!this.stormState) return;
+    const { phase, timer, safeX, safeHalfW } = this.stormState;
+    const leftSafe = Math.max(0, safeX - safeHalfW);
+    const rightSafe = Math.min(this.width, safeX + safeHalfW);
+
+    ctx.save();
+    if (phase === 'WARNING') {
+      const blink = Math.floor(timer * 8) % 2 === 0;
+      // Danger red columns everywhere except Safe Zone
+      ctx.fillStyle = blink ? 'rgba(239, 68, 68, 0.22)' : 'rgba(239, 68, 68, 0.12)';
+      ctx.fillRect(0, 0, leftSafe, floorY);
+      ctx.fillRect(rightSafe, 0, Math.max(0, this.width - rightSafe), floorY);
+
+      // Glowing Green Safe Sanctuary Pillar
+      ctx.fillStyle = 'rgba(34, 197, 94, 0.22)';
+      ctx.fillRect(leftSafe, 0, rightSafe - leftSafe, floorY);
+      ctx.strokeStyle = '#4ade80';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(leftSafe, 4, rightSafe - leftSafe, floorY - 4);
+
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#86efac';
+      ctx.font = '900 20px system-ui, sans-serif';
+      ctx.fillText('🛡️ SAFE ZONE', safeX, floorY - 22);
+
+      // Urgent Banner below Hearts (no HUD overlap)
+      ctx.fillStyle = blink ? '#facc15' : '#ef4444';
+      ctx.font = '900 26px system-ui, sans-serif';
+      ctx.shadowColor = 'rgba(0,0,0,0.85)';
+      ctx.shadowBlur = 10;
+      ctx.fillText(
+        `🚨 똥 폭격 경보! 초록 안전구역으로 대피! (${timer.toFixed(1)}s)`,
+        this.width * 0.5,
+        122
+      );
+    } else {
+      ctx.fillStyle = 'rgba(34, 197, 94, 0.12)';
+      ctx.fillRect(leftSafe, 0, rightSafe - leftSafe, floorY);
+    }
+    ctx.restore();
+  }
+
+  _renderIcePatches(ctx, floorY) {
+    for (const ip of this.icePatches) {
+      const alpha = Math.min(1, ip.life / 0.8);
+      ctx.save();
+      ctx.globalAlpha = alpha;
+
+      // Translucent icy frozen surface right along the floor
+      const grad = ctx.createLinearGradient(ip.x - ip.halfWidth, floorY, ip.x + ip.halfWidth, floorY);
+      grad.addColorStop(0, 'rgba(56, 189, 248, 0.15)');
+      grad.addColorStop(0.5, 'rgba(186, 230, 253, 0.78)');
+      grad.addColorStop(1, 'rgba(56, 189, 248, 0.15)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.roundRect(ip.x - ip.halfWidth, floorY - 4, ip.halfWidth * 2, 16, 8);
+      ctx.fill();
+
+      ctx.strokeStyle = '#e0f2fe';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Central dung stain & crack lines fading out over 5s
+      ctx.fillStyle = 'rgba(120, 53, 15, 0.55)';
+      ctx.beginPath();
+      ctx.ellipse(ip.x, floorY + 2, 42, 8, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#bae6fd';
+      ctx.font = '800 12px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(`❄️ 빙판 (${Math.ceil(ip.life)}s)`, ip.x, floorY + 28);
+      ctx.restore();
+    }
+  }
+
   _renderDrop(ctx, drop) {
     ctx.save();
 
-    // Giant poop pre-drop warning reticle at top
+    // Giant / Elephant poop pre-drop warning reticle
     if (drop.warningTimer > 0) {
       const blink = Math.floor(drop.warningTimer * 16) % 2 === 0;
       ctx.fillStyle = blink ? '#ef4444' : '#facc15';
-      ctx.font = '900 18px system-ui, sans-serif';
+      ctx.font = drop.type === DropType.POOP_ELEPHANT ? '900 22px system-ui, sans-serif' : '900 18px system-ui, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('⚠️ GIANT!', drop.x, 78);
+      ctx.fillText(
+        drop.type === DropType.POOP_ELEPHANT ? '⚠️ 🐘 코끼리 똥!' : '⚠️ GIANT!',
+        drop.x,
+        82
+      );
       ctx.restore();
       return;
     }
@@ -459,34 +737,72 @@ export class PoopEngine {
 
     const r = drop.radius;
 
-    if (drop.isHazardous) {
-      // Cartoon Coiled Poop Tiers
+    if (drop.type === DropType.POOP_RAINBOW) {
+      // Shimmering Rainbow Poop Bonus!
+      ctx.shadowColor = '#f472b6';
+      ctx.shadowBlur = 18;
+
+      const hues = [
+        (this.elapsedTime * 180) % 360,
+        (this.elapsedTime * 180 + 60) % 360,
+        (this.elapsedTime * 180 + 130) % 360
+      ];
+      ctx.fillStyle = `hsl(${hues[0]}, 92%, 58%)`;
+      ctx.beginPath();
+      ctx.ellipse(0, r * 0.42, r * 0.95, r * 0.42, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = `hsl(${hues[1]}, 92%, 60%)`;
+      ctx.beginPath();
+      ctx.ellipse(0, r * 0.05, r * 0.72, r * 0.36, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = `hsl(${hues[2]}, 92%, 62%)`;
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.45, -r * 0.05);
+      ctx.quadraticCurveTo(0, -r * 1.05, r * 0.35, -r * 0.35);
+      ctx.quadraticCurveTo(r * 0.5, -r * 0.05, r * 0.4, -r * 0.05);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(-r * 0.2, 0, r * 0.16, 0, Math.PI * 2);
+      ctx.arc(r * 0.2, 0, r * 0.16, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath();
+      ctx.arc(-r * 0.2, 1, r * 0.08, 0, Math.PI * 2);
+      ctx.arc(r * 0.2, 1, r * 0.08, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (drop.isHazardous) {
+      const isElephant = drop.type === DropType.POOP_ELEPHANT;
       const isGiant = drop.type === DropType.POOP_GIANT;
       const isFast = drop.type === DropType.POOP_FAST;
 
-      const baseCol = isGiant ? '#713f12' : isFast ? '#9a3412' : '#78350f';
-      const midCol = isGiant ? '#a16207' : isFast ? '#c2410c' : '#92400e';
-      const topCol = isGiant ? '#ca8a04' : isFast ? '#ea580c' : '#a16207';
+      const baseCol = isElephant ? '#451a03' : isGiant ? '#713f12' : isFast ? '#9a3412' : '#78350f';
+      const midCol = isElephant ? '#78350f' : isGiant ? '#a16207' : isFast ? '#c2410c' : '#92400e';
+      const topCol = isElephant ? '#92400e' : isGiant ? '#ca8a04' : isFast ? '#ea580c' : '#a16207';
 
-      // Faint stink aura
-      ctx.fillStyle = isFast ? 'rgba(234, 88, 12, 0.25)' : 'rgba(132, 204, 22, 0.18)';
+      ctx.fillStyle = isElephant
+        ? 'rgba(56, 189, 248, 0.22)'
+        : isFast
+          ? 'rgba(234, 88, 12, 0.25)'
+          : 'rgba(132, 204, 22, 0.18)';
       ctx.beginPath();
       ctx.arc(0, 0, r * 1.25, 0, Math.PI * 2);
       ctx.fill();
 
-      // Bottom coil
       ctx.fillStyle = baseCol;
       ctx.beginPath();
       ctx.ellipse(0, r * 0.42, r * 0.95, r * 0.42, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // Middle coil
       ctx.fillStyle = midCol;
       ctx.beginPath();
       ctx.ellipse(0, r * 0.05, r * 0.72, r * 0.36, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // Top peak swirl
       ctx.fillStyle = topCol;
       ctx.beginPath();
       ctx.moveTo(-r * 0.45, -r * 0.05);
@@ -495,8 +811,24 @@ export class PoopEngine {
       ctx.closePath();
       ctx.fill();
 
-      // Cute comical googly eyes (or cool sunglasses on King Giant Poop!)
-      if (isGiant) {
+      if (isElephant) {
+        // Icy frost glint + angry brow on Mega Elephant Poop
+        ctx.fillStyle = '#bae6fd';
+        ctx.beginPath();
+        ctx.arc(-r * 0.3, -r * 0.35, r * 0.1, 0, Math.PI * 2);
+        ctx.arc(r * 0.25, r * 0.1, r * 0.08, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(-r * 0.22, -r * 0.02, r * 0.15, 0, Math.PI * 2);
+        ctx.arc(r * 0.22, -r * 0.02, r * 0.15, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#ef4444';
+        ctx.beginPath();
+        ctx.arc(-r * 0.22, 0, r * 0.08, 0, Math.PI * 2);
+        ctx.arc(r * 0.22, 0, r * 0.08, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (isGiant) {
         ctx.fillStyle = '#0f172a';
         ctx.fillRect(-r * 0.48, -r * 0.12, r * 0.4, r * 0.24);
         ctx.fillRect(r * 0.08, -r * 0.12, r * 0.4, r * 0.24);
@@ -515,7 +847,6 @@ export class PoopEngine {
         ctx.fill();
       }
     } else if (drop.type === DropType.TOILET_PAPER) {
-      // Glowing Golden-White Toilet Roll
       ctx.shadowColor = '#facc15';
       ctx.shadowBlur = 14;
       ctx.fillStyle = '#f8fafc';
@@ -528,7 +859,6 @@ export class PoopEngine {
       ctx.beginPath();
       ctx.ellipse(0, -r * 0.75, r * 0.26, r * 0.1, 0, 0, Math.PI * 2);
       ctx.fill();
-      // Hanging loose sheet
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(r * 0.55, -r * 0.35, r * 0.35, r * 0.9);
     } else if (drop.type === DropType.UMBRELLA) {
@@ -563,8 +893,8 @@ export class PoopEngine {
 
   _renderPlayer(ctx) {
     const p = this.player;
-    const r = p.radius; // 34 (+30% larger chibi ninja runner)
-    const s = r / 26;   // ~1.308 overall proportional visual scale
+    const r = p.radius;
+    const floorY = this.getFloorY();
     ctx.save();
 
     if (p.invulnerableTimer > 0 && Math.floor(p.invulnerableTimer * 12) % 2 === 0) {
@@ -574,7 +904,7 @@ export class PoopEngine {
     // Ground Shadow
     ctx.fillStyle = 'rgba(0, 0, 0, 0.38)';
     ctx.beginPath();
-    ctx.ellipse(p.x, this.getFloorY() + 3, r * 0.92, 8 * s, 0, 0, Math.PI * 2);
+    ctx.ellipse(p.x, floorY + 3, r * 0.95, 9, 0, 0, Math.PI * 2);
     ctx.fill();
 
     // Active Umbrella Bubble Shield + Overhead Parasol
@@ -586,14 +916,13 @@ export class PoopEngine {
       ctx.shadowColor = '#38bdf8';
       ctx.shadowBlur = 18;
       ctx.beginPath();
-      ctx.arc(p.x, p.y - 6 * s, r + 18, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y - 12, r + 24, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
 
-      // Canopy umbrella dome overhead
       ctx.fillStyle = '#0ea5e9';
       ctx.beginPath();
-      ctx.arc(p.x, p.y - 28 * s, r * 1.15, Math.PI, Math.PI * 2);
+      ctx.arc(p.x, p.y - r * 1.45, r * 1.25, Math.PI, Math.PI * 2);
       ctx.fill();
       ctx.strokeStyle = '#e0f2fe';
       ctx.lineWidth = 2;
@@ -601,174 +930,67 @@ export class PoopEngine {
       ctx.restore();
     }
 
-    const bob = Math.abs(Math.sin(p.runAnim)) * 3.5 * s * (Math.abs(p.vx) > 40 ? 1 : 0);
-    ctx.translate(p.x, p.y - bob);
-    ctx.rotate(p.tilt);
+    const img = this.spriteCache[this.selectedSpriteId];
+    const spriteReady = img && img.complete && img.naturalWidth > 0 && img.naturalHeight > 0;
 
-    const legSwing = Math.sin(p.runAnim) * 8 * s * Math.min(1, Math.abs(p.vx) / 140);
-    const armSwing = -legSwing * 0.85;
-    const lookBias = Math.max(-2.5, Math.min(2.5, p.vx / 260)) * s;
-    const tailWave = Math.sin(this.elapsedTime * 11) * 4 * s - Math.sign(p.vx) * 5 * s;
+    if (spriteReady) {
+      const cellW = img.naturalWidth / 4;
+      const cellH = img.naturalHeight / 4;
 
-    // 1. Dynamic Flowing Headband Ribbon Tails (behind head/neck)
-    ctx.strokeStyle = '#ef4444';
-    ctx.lineWidth = 4.5 * s;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(11 * s, -17 * s);
-    ctx.quadraticCurveTo(21 * s + tailWave * 0.4, -19 * s, 26 * s + tailWave, -11 * s);
-    ctx.moveTo(10 * s, -15 * s);
-    ctx.quadraticCurveTo(18 * s + tailWave * 0.3, -12 * s, 22 * s + tailWave * 0.8, -5 * s);
-    ctx.stroke();
+      let row = 0;
+      let col = 0;
+      if (p.vx > 28) {
+        row = 2; // Right walk
+        col = Math.floor(p.walkFrame) % 4;
+      } else if (p.vx < -28) {
+        row = 3; // Left walk
+        col = Math.floor(p.walkFrame) % 4;
+      }
 
-    // 2. Running Legs & Sneakers
-    ctx.lineCap = 'round';
-    ctx.strokeStyle = '#1e293b';
-    ctx.lineWidth = 5 * s;
-    ctx.beginPath();
-    ctx.moveTo(-7 * s, 10 * s);
-    ctx.lineTo(-9 * s + legSwing, 23 * s);
-    ctx.moveTo(7 * s, 10 * s);
-    ctx.lineTo(9 * s - legSwing, 23 * s);
-    ctx.stroke();
+      const drawH = r * 3.35; // ~114px tall crisp +30% chibi sprite
+      const drawW = drawH * (cellW / cellH);
 
-    // Shoes (white soles + sky trim)
-    [
-      { x: -9 * s + legSwing, dir: -1 },
-      { x: 9 * s - legSwing, dir: 1 }
-    ].forEach((shoe) => {
-      ctx.fillStyle = '#0284c7';
-      ctx.beginPath();
-      ctx.ellipse(shoe.x + shoe.dir * 2 * s, 24 * s, 7 * s, 4 * s, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(shoe.x - 5 * s, 25.5 * s, 11 * s, 2.5 * s);
-    });
-
-    // 3. Back Arm
-    ctx.strokeStyle = '#fde047';
-    ctx.lineWidth = 5 * s;
-    ctx.beginPath();
-    ctx.moveTo(-11 * s, 2 * s);
-    ctx.lineTo(-19 * s - armSwing * 0.5, 9 * s + armSwing * 0.4);
-    ctx.moveTo(11 * s, 2 * s);
-    ctx.lineTo(19 * s + armSwing * 0.5, 9 * s - armSwing * 0.4);
-    ctx.stroke();
-
-    // 4. Stylized Ninja Tunic Torso (navy with cyan sash belt)
-    ctx.fillStyle = '#1e3a8a';
-    ctx.strokeStyle = '#0f172a';
-    ctx.lineWidth = 2 * s;
-    ctx.beginPath();
-    ctx.roundRect(-12 * s, -2 * s, 24 * s, 16 * s, 6 * s);
-    ctx.fill();
-    ctx.stroke();
-
-    // Cyan belt sash & chest emblem
-    ctx.fillStyle = '#38bdf8';
-    ctx.fillRect(-12 * s, 7 * s, 24 * s, 4 * s);
-    ctx.fillStyle = '#facc15';
-    ctx.beginPath();
-    ctx.arc(0, 9 * s, 2.8 * s, 0, Math.PI * 2);
-    ctx.fill();
-
-    // 5. Chibi Character Head (warm gradient + crisp outline)
-    const headGrad = ctx.createRadialGradient(-4 * s, -18 * s, 3 * s, 0, -14 * s, 19 * s);
-    headGrad.addColorStop(0, '#fef9c3');
-    headGrad.addColorStop(0.65, '#fde047');
-    headGrad.addColorStop(1, '#f59e0b');
-    ctx.fillStyle = headGrad;
-    ctx.beginPath();
-    ctx.arc(0, -14 * s, 16.5 * s, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.lineWidth = 2.2 * s;
-    ctx.strokeStyle = '#0f172a';
-    ctx.stroke();
-
-    // Spiky Dark Hair Tufts poking above headband
-    ctx.fillStyle = '#0f172a';
-    ctx.beginPath();
-    ctx.moveTo(-12 * s, -22 * s);
-    ctx.lineTo(-14 * s, -32 * s);
-    ctx.lineTo(-5 * s, -27 * s);
-    ctx.lineTo(0, -35 * s);
-    ctx.lineTo(6 * s, -27 * s);
-    ctx.lineTo(14 * s, -31 * s);
-    ctx.lineTo(12 * s, -22 * s);
-    ctx.closePath();
-    ctx.fill();
-
-    // Crimson Ninja Headband + Metal Emblem Plate
-    ctx.fillStyle = '#ef4444';
-    ctx.beginPath();
-    ctx.roundRect(-16 * s, -24 * s, 32 * s, 7 * s, 2.5 * s);
-    ctx.fill();
-    ctx.strokeStyle = '#7f1d1d';
-    ctx.lineWidth = 1.4 * s;
-    ctx.stroke();
-
-    ctx.fillStyle = '#e2e8f0';
-    ctx.fillRect(-5 * s, -23 * s, 10 * s, 5 * s);
-
-    // Rosy Cheeks
-    ctx.fillStyle = 'rgba(244, 63, 94, 0.42)';
-    ctx.beginPath();
-    ctx.ellipse(-9 * s + lookBias * 0.5, -10 * s, 3.2 * s, 2 * s, 0, 0, Math.PI * 2);
-    ctx.ellipse(9 * s + lookBias * 0.5, -10 * s, 3.2 * s, 2 * s, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // 6. Expressive Anime Eyes + Catchlights
-    ctx.strokeStyle = '#0f172a';
-    ctx.fillStyle = '#0f172a';
-    if (p.expression === 'OUCH') {
-      ctx.lineWidth = 2.4 * s;
-      ctx.beginPath();
-      ctx.moveTo(-9 * s, -15 * s);
-      ctx.lineTo(-4 * s, -10 * s);
-      ctx.moveTo(-4 * s, -15 * s);
-      ctx.lineTo(-9 * s, -10 * s);
-      ctx.moveTo(4 * s, -15 * s);
-      ctx.lineTo(9 * s, -10 * s);
-      ctx.moveTo(9 * s, -15 * s);
-      ctx.lineTo(4 * s, -10 * s);
-      ctx.stroke();
-    } else if (p.expression === 'HAPPY') {
-      ctx.lineWidth = 2.4 * s;
-      ctx.beginPath();
-      ctx.arc(-6.5 * s, -12 * s, 3.5 * s, Math.PI, 0);
-      ctx.arc(6.5 * s, -12 * s, 3.5 * s, Math.PI, 0);
-      ctx.stroke();
+      ctx.save();
+      ctx.translate(p.x, floorY + 2);
+      ctx.rotate(p.tilt * 0.65);
+      ctx.drawImage(
+        img,
+        col * cellW,
+        row * cellH,
+        cellW,
+        cellH,
+        -drawW * 0.5,
+        -drawH,
+        drawW,
+        drawH
+      );
+      ctx.restore();
     } else {
+      // Headless / pre-load stylized ninja fallback
+      const s = r / 26;
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.tilt);
+      ctx.fillStyle = '#fde047';
       ctx.beginPath();
-      ctx.ellipse(-6.5 * s + lookBias, -13 * s, 2.8 * s, 3.6 * s, 0, 0, Math.PI * 2);
-      ctx.ellipse(6.5 * s + lookBias, -13 * s, 2.8 * s, 3.6 * s, 0, 0, Math.PI * 2);
+      ctx.arc(0, -10 * s, 16 * s, 0, Math.PI * 2);
       ctx.fill();
-
-      // Sparkling eye catchlights
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.arc(-7.3 * s + lookBias, -14.3 * s, 1.1 * s, 0, Math.PI * 2);
-      ctx.arc(5.7 * s + lookBias, -14.3 * s, 1.1 * s, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.fillStyle = '#ef4444';
+      ctx.fillRect(-16 * s, -20 * s, 32 * s, 6 * s);
+      ctx.restore();
     }
 
-    // 7. Expressive Mouth
-    ctx.fillStyle = '#dc2626';
-    ctx.strokeStyle = '#0f172a';
-    ctx.lineWidth = 1.8 * s;
-    ctx.beginPath();
-    if (p.expression === 'OUCH') {
-      ctx.arc(0, -5 * s, 3.5 * s, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-    } else if (p.expression === 'HAPPY') {
-      ctx.arc(lookBias * 0.4, -7 * s, 5 * s, 0, Math.PI);
-      ctx.fill();
-      ctx.stroke();
-    } else {
-      ctx.moveTo(-4 * s + lookBias * 0.5, -6 * s);
-      ctx.quadraticCurveTo(lookBias * 0.5, -4.5 * s, 4 * s + lookBias * 0.5, -6 * s);
-      ctx.stroke();
+    // Floating status badge above character when slipping on ice / dizzy / happy
+    if (p.isOnIce) {
+      ctx.textAlign = 'center';
+      ctx.font = '800 13px system-ui, sans-serif';
+      ctx.fillStyle = '#7dd3fc';
+      ctx.fillText('❄️ 미끄럼!', p.x, floorY - r * 3.55);
+    } else if (p.expression === 'OUCH') {
+      ctx.textAlign = 'center';
+      ctx.font = '900 16px system-ui, sans-serif';
+      ctx.fillStyle = '#ef4444';
+      ctx.fillText('💫 앗!', p.x, floorY - r * 3.55);
     }
 
     ctx.restore();
@@ -780,19 +1002,21 @@ export class PoopEngine {
 
     ctx.save();
 
-    // Bottom-left Head X Tracking & Shield Status Pill
     ctx.textAlign = 'left';
     if (this.player.shieldTimer > 0) {
       ctx.fillStyle = '#38bdf8';
       ctx.font = '900 15px system-ui, sans-serif';
       ctx.fillText(`☂️ SHIELD: ${this.player.shieldTimer.toFixed(1)}s`, 24, h - 24);
+    } else if (this.player.isOnIce) {
+      ctx.fillStyle = '#7dd3fc';
+      ctx.font = '900 14px system-ui, sans-serif';
+      ctx.fillText('❄️ 빙판 위! 미끄러짐 주의!', 24, h - 22);
     } else {
       ctx.fillStyle = '#94a3b8';
       ctx.font = '700 13px system-ui, sans-serif';
-      ctx.fillText('🙂 머리를 좌우로 움직여 똥을 피하세요!', 24, h - 22);
+      ctx.fillText(`🙂 머리 좌우 이동 · 캐릭터 #${this.selectedSpriteId}`, 24, h - 22);
     }
 
-    // Bottom-right Level & Dodged Count
     ctx.textAlign = 'right';
     ctx.fillStyle = '#facc15';
     ctx.font = '900 16px system-ui, sans-serif';

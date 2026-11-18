@@ -222,15 +222,15 @@ export class UIManager {
       if (this.btnModePoop) this.btnModePoop.classList.add('active');
       if (this.instructionModeDesc) {
         this.instructionModeDesc.innerHTML =
-          '💩 <strong>똥피하기 모드</strong>: 머리를 좌우로 움직여 <strong>캐릭터 X 위치</strong>를 조종하고 쏟아지는 똥을 피하세요!';
+          '💩 <strong>똥피하기 모드</strong>: 머리 X좌표로 <strong>랜덤 캐릭터(033~038)</strong>를 조종해 쏟아지는 똥을 피하세요! (3초 한자리 금지)';
       }
       if (this.instructionSpecial) {
         this.instructionSpecial.innerHTML =
-          '🧻 <strong>보너스 휴지 & 우산 보호막</strong>: 🧻 두루마리 휴지(<code>+15점</code>)와 ☂️ 무적 우산(5.5초 방어 & 반사!)을 챙기세요!';
+          '🌈 <strong>무지개 똥 & 휴지 보너스</strong>: 🌈 무지개 똥(<code>+25점</code>) · 🧻 휴지(<code>+15점</code>) · ☂️ 우산 보호막을 획득하세요!';
       }
       if (this.instructionTip1) {
         this.instructionTip1.innerHTML =
-          '👑 <strong>왕똥 & 사선탄 주의</strong>: 레벨이 오를수록 경고 후 떨어지는 거대 왕똥과 대각선 고속탄이 등장합니다!';
+          '🐘 <strong>Lv5+ 코끼리 똥 & 폭격 경보</strong>: 거대 코끼리 똥은 5초간 미끄러운 <strong>빙판</strong>을 만들고, 🚨 경보 시 <strong>안전구역</strong>으로 대피하세요!';
       }
       if (this.instructionTip2) {
         this.instructionTip2.innerHTML =

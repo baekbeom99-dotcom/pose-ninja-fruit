@@ -1026,6 +1026,58 @@ export class SoundManager {
     osc.start(now);
     osc.stop(now + 0.21);
   }
+
+  playPoopElephantSplat() {
+    if (!this.ctx || this.isMuted) return;
+    this.resume();
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(110, now);
+    osc.frequency.exponentialRampToValueAtTime(32, now + 0.34);
+    gain.gain.setValueAtTime(0.32, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.36);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.37);
+
+    // Icy freeze chime shimmer right after impact
+    [1318.5, 1760].forEach((freq, i) => {
+      const t = now + 0.08 + i * 0.05;
+      const iceOsc = this.ctx.createOscillator();
+      const iceGain = this.ctx.createGain();
+      iceOsc.type = 'sine';
+      iceOsc.frequency.setValueAtTime(freq, t);
+      iceGain.gain.setValueAtTime(0.09, t);
+      iceGain.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+      iceOsc.connect(iceGain);
+      iceGain.connect(this.ctx.destination);
+      iceOsc.start(t);
+      iceOsc.stop(t + 0.23);
+    });
+  }
+
+  playPoopStormAlarm() {
+    if (!this.ctx || this.isMuted) return;
+    this.resume();
+    const now = this.ctx.currentTime;
+    [0, 0.24, 0.48].forEach((offset, i) => {
+      const t = now + offset;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(i % 2 === 0 ? 880 : 660, t);
+      osc.frequency.linearRampToValueAtTime(i % 2 === 0 ? 988 : 740, t + 0.16);
+      gain.gain.setValueAtTime(0.11, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(t);
+      osc.stop(t + 0.19);
+    });
+  }
 }
 
 export const soundManager = new SoundManager();
