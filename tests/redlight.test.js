@@ -113,8 +113,8 @@ function runTests() {
   }
   const midScale = engine.getTargetScale(engine.distance);
   assert(
-    engine.distance > 0.12 && midScale > initialScale && sfxLog.includes('SYL_0'),
-    'In-place running advances distance forward and grows target perspective scale'
+    engine.distance > 0.05 && engine.distance < 0.20 && midScale > initialScale && sfxLog.includes('SYL_0'),
+    'In-place running advances paced longer distance forward and grows target perspective scale'
   );
 
   // Advance until chant completes -> transitions to RED_LIGHT with red eyes snap SFX
@@ -147,7 +147,7 @@ function runTests() {
   engine.distance = 0.96;
   engine.chantProgress = 0.1;
   engine.chantDuration = 5.0;
-  for (let i = 0; i < 8; i++) {
+  for (let i = 0; i < 18; i++) {
     const runPose = makePose({
       noseY: 0.25 + (i % 2 === 0 ? -0.05 : 0.05),
       wristY: i % 2 === 0 ? 0.48 : 0.68,
@@ -166,7 +166,7 @@ function runTests() {
 
   // Sprint rapidly in ESCAPE_RUN to beat Young-hee back to the Start Safe Gate
   const prevEsc = engine.escapeProgress;
-  for (let i = 0; i < 75 && engine.phase === RedLightPhase.ESCAPE_RUN; i++) {
+  for (let i = 0; i < 160 && engine.phase === RedLightPhase.ESCAPE_RUN; i++) {
     const sprintPose = makePose({
       noseY: 0.25 + (i % 2 === 0 ? -0.06 : 0.06),
       wristY: i % 2 === 0 ? 0.46 : 0.70,

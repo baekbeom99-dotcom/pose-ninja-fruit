@@ -164,8 +164,8 @@ export class RedLightEngine {
   _enterEscapeRun() {
     this.phase = RedLightPhase.ESCAPE_RUN;
     this.escapeProgress = 0.12; // Small head-start burst upon tagging
-    this.chaserProgress = -0.12;
-    this.chaseSpeed = Math.min(0.22, 0.13 + (this.round - 1) * 0.014);
+    this.chaserProgress = -0.10;
+    this.chaseSpeed = Math.min(0.145, 0.072 + (this.round - 1) * 0.01);
     this._addScore(50);
     this._spawnBurst(this.width * 0.5, this.height * 0.45, '#facc15', 22, 260);
     this._spawnFloatingText('💥 터치 성공! 뒤돌아 전력 질주!!', this.width * 0.5, this.height * 0.30, '#4ade80', 1.3);
@@ -319,9 +319,9 @@ export class RedLightEngine {
         }
       }
 
-      // Advance forward toward Young-hee when running in place
+      // Advance forward toward Young-hee when running in place (longer 100m course ~13s sprint)
       if (this.runIntensity > 0.08) {
-        const approachRate = 0.24 * this.runIntensity; // ~4.2s sustained sprint to reach 100%
+        const approachRate = 0.078 * this.runIntensity;
         this.distance = Math.min(1.0, this.distance + approachRate * safeDt);
         const pct = Math.floor(this.distance * 100);
         if (pct > this.bestDistancePct) {
@@ -359,7 +359,7 @@ export class RedLightEngine {
     } else if (this.phase === RedLightPhase.ESCAPE_RUN) {
       // Reverse sprint back to start gate! Too slow -> Young-hee catches up!
       if (this.runIntensity > 0.08) {
-        const escapeRate = 0.26 * this.runIntensity;
+        const escapeRate = 0.135 * this.runIntensity;
         this.escapeProgress = Math.min(1.0, this.escapeProgress + escapeRate * safeDt);
       }
 
@@ -397,11 +397,11 @@ export class RedLightEngine {
   }
 
   /**
-   * Computes perspective zoom scale [0.24 .. 1.0] for the approaching target.
+   * Computes perspective zoom scale [0.14 .. 1.0] for the approaching target.
    */
   getTargetScale(progressVal) {
     const p = Math.max(0, Math.min(1, progressVal));
-    return 0.24 + 0.76 * Math.pow(p, 1.35);
+    return 0.14 + 0.86 * Math.pow(p, 1.65);
   }
 
   render(ctx) {
@@ -504,8 +504,8 @@ export class RedLightEngine {
       ctx.stroke();
     });
 
-    // Horizontal ground stripes rushing downward smoothly with stridePhase
-    const scrollFrac = ((isEscape ? this.escapeProgress : this.distance) * 10) % 1;
+    // Horizontal ground stripes rushing downward briskly to preserve high-speed running feel
+    const scrollFrac = ((isEscape ? this.escapeProgress * 22 : this.distance * 32)) % 1;
     for (let i = 0; i < 6; i++) {
       const t = (i + scrollFrac) / 6;
       const y = horizonY + (h - horizonY) * Math.pow(t, 1.8);
@@ -836,10 +836,11 @@ export class RedLightEngine {
     ctx.textAlign = 'right';
     ctx.font = '900 18px system-ui, sans-serif';
     ctx.lineWidth = 4;
+    const remainM = Math.max(0, 100 - pct);
     const rightTxt =
       this.phase === RedLightPhase.ESCAPE_RUN
-        ? `ROUND ${this.round} · 탈출 ${pct}%`
-        : `ROUND ${this.round} · 목표거리 ${pct}%`;
+        ? `ROUND ${this.round} · 출발선까지 ${remainM}m`
+        : `ROUND ${this.round} · 남은 거리 ${remainM}m (${pct}%)`;
     ctx.strokeText(rightTxt, w - 24, h - 22);
     ctx.fillStyle = '#fde047';
     ctx.fillText(rightTxt, w - 24, h - 22);
