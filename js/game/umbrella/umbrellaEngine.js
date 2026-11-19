@@ -16,42 +16,79 @@ export const KID_PROFILES = [
   {
     id: 'TINY',
     label: '꼬마',
+    pattern: 'STEADY',
     coatColor: '#facc15',
     hatColor: '#f59e0b',
     baseSpeed: 76,
-    freq: 1.8,
-    amp: 0.45,
-    pauseChance: 0.28
+    freq: 1.6,
+    amp: 0.25,
+    pauseChance: 0.14
   },
   {
     id: 'DREAMER',
     label: '느긋이',
+    pattern: 'GENTLE_WAVE',
     coatColor: '#86efac',
     hatColor: '#22c55e',
-    baseSpeed: 88,
-    freq: 1.2,
-    amp: 0.58,
+    baseSpeed: 92,
+    freq: 1.4,
+    amp: 0.45,
     pauseChance: 0.18
   },
   {
-    id: 'BOUNCY',
-    label: '폴짝이',
-    coatColor: '#fda4af',
-    hatColor: '#f43f5e',
-    baseSpeed: 102,
-    freq: 3.1,
-    amp: 0.48,
-    pauseChance: 0.12
+    id: 'CHAOTIC',
+    label: '변화무쌍이',
+    pattern: 'CHAOTIC',
+    coatColor: '#fb923c',
+    hatColor: '#ea580c',
+    baseSpeed: 108,
+    freq: 4.2,
+    amp: 0.92,
+    pauseChance: 0.35
   },
   {
-    id: 'SPRINTER',
-    label: '달리기왕',
-    coatColor: '#93c5fd',
-    hatColor: '#3b82f6',
-    baseSpeed: 126,
-    freq: 2.3,
-    amp: 0.42,
-    pauseChance: 0.15
+    id: 'HYPER_DASH',
+    label: '번개돌이 ⚡',
+    pattern: 'HYPER_DASH',
+    coatColor: '#60a5fa',
+    hatColor: '#4f46e5',
+    baseSpeed: 205,
+    freq: 3.0,
+    amp: 0.18,
+    pauseChance: 0.0
+  },
+  {
+    id: 'STOP_AND_DASH',
+    label: '멈칫돌진 🛑',
+    pattern: 'STOP_AND_DASH',
+    coatColor: '#fda4af',
+    hatColor: '#e11d48',
+    baseSpeed: 120,
+    freq: 2.2,
+    amp: 0.35,
+    pauseChance: 0.0
+  },
+  {
+    id: 'FAKE_BACKSTEP',
+    label: '장난꾸러기 ↩️',
+    pattern: 'FAKE_BACKSTEP',
+    coatColor: '#c4b5fd',
+    hatColor: '#7c3aed',
+    baseSpeed: 118,
+    freq: 2.0,
+    amp: 0.3,
+    pauseChance: 0.0
+  },
+  {
+    id: 'MEGA_SPRINTER',
+    label: '초고속질주 🚀',
+    pattern: 'HYPER_DASH',
+    coatColor: '#38bdf8',
+    hatColor: '#0284c7',
+    baseSpeed: 225,
+    freq: 3.4,
+    amp: 0.25,
+    pauseChance: 0.0
   }
 ];
 
@@ -86,6 +123,8 @@ export class UmbrellaEngine {
 
     this.kidQueue = [];
     this.activeChild = null;
+    this.nextKidOrder = 1;
+    this.lastAdvancedPatternId = null;
 
     this.particles = [];
     this.floatingTexts = [];
@@ -131,13 +170,35 @@ export class UmbrellaEngine {
     }
   }
 
+  _selectProfileForOrder(order) {
+    if (order === 1) return KID_PROFILES.find((p) => p.id === 'TINY');
+    if (order === 2) return KID_PROFILES.find((p) => p.id === 'DREAMER');
+    if (order === 3) return KID_PROFILES.find((p) => p.id === 'CHAOTIC');
+    if (order === 4) return KID_PROFILES.find((p) => p.id === 'HYPER_DASH');
+
+    // Kid #5+: rotate varied tricky patterns with escalating speed difficulty
+    const advancedPool = KID_PROFILES.filter(
+      (p) =>
+        p.id === 'CHAOTIC' ||
+        p.id === 'STOP_AND_DASH' ||
+        p.id === 'FAKE_BACKSTEP' ||
+        p.id === 'MEGA_SPRINTER'
+    );
+    const filtered = advancedPool.filter((p) => p.id !== this.lastAdvancedPatternId);
+    const pool = filtered.length > 0 ? filtered : advancedPool;
+    const chosen = pool[Math.floor(Math.random() * pool.length)];
+    this.lastAdvancedPatternId = chosen.id;
+    return chosen;
+  }
+
   _createChild(profileOverride = null) {
-    const profile =
-      profileOverride || KID_PROFILES[Math.floor(Math.random() * KID_PROFILES.length)];
+    const order = this.nextKidOrder++;
+    const profile = profileOverride || this._selectProfileForOrder(order);
     const { floorY, schoolPorchLeftX } = this.getLayout();
-    const speedScale = 1 + Math.min(0.45, this.rescuedCount * 0.045);
+    const speedScale = order <= 4 ? 1.0 : 1.0 + Math.min(0.65, (order - 4) * 0.09);
 
     return {
+      order,
       profile,
       x: schoolPorchLeftX + 26,
       y: floorY,
@@ -146,6 +207,8 @@ export class UmbrellaEngine {
       speed: profile.baseSpeed * speedScale,
       walkPhase: Math.random() * Math.PI * 2,
       pacePhase: Math.random() * Math.PI * 2,
+      patternTimer: 0,
+      chaosSeed: Math.random() * 10,
       pauseTimer: 0,
       wetness: 0,
       tearsPhase: 0,
@@ -164,6 +227,8 @@ export class UmbrellaEngine {
     this.floatingTexts = [];
     this.homeGlowTimer = 0;
     this.wasSheltering = false;
+    this.nextKidOrder = 1;
+    this.lastAdvancedPatternId = null;
 
     this.kidQueue = [
       this._createChild(),
@@ -333,6 +398,52 @@ export class UmbrellaEngine {
     }
   }
 
+  _computeChildVelocity(child, dt, schoolPorchLeftX) {
+    child.patternTimer += dt;
+    child.pacePhase += dt * child.profile.freq;
+    const pat = child.profile.pattern;
+
+    if (pat === 'CHAOTIC') {
+      // Kid #3 (& chaotic round 5+): wildly fluctuating speeds across slow creeps, sudden stops, and fast dashes
+      const w1 = Math.sin(child.pacePhase + child.chaosSeed);
+      const w2 = Math.cos(child.pacePhase * 2.35 + child.chaosSeed * 1.7);
+      const burst = Math.sin(child.patternTimer * 3.1) > 0.45 ? 1.55 : 0.45;
+      const mult = Math.max(0.08, Math.min(2.25, (1.0 + 0.55 * w1 + 0.4 * w2) * burst));
+      return child.speed * mult;
+    }
+
+    if (pat === 'HYPER_DASH') {
+      // Kid #4 (& escalated sprinters): blazing fast sprint with rhythmic stride
+      return child.speed * (1.02 + Math.sin(child.pacePhase) * child.profile.amp);
+    }
+
+    if (pat === 'STOP_AND_DASH') {
+      // 2.2s cycle: 0..0.7s creep -> 0.7..1.25s dead stop -> 1.25..2.2s rocket dash!
+      const cyc = child.patternTimer % 2.2;
+      if (cyc < 0.7) return child.speed * 0.42;
+      if (cyc < 1.25) return 0;
+      return child.speed * 1.95;
+    }
+
+    if (pat === 'FAKE_BACKSTEP') {
+      // 2.6s cycle: walks home briskly, then playfully hops backward briefly before dashing again!
+      const cyc = child.patternTimer % 2.6;
+      if (cyc >= 1.15 && cyc < 1.65 && child.x < schoolPorchLeftX - 30) {
+        return -child.speed * 0.52; // Hop backward right!
+      }
+      return child.speed * (1.15 + Math.sin(child.pacePhase) * 0.25);
+    }
+
+    // Standard Kid #1 & #2 irregular walking modulation
+    if (child.pauseTimer > 0) {
+      child.pauseTimer = Math.max(0, child.pauseTimer - dt);
+    } else if (Math.random() < child.profile.pauseChance * dt * 0.6) {
+      child.pauseTimer = 0.25 + Math.random() * 0.35;
+    }
+    const mod = child.pauseTimer > 0 ? 0.22 : 1.0 + Math.sin(child.pacePhase) * child.profile.amp;
+    return Math.max(20, child.speed * mod);
+  }
+
   update(dt, currentTime, poses = null) {
     const safeDt = Math.min(Math.max(dt || 0, 0), 0.1);
     this.elapsedTime += safeDt;
@@ -361,22 +472,10 @@ export class UmbrellaEngine {
         }
       }
     } else if (child.state === KidState.WALKING_HOME) {
-      // Irregular per-kid walking speed modulation
-      child.pacePhase += safeDt * child.profile.freq;
-      if (child.pauseTimer > 0) {
-        child.pauseTimer = Math.max(0, child.pauseTimer - safeDt);
-      } else {
-        // Occasional short unpredictable hesitation or skip
-        if (Math.random() < child.profile.pauseChance * safeDt * 0.6) {
-          child.pauseTimer = 0.25 + Math.random() * 0.35;
-        }
-      }
-
-      const mod = child.pauseTimer > 0 ? 0.22 : 1.0 + Math.sin(child.pacePhase) * child.profile.amp;
-      const curSpeed = Math.max(20, child.speed * mod);
-
+      // Pattern-based velocity (including irregular bursts, blazing sprint, stop-and-dash, or playful backstep!)
+      const curSpeed = this._computeChildVelocity(child, safeDt, schoolPorchLeftX);
       child.x -= curSpeed * safeDt;
-      child.walkPhase += safeDt * (curSpeed * 0.14);
+      child.walkPhase += safeDt * (Math.abs(curSpeed) * 0.14);
 
       if (this.isPointInRain(child.x, childHeadY)) {
         // Exposed outside hand shelter -> gets soaked fast and runs crying back to school!

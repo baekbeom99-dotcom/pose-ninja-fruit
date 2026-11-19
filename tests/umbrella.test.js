@@ -154,6 +154,55 @@ function runTests() {
   }
   assert(engine.state === 'GAMEOVER' && engine.lives === 0 && gameOverCalled, 'Losing final heart triggers GAMEOVER cleanly');
 
+  // Test kid sequence progression: #1 TINY, #2 DREAMER, #3 CHAOTIC, #4 HYPER_DASH, #5+ escalated patterns
+  engine.reset();
+  const kid1 = engine.activeChild;
+  engine._promoteNextChild();
+  const kid2 = engine.activeChild;
+  engine._promoteNextChild();
+  const kid3 = engine.activeChild;
+  engine._promoteNextChild();
+  const kid4 = engine.activeChild;
+  assert(
+    kid1.profile.id === 'TINY' &&
+      kid2.profile.id === 'DREAMER' &&
+      kid3.profile.id === 'CHAOTIC' &&
+      kid4.profile.id === 'HYPER_DASH' &&
+      kid4.speed >= 200,
+    `Kid progression matches #1..#4 (${kid1.profile.id}, ${kid2.profile.id}, ${kid3.profile.id}, ${kid4.profile.id}@${kid4.speed}px/s)`
+  );
+
+  // Measure Kid #3 CHAOTIC speed variance across 3.5s
+  const kid3Speeds = [];
+  for (let i = 0; i < 70; i++) {
+    kid3Speeds.push(engine._computeChildVelocity(kid3, 0.05, schoolPorchLeftX));
+  }
+  const chaosRatio = Math.max(...kid3Speeds) / Math.max(1, Math.min(...kid3Speeds));
+  assert(chaosRatio > 3.5, `Kid #3 speed varies wildly (max/min ratio=${chaosRatio.toFixed(1)}x)`);
+
+  // Verify Kid #5+ draws varied advanced patterns and increases difficulty scaling
+  const seen5Plus = new Set();
+  for (let i = 0; i < 12; i++) {
+    engine._promoteNextChild();
+    seen5Plus.add(engine.activeChild.profile.pattern);
+  }
+  assert(seen5Plus.size >= 3, `Kid #5+ cycles through varied difficulty patterns (${[...seen5Plus].join(', ')})`);
+
+  // Verify STOP_AND_DASH pauses then bolts & FAKE_BACKSTEP steps backward momentarily
+  const stopKid = engine._createChild(KID_PROFILES.find(p => p.id === 'STOP_AND_DASH'));
+  stopKid.x = 600;
+  stopKid.patternTimer = 0.85; // inside stop segment (0.7..1.25s)
+  const stoppedVel = engine._computeChildVelocity(stopKid, 0.05, schoolPorchLeftX);
+  stopKid.patternTimer = 1.45; // inside dash segment
+  const dashedVel = engine._computeChildVelocity(stopKid, 0.05, schoolPorchLeftX);
+  assert(stoppedVel === 0 && dashedVel > stopKid.speed * 1.8, 'STOP_AND_DASH freezes then surges rapidly');
+
+  const trickKid = engine._createChild(KID_PROFILES.find(p => p.id === 'FAKE_BACKSTEP'));
+  trickKid.x = 600;
+  trickKid.patternTimer = 1.25; // inside backstep window (1.15..1.65s)
+  const backVel = engine._computeChildVelocity(trickKid, 0.05, schoolPorchLeftX);
+  assert(backVel < 0, 'FAKE_BACKSTEP hops briefly backward before sprinting left');
+
   // Headless render test
   const mockCtx = {
     save() {},
