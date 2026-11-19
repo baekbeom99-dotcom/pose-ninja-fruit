@@ -113,13 +113,36 @@ function runTests() {
     'Uncovered child caught in shower region cries back toward school and deducts 1 life'
   );
 
-  // Advance crying return until safely back under school awning
+  // Verify sheltering BEFORE 1.5s doesn't cancel cry immediately, whereas AFTER 1.5s it resumes WALKING_HOME!
+  engine.activeChild.x = 500;
+  engine.activeChild.cryingReturnTime = 0;
+  for (let i = 0; i < 10; i++) {
+    // 0.5s total (< 1.5s) while sheltered -> still RETURNING_CRYING
+    engine.update(0.05, 0, makeHandPose(engine.activeChild.x, floorY - 130));
+  }
+  assert(
+    engine.activeChild.state === KidState.RETURNING_CRYING,
+    'Before 1.5s elapses, crying child keeps heading toward school'
+  );
+
+  for (let i = 0; i < 24; i++) {
+    // Advance past 1.5s total while sheltered -> turns right back into WALKING_HOME!
+    engine.update(0.05, 0, makeHandPose(engine.activeChild.x, floorY - 130));
+  }
+  assert(
+    engine.activeChild.state === KidState.WALKING_HOME && engine.activeChild.x < schoolPorchLeftX,
+    'After 1.5s of crying return, sheltering child again resumes WALKING_HOME toward Home'
+  );
+
+  // Now leave uncovered until returning crying all the way back to school awning
+  engine.activeChild.state = KidState.RETURNING_CRYING;
+  engine.activeChild.x = 760;
   for (let i = 0; i < 60 && engine.activeChild.state === KidState.RETURNING_CRYING; i++) {
     engine.update(0.05, 0, null);
   }
   assert(
     engine.activeChild.state === KidState.WAITING_AT_SCHOOL && engine.activeChild.x >= schoolPorchLeftX,
-    'Crying child runs back right to school overhang to wait again'
+    'Crying child runs back right to school overhang to wait again when unresheltered'
   );
 
   // Verify GameOver at 0 lives

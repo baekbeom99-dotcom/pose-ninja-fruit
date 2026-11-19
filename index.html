@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Pose Ninja Fruit - 모션 인식 슬라이스 게임</title>
+  <title>Let's PLAY - 모션 인식 게임</title>
   <link rel="stylesheet" href="css/main.css">
   <link rel="stylesheet" href="css/ui.css">
 </head>
@@ -129,27 +129,15 @@
           </button>
 
           <div class="start-modal-header">
-            <h1 class="game-title">POSE NINJA FRUIT</h1>
-            <p class="modal-desc">웹캠 또는 전면 카메라 앞에서 온몸과 양손을 휘둘러 날아오는 과일을 베어보세요!</p>
+            <h1 class="game-title">Let's PLAY</h1>
+            <p class="modal-desc">웹캠 또는 전면 카메라 앞에서 온몸과 양손을 움직여 다양한 모션 게임을 즐겨보세요!</p>
           </div>
 
           <div class="start-modal-body">
             <!-- Left Column: Mode Selection -->
             <div class="start-modal-col start-col-modes">
-              <div class="start-section-label">🎮 게임 모드 선택</div>
-              <div class="game-mode-tabs-container">
-                <button id="btn-mode-classic" class="game-mode-tab active" data-mode="CLASSIC">
-                  <span class="tab-emoji">🗡️</span>
-                  <span class="tab-name">클래식 닌자</span>
-                </button>
-                <button id="btn-mode-strange" class="game-mode-tab" data-mode="DOCTOR_STRANGE">
-                  <span class="tab-emoji">🔮</span>
-                  <span class="tab-name">닥터 스트레인지</span>
-                </button>
-                <button id="btn-mode-ufo" class="game-mode-tab" data-mode="UFO_FISH">
-                  <span class="tab-emoji">🛸</span>
-                  <span class="tab-name">UFO 과일</span>
-                </button>
+              <div class="start-section-label">🎮 모션 아케이드 게임</div>
+              <div class="game-mode-tabs-container game-mode-grid-3">
                 <button id="btn-mode-galaga" class="game-mode-tab" data-mode="GALAGA">
                   <span class="tab-emoji">👾</span>
                   <span class="tab-name">갤러그</span>
@@ -175,13 +163,29 @@
                   <span class="tab-name">벽돌깨기</span>
                 </button>
               </div>
+
+              <div class="start-section-label start-subsection-label">🍉 과일자르기 게임</div>
+              <div class="game-mode-tabs-container game-mode-grid-3 game-mode-grid-fruit">
+                <button id="btn-mode-classic" class="game-mode-tab active" data-mode="CLASSIC">
+                  <span class="tab-emoji">🗡️</span>
+                  <span class="tab-name">클래식</span>
+                </button>
+                <button id="btn-mode-strange" class="game-mode-tab" data-mode="DOCTOR_STRANGE">
+                  <span class="tab-emoji">🔮</span>
+                  <span class="tab-name">닥터 스트레인지</span>
+                </button>
+                <button id="btn-mode-ufo" class="game-mode-tab" data-mode="UFO_FISH">
+                  <span class="tab-emoji">🛸</span>
+                  <span class="tab-name">UFO 과일</span>
+                </button>
+              </div>
             </div>
 
             <!-- Right Column: Guide & Start Button -->
             <div class="start-modal-col start-col-guide">
               <div class="start-section-label">📜 게임 안내 & 규칙</div>
               <div class="instructions-card">
-                <div id="instruction-mode-desc">⚔️ <strong>클래식 닌자 모드</strong>: 양손 독립 검기로 날아오는 과일을 베어보세요!</div>
+                <div id="instruction-mode-desc">⚔️ <strong>클래식 모드</strong>: 양손 독립 검기로 날아오는 과일을 베어보세요!</div>
                 <div id="instruction-special">⚡ <strong>필살기 (12개 절단 시)</strong>: 한글 자음(ㄱ, ㄴ, ㅅ, ㅇ) 포즈를 0.5초 유지하면 전멸기 발동!</div>
                 <div id="instruction-tip-1">💖 <strong>하트 보너스</strong>: 반짝이는 하트를 베면 생명(+1)이 회복됩니다!</div>
                 <div id="instruction-tip-2">💣 <strong>폭탄 격파</strong>: 닿으면 하트 2개 차감! 머리(헤딩 ⚽)로 들이받으면 안전하게 격파 (+10점)!</div>

@@ -148,7 +148,8 @@ export class UmbrellaEngine {
       pacePhase: Math.random() * Math.PI * 2,
       pauseTimer: 0,
       wetness: 0,
-      tearsPhase: 0
+      tearsPhase: 0,
+      cryingReturnTime: 0
     };
   }
 
@@ -383,6 +384,7 @@ export class UmbrellaEngine {
         if (child.wetness >= 1.0) {
           child.state = KidState.RETURNING_CRYING;
           child.wetness = 1.0;
+          child.cryingReturnTime = 0;
           this.lives = Math.max(0, this.lives - 1);
           this.onLivesChanged(this.lives);
           if (this.ui) {
@@ -423,13 +425,29 @@ export class UmbrellaEngine {
         this._promoteNextChild();
       }
     } else if (child.state === KidState.RETURNING_CRYING) {
+      child.cryingReturnTime += safeDt;
+      // After 1.5s of crying back toward school, sheltering them again soothes them & resumes walk home!
+      if (child.cryingReturnTime >= 1.5 && shelteredNow) {
+        child.state = KidState.WALKING_HOME;
+        child.wetness = 0;
+        child.cryingReturnTime = 0;
+        this.wasSheltering = true;
+        this._spawnBurst(child.x, childHeadY, '#fde047', 12, 140);
+        this._spawnFloatingText('🌤️ 뚝! 다시 집으로!', child.x, childHeadY - 26, '#fde047', 1.15);
+        if (this.sound && typeof this.sound.playUmbrellaShelter === 'function') {
+          this.sound.playUmbrellaShelter();
+        }
+        return;
+      }
+
       child.tearsPhase += safeDt * 12;
-      child.x += 220 * safeDt;
-      child.walkPhase += safeDt * 20;
+      child.x += 170 * safeDt;
+      child.walkPhase += safeDt * 18;
       if (child.x >= schoolPorchLeftX + 24) {
         child.x = schoolPorchLeftX + 24;
         child.state = KidState.WAITING_AT_SCHOOL;
         child.wetness = 0;
+        child.cryingReturnTime = 0;
       }
     }
   }

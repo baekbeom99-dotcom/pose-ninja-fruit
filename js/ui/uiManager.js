@@ -311,7 +311,7 @@ export class UIManager {
       if (this.btnModeClassic) this.btnModeClassic.classList.add('active');
       if (this.instructionModeDesc) {
         this.instructionModeDesc.innerHTML =
-          '⚔️ <strong>클래식 닌자 모드</strong>: 양손 독립 검기로 높이 솟구치는 과일을 베어보세요!';
+          '⚔️ <strong>클래식 모드</strong>: 양손 독립 검기로 높이 솟구치는 과일을 베어보세요!';
       }
       if (this.instructionSpecial) {
         this.instructionSpecial.innerHTML =
