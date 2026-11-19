@@ -96,6 +96,15 @@ class App {
         this.ui.showStartModal();
       });
     }
+
+    const mouthModeBtn = document.getElementById('btn-mode-mouth');
+    if (mouthModeBtn) {
+      mouthModeBtn.addEventListener('click', () => {
+        if (this.gameEngine && this.gameEngine.faceTracker) {
+          this.gameEngine.faceTracker.ensureReady().catch(() => {});
+        }
+      });
+    }
   }
 
   /**
@@ -120,6 +129,10 @@ class App {
 
       if (this.gameEngine && this.gameEngine.gameMode === 'BREAKOUT') {
         this.gameEngine.breakoutEngine.setPointerX(x);
+      }
+
+      if (this.gameEngine && this.gameEngine.gameMode === 'MOUTH_CATCH') {
+        this.gameEngine.mouthEngine.setPointerFallback(x, y, null);
       }
 
       if (!isDown) return;
@@ -152,6 +165,18 @@ class App {
           this.gameEngine.breakoutEngine.launchStuckBalls();
         }
       }
+      if (this.gameEngine && this.gameEngine.gameMode === 'MOUTH_CATCH' && this.gameEngine.state === 'PLAYING') {
+        if (e.code === 'Space') {
+          e.preventDefault();
+          this.gameEngine.mouthEngine.setPointerFallback(null, null, true);
+        }
+      }
+    });
+
+    window.addEventListener('keyup', (e) => {
+      if (this.gameEngine && this.gameEngine.gameMode === 'MOUTH_CATCH' && e.code === 'Space') {
+        this.gameEngine.mouthEngine.setPointerFallback(null, null, false);
+      }
     });
 
     window.addEventListener('wheel', (e) => {
@@ -175,6 +200,11 @@ class App {
         }
         return;
       }
+      if (this.gameEngine && this.gameEngine.gameMode === 'MOUTH_CATCH' && this.gameEngine.state === 'PLAYING') {
+        if (!e.target.closest('button')) {
+          this.gameEngine.mouthEngine.setPointerFallback(e.clientX, e.clientY, true);
+        }
+      }
       isDown = true;
       handlePointerMove(e.clientX, e.clientY);
     });
@@ -186,6 +216,9 @@ class App {
     window.addEventListener('mouseup', () => {
       isDown = false;
       this.gameEngine.blades.p1RightBlade.update(null, performance.now());
+      if (this.gameEngine && this.gameEngine.gameMode === 'MOUTH_CATCH') {
+        this.gameEngine.mouthEngine.setPointerFallback(null, null, false);
+      }
     });
 
     // Touch support
@@ -202,6 +235,11 @@ class App {
         }
         return;
       }
+      if (this.gameEngine && this.gameEngine.gameMode === 'MOUTH_CATCH' && this.gameEngine.state === 'PLAYING') {
+        if (!e.target.closest('button') && e.touches.length > 0) {
+          this.gameEngine.mouthEngine.setPointerFallback(e.touches[0].clientX, e.touches[0].clientY, true);
+        }
+      }
       isDown = true;
       if (e.touches.length > 0) {
         handlePointerMove(e.touches[0].clientX, e.touches[0].clientY);
@@ -217,6 +255,9 @@ class App {
     window.addEventListener('touchend', () => {
       isDown = false;
       this.gameEngine.blades.p1RightBlade.update(null, performance.now());
+      if (this.gameEngine && this.gameEngine.gameMode === 'MOUTH_CATCH') {
+        this.gameEngine.mouthEngine.setPointerFallback(null, null, false);
+      }
     });
   }
 }

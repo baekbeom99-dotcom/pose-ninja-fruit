@@ -168,6 +168,10 @@
                   <span class="tab-emoji">🧱</span>
                   <span class="tab-name">벽돌깨기</span>
                 </button>
+                <button id="btn-mode-mouth" class="game-mode-tab" data-mode="MOUTH_CATCH">
+                  <span class="tab-emoji">😋</span>
+                  <span class="tab-name">냠냠 먹기</span>
+                </button>
               </div>
 
               <div class="start-section-label start-subsection-label">🍉 과일자르기 게임</div>
@@ -190,6 +194,13 @@
             <!-- Right Column: Guide & Start Button -->
             <div class="start-modal-col start-col-guide">
               <div class="start-section-label">📜 게임 안내 & 규칙</div>
+
+              <!-- Sub-mode selector shown when MOUTH_CATCH is selected -->
+              <div id="mouth-submode-row" class="mouth-submode-row hidden">
+                <button id="btn-mouth-toss" class="submode-btn active" data-submode="TOSS">🚀 아래서 튀어오르기</button>
+                <button id="btn-mouth-rain" class="submode-btn" data-submode="RAIN">🌧️ 하늘에서 비처럼</button>
+              </div>
+
               <div class="instructions-card">
                 <div id="instruction-mode-desc">⚔️ <strong>클래식 모드</strong>: 양손 독립 검기로 날아오는 과일을 베어보세요!</div>
                 <div id="instruction-special">⚡ <strong>필살기 (12개 절단 시)</strong>: 한글 자음(ㄱ, ㄴ, ㅅ, ㅇ) 포즈를 0.5초 유지하면 전멸기 발동!</div>

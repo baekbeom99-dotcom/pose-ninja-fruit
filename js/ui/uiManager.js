@@ -61,6 +61,11 @@ export class UIManager {
     this.btnModeRedLight = document.getElementById('btn-mode-redlight');
     this.btnModeUmbrella = document.getElementById('btn-mode-umbrella');
     this.btnModeBreakout = document.getElementById('btn-mode-breakout');
+    this.btnModeMouth = document.getElementById('btn-mode-mouth');
+    this.mouthSubmodeRow = document.getElementById('mouth-submode-row');
+    this.btnMouthToss = document.getElementById('btn-mouth-toss');
+    this.btnMouthRain = document.getElementById('btn-mouth-rain');
+    this.mouthSubMode = 'TOSS';
     this.ultimatePanel = document.getElementById('ultimate-panel');
     this.instructionModeDesc = document.getElementById('instruction-mode-desc');
     this.instructionSpecial = document.getElementById('instruction-special');
@@ -94,8 +99,21 @@ export class UIManager {
       { btn: this.btnModePoop, mode: 'POOP_DODGE' },
       { btn: this.btnModeRedLight, mode: 'RED_LIGHT' },
       { btn: this.btnModeUmbrella, mode: 'UMBRELLA' },
-      { btn: this.btnModeBreakout, mode: 'BREAKOUT' }
+      { btn: this.btnModeBreakout, mode: 'BREAKOUT' },
+      { btn: this.btnModeMouth, mode: 'MOUTH_CATCH' }
     ];
+
+    const updateMouthSubButtons = (sub) => {
+      this.mouthSubMode = sub === 'RAIN' ? 'RAIN' : 'TOSS';
+      if (this.btnMouthToss) this.btnMouthToss.classList.toggle('active', this.mouthSubMode === 'TOSS');
+      if (this.btnMouthRain) this.btnMouthRain.classList.toggle('active', this.mouthSubMode === 'RAIN');
+    };
+    if (this.btnMouthToss) {
+      this.btnMouthToss.addEventListener('click', () => updateMouthSubButtons('TOSS'));
+    }
+    if (this.btnMouthRain) {
+      this.btnMouthRain.addEventListener('click', () => updateMouthSubButtons('RAIN'));
+    }
 
     tabs.forEach(({ btn, mode }) => {
       if (btn) {
@@ -219,10 +237,14 @@ export class UIManager {
       this.btnModePoop,
       this.btnModeRedLight,
       this.btnModeUmbrella,
-      this.btnModeBreakout
+      this.btnModeBreakout,
+      this.btnModeMouth
     ].forEach(btn => {
       if (btn) btn.classList.remove('active');
     });
+    if (this.mouthSubmodeRow) {
+      this.mouthSubmodeRow.classList.toggle('hidden', mode !== 'MOUTH_CATCH');
+    }
 
     const restoreFruitTips = () => {
       if (this.instructionTip1) {
@@ -353,6 +375,24 @@ export class UIManager {
         this.instructionTip2.innerHTML =
           '🕹️ <strong>간편 조작 지원</strong>: 마우스 좌우 이동 + 휠(또는 <code>A</code>/<code>D</code> · <code>←</code>/<code>→</code> 키)로 기울기 조절, <code>Space</code>로 공 발사!';
       }
+    } else if (mode === 'MOUTH_CATCH') {
+      if (this.btnModeMouth) this.btnModeMouth.classList.add('active');
+      if (this.instructionModeDesc) {
+        this.instructionModeDesc.innerHTML =
+          '😋 <strong>냠냠! 입 벌려 받아먹기</strong>: 화면에 비친 얼굴에 맞춰 <strong>입을 벌려(😮)</strong> 날아오는 음식을 받아먹으세요!';
+      }
+      if (this.instructionSpecial) {
+        this.instructionSpecial.innerHTML =
+          '🍄 <strong>버섯 색상 효과</strong>: 🟡 노랑(점수 +50) · 🟢 초록(하트 +1) · 🔴 빨강(독버섯 -1❤️! 입 다물기)';
+      }
+      if (this.instructionTip1) {
+        this.instructionTip1.innerHTML =
+          '🥾 <strong>비음식 조심 & 얼굴 얼룩</strong>: 음식이 아닌 것을 먹으면 -1❤️! 못 먹고 얼굴에 맞으면 얼룩이 남습니다!';
+      }
+      if (this.instructionTip2) {
+        this.instructionTip2.innerHTML =
+          '🕹️ <strong>방식 선택 & 폴백</strong>: 위 버튼으로 <code>튀어오르기</code> / <code>하늘비</code>를 고르거나 마우스 클릭/<code>Space</code>로 입 열기 가능!';
+      }
     } else {
       restoreFruitTips();
       if (this.btnModeClassic) this.btnModeClassic.classList.add('active');
@@ -370,7 +410,8 @@ export class UIManager {
       mode !== 'POOP_DODGE' &&
       mode !== 'RED_LIGHT' &&
       mode !== 'UMBRELLA' &&
-      mode !== 'BREAKOUT'
+      mode !== 'BREAKOUT' &&
+      mode !== 'MOUTH_CATCH'
     ) {
       restoreFruitTips();
     }
@@ -390,7 +431,8 @@ export class UIManager {
       gameMode === 'POOP_DODGE' ||
       gameMode === 'RED_LIGHT' ||
       gameMode === 'UMBRELLA' ||
-      gameMode === 'BREAKOUT';
+      gameMode === 'BREAKOUT' ||
+      gameMode === 'MOUTH_CATCH';
     if (this.livesContainer) {
       this.livesContainer.classList.toggle('hidden', gameMode === 'RED_LIGHT');
     }
@@ -600,6 +642,10 @@ export class UIManager {
       BREAKOUT: {
         title: '🙌 양손을 움직이세요!',
         sub: '양손 높이 차이로 시소를 기울여 공을 정밀 반사!'
+      },
+      MOUTH_CATCH: {
+        title: '😮 입을 크게 벌려 받아먹으세요!',
+        sub: '음식·노랑/초록버섯만 냠냠! 💣·🔴독버섯은 입을 다물어 피하세요!'
       },
       POOP_DODGE: {
         title: '🙂 머리를 좌우로 움직이세요!',

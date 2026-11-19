@@ -321,6 +321,42 @@
   box-shadow: 0 0 22px rgba(56, 189, 248, 0.6);
 }
 
+.game-mode-tab[data-mode="MOUTH_CATCH"].active {
+  background: linear-gradient(135deg, rgba(234, 88, 12, 0.92) 0%, rgba(236, 72, 153, 0.92) 100%);
+  border-color: #fb7185;
+  box-shadow: 0 0 22px rgba(251, 113, 133, 0.6);
+}
+
+.mouth-submode-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.mouth-submode-row.hidden {
+  display: none !important;
+}
+
+.submode-btn {
+  flex: 1;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1.5px solid rgba(255, 255, 255, 0.18);
+  color: #cbd5e1;
+  font-size: 12.5px;
+  font-weight: 800;
+  padding: 9px 10px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.submode-btn.active {
+  background: linear-gradient(135deg, #f97316, #ec4899);
+  border-color: #fde047;
+  color: #ffffff;
+  box-shadow: 0 0 14px rgba(249, 115, 22, 0.5);
+}
+
 .lives-container.hidden {
   display: none !important;
 }

@@ -290,6 +290,34 @@ export const MODE_POSTURE_GUIDES = {
         `)
       }
     ]
+  },
+  MOUTH_CATCH: {
+    title: '😋 냠냠! 입 벌려 받아먹기 가이드',
+    desc: '얼굴 위치로 조준하고 입을 벌려 음식만 받아먹으세요! 못 먹으면 얼굴에 얼룩이 생깁니다.',
+    cards: [
+      {
+        title: '입 크게 벌려 먹기 (😮)',
+        desc: '맛있는 음식, 황금 노랑버섯(+50), 초록버섯(+1❤️)이 올 때 입을 아~ 벌리세요!',
+        svg: makeStickSvg(`
+          <circle cx="50" cy="50" r="30" fill="#ffedd5" stroke="#fb923c" stroke-width="3"/>
+          <circle cx="38" cy="40" r="3.5" fill="#292524"/>
+          <circle cx="62" cy="40" r="3.5" fill="#292524"/>
+          <ellipse cx="50" cy="62" rx="14" ry="11" fill="#ef4444" stroke="#7f1d1d" stroke-width="2.5"/>
+          <circle cx="50" cy="24" r="6" fill="#4ade80"/>
+        `)
+      },
+      {
+        title: '비음식·빨간 독버섯 = 입 다물기! (😐)',
+        desc: '신발·폭탄·빨간 독버섯은 먹으면 하트가 줄어듭니다! 입을 꾹 다물어 피하세요!',
+        svg: makeStickSvg(`
+          <circle cx="50" cy="50" r="30" fill="#ffedd5" stroke="#ef4444" stroke-width="3"/>
+          <circle cx="38" cy="40" r="3.5" fill="#292524"/>
+          <circle cx="62" cy="40" r="3.5" fill="#292524"/>
+          <line x1="36" y1="62" x2="64" y2="62" stroke="#292524" stroke-width="4" stroke-linecap="round"/>
+          <circle cx="76" cy="24" r="8" fill="#ef4444"/>
+        `)
+      }
+    ]
   }
 };
 

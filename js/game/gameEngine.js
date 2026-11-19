@@ -14,6 +14,8 @@ import { PoopEngine } from './poop/poopEngine.js';
 import { RedLightEngine } from './redlight/redLightEngine.js';
 import { UmbrellaEngine } from './umbrella/umbrellaEngine.js';
 import { BreakoutEngine } from './breakout/breakoutEngine.js';
+import { MouthEngine } from './mouth/mouthEngine.js';
+import { FaceTracker } from '../camera/faceTracker.js';
 import { soundManager } from '../audio/soundManager.js';
 
 export const GameState = {
@@ -132,6 +134,19 @@ export class GameEngine {
       this.p1Score = score;
     };
     this.breakoutEngine.onLivesChanged = (lives) => {
+      this.lives = lives;
+    };
+
+    // Mouth Catch Mode Subsystem ("냠냠! 입 벌려 받아먹기") & Lazy FaceTracker
+    this.faceTracker = new FaceTracker();
+    this.mouthEngine = new MouthEngine(this.width, this.height, this.ui, soundManager);
+    this.mouthEngine.onGameOver = () => {
+      this.triggerGameOver();
+    };
+    this.mouthEngine.onScore = (score) => {
+      this.p1Score = score;
+    };
+    this.mouthEngine.onLivesChanged = (lives) => {
       this.lives = lives;
     };
 
@@ -256,6 +271,9 @@ export class GameEngine {
       if (this.breakoutEngine) {
         this.breakoutEngine.resize(w, h);
       }
+      if (this.mouthEngine) {
+        this.mouthEngine.resize(w, h);
+      }
     };
 
     window.addEventListener('resize', resize);
@@ -296,6 +314,10 @@ export class GameEngine {
       this.breakoutEngine.stop();
       this.breakoutEngine.reset();
     }
+    if (this.mouthEngine) {
+      this.mouthEngine.stop();
+      this.mouthEngine.reset();
+    }
     this.fruitManager.reset();
     this.particles.clear();
     this.ui.updateScores(0, 0, this.isTwoPlayerMode);
@@ -313,7 +335,8 @@ export class GameEngine {
       [CONFIG.MODES.POOP_DODGE]: this.poopEngine,
       [CONFIG.MODES.RED_LIGHT]: this.redLightEngine,
       [CONFIG.MODES.UMBRELLA]: this.umbrellaEngine,
-      [CONFIG.MODES.BREAKOUT]: this.breakoutEngine
+      [CONFIG.MODES.BREAKOUT]: this.breakoutEngine,
+      [CONFIG.MODES.MOUTH_CATCH]: this.mouthEngine
     };
   }
 
@@ -333,6 +356,12 @@ export class GameEngine {
     if (activeCustom) {
       if (this.gameMode !== CONFIG.MODES.GALAGA) {
         soundManager.stopGalagaBGM();
+      }
+      if (this.gameMode === CONFIG.MODES.MOUTH_CATCH) {
+        if (this.faceTracker) this.faceTracker.ensureReady();
+        if (this.ui && this.ui.mouthSubMode) {
+          this.mouthEngine.setSubMode(this.ui.mouthSubMode);
+        }
       }
       this.state = GameState.PLAYING;
       activeCustom.start();
@@ -506,6 +535,19 @@ export class GameEngine {
       return;
     }
 
+    // Mouth Catch Mode Update Loop (FaceLandmarker + headPose fallback)
+    if (this.gameMode === CONFIG.MODES.MOUTH_CATCH) {
+      if (this.state === GameState.PLAYING) {
+        const faceData =
+          this.faceTracker && this.video.readyState >= 2
+            ? this.faceTracker.detect(this.video, currentTime, CONFIG.CANVAS.MIRROR)
+            : null;
+        this.mouthEngine.update(dt, currentTime, faceData, this.lastHeadPose);
+      }
+      this.lastPoses = poses;
+      return;
+    }
+
     // 2. Update Blade Tracker with filtered poses first
     this.blades.update(poses, this.width, this.height, currentTime, CONFIG.CANVAS.MIRROR);
 
@@ -568,16 +610,21 @@ export class GameEngine {
     const customEngines = this._getCustomEnginesMap();
     const activeCustom = customEngines[this.gameMode];
     if (activeCustom) {
+      const isMouthMode = this.gameMode === CONFIG.MODES.MOUTH_CATCH;
       this.bgCtx.clearRect(0, 0, w, h);
       if (this.video.readyState >= 2) {
         this.bgCtx.save();
         this.bgCtx.translate(w, 0);
         this.bgCtx.scale(-1, 1);
-        this.bgCtx.globalAlpha = this.gameMode === CONFIG.MODES.CROSSY ? 0.25 : 0.28;
+        this.bgCtx.globalAlpha = isMouthMode
+          ? 1.0
+          : this.gameMode === CONFIG.MODES.CROSSY
+            ? 0.25
+            : 0.28;
         this.bgCtx.drawImage(this.video, 0, 0, w, h);
         this.bgCtx.restore();
       }
-      if (this.gameMode !== CONFIG.MODES.GALAGA && this.lastPoses) {
+      if (!isMouthMode && this.gameMode !== CONFIG.MODES.GALAGA && this.lastPoses) {
         this.poseTracker.drawSkeletons(this.bgCtx, this.lastPoses, w, h, CONFIG.CANVAS.MIRROR);
       }
 
