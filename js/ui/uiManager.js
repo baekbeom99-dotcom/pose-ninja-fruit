@@ -1,4 +1,5 @@
 import { soundManager } from '../audio/soundManager.js';
+import { getPostureGuideForMode } from './postureGuides.js';
 
 /**
  * UI Manager - Handles HUD, Hearts, Combo Popups, High Scores, Ultimate Gauge,
@@ -35,6 +36,9 @@ export class UIManager {
     this.btnExit = document.getElementById('btn-exit');
     this.btnGuide = document.getElementById('btn-guide');
     this.closeGuideBtn = document.getElementById('close-guide-btn');
+    this.guideModalTitle = document.getElementById('guide-modal-title');
+    this.guideModalDesc = document.getElementById('guide-modal-desc');
+    this.guideGrid = document.getElementById('guide-grid');
 
     // Ultimate HUD elements
     this.ultimateCount = document.getElementById('ultimate-count');
@@ -151,8 +155,9 @@ export class UIManager {
       });
     }
 
-    // Guide Modal
+    // Guide Modal (renders ONLY poses belonging to the active mode)
     const openGuide = () => {
+      this.renderPostureGuide(this.activeGameMode || this.selectedGameMode);
       if (this.guideModal) this.guideModal.classList.remove('hidden');
     };
     const closeGuide = () => {
@@ -162,6 +167,44 @@ export class UIManager {
     if (this.btnGuide) this.btnGuide.addEventListener('click', openGuide);
     if (this.ultimatePoseCard) this.ultimatePoseCard.addEventListener('click', openGuide);
     if (this.closeGuideBtn) this.closeGuideBtn.addEventListener('click', closeGuide);
+  }
+
+  renderPostureGuide(gameMode = 'CLASSIC') {
+    const guide = getPostureGuideForMode(gameMode);
+    if (this.guideModalTitle) this.guideModalTitle.textContent = guide.title;
+    if (this.guideModalDesc) this.guideModalDesc.textContent = guide.desc;
+    if (!this.guideGrid) return;
+
+    this.guideGrid.innerHTML = '';
+    guide.cards.forEach((c, idx) => {
+      const card = document.createElement('div');
+      card.className = 'guide-card';
+      if (c.accentColor) {
+        card.style.borderColor = c.accentColor;
+      }
+
+      const figWrap = document.createElement('div');
+      figWrap.className = 'guide-fig-wrap';
+      figWrap.innerHTML = c.svg;
+
+      const info = document.createElement('div');
+      info.className = 'guide-info';
+
+      const title = document.createElement('div');
+      title.className = 'guide-title';
+      if (c.accentColor) title.style.color = c.accentColor;
+      title.textContent = `${idx + 1}. ${c.title}`;
+
+      const desc = document.createElement('div');
+      desc.className = 'guide-desc';
+      desc.textContent = c.desc;
+
+      info.appendChild(title);
+      info.appendChild(desc);
+      card.appendChild(figWrap);
+      card.appendChild(info);
+      this.guideGrid.appendChild(card);
+    });
   }
 
   setGameMode(mode = 'CLASSIC') {
@@ -339,6 +382,8 @@ export class UIManager {
   }
 
   updateHUDMode(twoPlayer = false, gameMode = 'CLASSIC') {
+    this.activeGameMode = gameMode;
+    this.renderPostureGuide(gameMode);
     const hideFruitUltimate =
       gameMode === 'GALAGA' ||
       gameMode === 'CROSSY' ||
@@ -357,12 +402,9 @@ export class UIManager {
         this.ultimatePanel.classList.remove('hidden');
       }
     }
+    // Posture Guide button stays accessible in every mode (showing only that mode's relevant actions!)
     if (this.btnGuide) {
-      if (hideFruitUltimate) {
-        this.btnGuide.classList.add('hidden');
-      } else {
-        this.btnGuide.classList.remove('hidden');
-      }
+      this.btnGuide.classList.remove('hidden');
     }
   }
 

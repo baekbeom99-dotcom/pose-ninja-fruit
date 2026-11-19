@@ -221,113 +221,13 @@
         </div>
       </div>
 
-      <!-- Posture Guide Modal -->
+      <!-- Posture Guide Modal (dynamically populated per active game mode) -->
       <div id="guide-modal" class="modal-screen hidden">
         <div class="modal-content guide-modal-content">
-          <h2 class="game-title" style="font-size: 32px; margin-bottom: 8px;">⚡ 한글 자음 필살기 자세 가이드</h2>
-          <p class="modal-desc" style="margin-bottom: 16px;">과일 10개를 벤 후, 요구되는 자음 모양을 0.2초간 취하면 발동됩니다!</p>
+          <h2 id="guide-modal-title" class="game-title" style="font-size: 30px; margin-bottom: 8px;">⚡ 자세 가이드</h2>
+          <p id="guide-modal-desc" class="modal-desc" style="margin-bottom: 16px;">해당 게임에서 사용하는 동작만 표시됩니다!</p>
 
-          <div class="guide-grid">
-            <!-- 1. SIOT -->
-            <div class="guide-card">
-              <div class="guide-fig-wrap">
-                <svg viewBox="0 0 100 100" class="pose-stickman">
-                  <circle cx="50" cy="22" r="8" fill="#38bdf8"/>
-                  <line x1="50" y1="30" x2="50" y2="65" stroke="#38bdf8" stroke-width="4" stroke-linecap="round"/>
-                  <line x1="50" y1="65" x2="35" y2="90" stroke="#38bdf8" stroke-width="4" stroke-linecap="round"/>
-                  <line x1="50" y1="65" x2="65" y2="90" stroke="#38bdf8" stroke-width="4" stroke-linecap="round"/>
-                  <polyline points="35,40 30,22 48,10" fill="none" stroke="#facc15" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
-                  <polyline points="65,40 70,22 52,10" fill="none" stroke="#facc15" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
-                  <circle cx="50" cy="10" r="4.5" fill="#ffffff"/>
-                </svg>
-              </div>
-              <div class="guide-info">
-                <div class="guide-title">1. 시옷(ㅅ) 참격</div>
-                <div class="guide-desc">머리 위/앞으로 양손을 모아 세모(∧) 지붕 만들기</div>
-              </div>
-            </div>
-
-            <!-- 2. IEUNG -->
-            <div class="guide-card">
-              <div class="guide-fig-wrap">
-                <svg viewBox="0 0 100 100" class="pose-stickman">
-                  <circle cx="50" cy="28" r="7" fill="#06b6d4"/>
-                  <line x1="50" y1="35" x2="50" y2="65" stroke="#06b6d4" stroke-width="4" stroke-linecap="round"/>
-                  <line x1="50" y1="65" x2="35" y2="90" stroke="#06b6d4" stroke-width="4" stroke-linecap="round"/>
-                  <line x1="50" y1="65" x2="65" y2="90" stroke="#06b6d4" stroke-width="4" stroke-linecap="round"/>
-                  <path d="M 50,36 C 26,34 22,14 42,8 C 50,5 58,5 66,10 C 82,18 76,34 50,36" fill="none" stroke="#facc15" stroke-width="5" stroke-linecap="round"/>
-                  <circle cx="50" cy="8" r="4.5" fill="#ffffff"/>
-                  <circle cx="50" cy="36" r="4.5" fill="#ffffff"/>
-                </svg>
-              </div>
-              <div class="guide-info">
-                <div class="guide-title">2. 이응(ㅇ) 광륜</div>
-                <div class="guide-desc">양팔을 둥글게 모아 커다란 원(○) 만들기</div>
-              </div>
-            </div>
-
-            <!-- 3. GIYEOK -->
-            <div class="guide-card">
-              <div class="guide-fig-wrap">
-                <svg viewBox="0 0 100 100" class="pose-stickman">
-                  <circle cx="50" cy="24" r="8" fill="#facc15"/>
-                  <line x1="50" y1="32" x2="50" y2="65" stroke="#facc15" stroke-width="4" stroke-linecap="round"/>
-                  <line x1="50" y1="65" x2="35" y2="90" stroke="#facc15" stroke-width="4" stroke-linecap="round"/>
-                  <line x1="50" y1="65" x2="65" y2="90" stroke="#facc15" stroke-width="4" stroke-linecap="round"/>
-                  <line x1="50" y1="38" x2="16" y2="38" stroke="#38bdf8" stroke-width="5" stroke-linecap="round"/>
-                  <polyline points="50,38 74,38 74,68" fill="none" stroke="#38bdf8" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
-                  <circle cx="16" cy="38" r="4.5" fill="#ffffff"/>
-                  <circle cx="74" cy="68" r="4.5" fill="#ffffff"/>
-                </svg>
-              </div>
-              <div class="guide-info">
-                <div class="guide-title">3. 기역(ㄱ) 뇌격</div>
-                <div class="guide-desc">한 팔은 옆으로 수평, 다른 팔은 아래로 직각(ㄱ)</div>
-              </div>
-            </div>
-
-            <!-- 4. NIEUN -->
-            <div class="guide-card">
-              <div class="guide-fig-wrap">
-                <svg viewBox="0 0 100 100" class="pose-stickman">
-                  <circle cx="50" cy="24" r="8" fill="#a855f7"/>
-                  <line x1="50" y1="32" x2="50" y2="65" stroke="#a855f7" stroke-width="4" stroke-linecap="round"/>
-                  <line x1="50" y1="65" x2="35" y2="90" stroke="#a855f7" stroke-width="4" stroke-linecap="round"/>
-                  <line x1="50" y1="65" x2="65" y2="90" stroke="#a855f7" stroke-width="4" stroke-linecap="round"/>
-                  <polyline points="50,38 26,38 26,68" fill="none" stroke="#facc15" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
-                  <line x1="50" y1="38" x2="82" y2="38" stroke="#facc15" stroke-width="5" stroke-linecap="round"/>
-                  <circle cx="26" cy="68" r="4.5" fill="#ffffff"/>
-                  <circle cx="82" cy="38" r="4.5" fill="#ffffff"/>
-                </svg>
-              </div>
-              <div class="guide-info">
-                <div class="guide-title">4. 니은(ㄴ) 파도</div>
-                <div class="guide-desc">한 팔은 아래로 수직, 다른 팔은 옆으로 수평(ㄴ)</div>
-              </div>
-            </div>
-
-            <!-- 5. DOCTOR STRANGE Y-POSE PORTAL -->
-            <div class="guide-card" style="border-color: rgba(245, 158, 11, 0.5);">
-              <div class="guide-fig-wrap">
-                <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" class="pose-stickman">
-                  <path d="M42,28 Q50,18 58,28 L64,52 L36,52 Z" fill="#b91c1c" opacity="0.85"/>
-                  <circle cx="50" cy="22" r="8" fill="#facc15"/>
-                  <line x1="50" y1="30" x2="50" y2="65" stroke="#facc15" stroke-width="4" stroke-linecap="round"/>
-                  <line x1="50" y1="65" x2="35" y2="90" stroke="#facc15" stroke-width="4" stroke-linecap="round"/>
-                  <line x1="50" y1="65" x2="65" y2="90" stroke="#facc15" stroke-width="4" stroke-linecap="round"/>
-                  <polyline points="50,38 33,24 18,9" fill="none" stroke="#f97316" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
-                  <polyline points="50,38 67,24 82,9" fill="none" stroke="#f97316" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
-                  <circle cx="50" cy="24" r="21" fill="none" stroke="#f59e0b" stroke-width="2.5" stroke-dasharray="5,3"/>
-                  <circle cx="18" cy="9" r="4.5" fill="#ffffff"/>
-                  <circle cx="82" cy="9" r="4.5" fill="#ffffff"/>
-                </svg>
-              </div>
-              <div class="guide-info">
-                <div class="guide-title" style="color: #f59e0b;">5. 닥터 Y포즈 차원 포털</div>
-                <div class="guide-desc">양팔을 대각선 위로 활짝 뻗어 큰 Y자 자세 만들기!</div>
-              </div>
-            </div>
-          </div>
+          <div id="guide-grid" class="guide-grid"></div>
 
           <button id="close-guide-btn" class="close-guide-btn">닫기</button>
         </div>
