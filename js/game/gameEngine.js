@@ -301,6 +301,9 @@ export class GameEngine {
     this.ui.updateScores(0, 0, this.isTwoPlayerMode);
     this.ui.updateChargingProgress(0);
     this.ui.updateUltimateGauge(0, this.ultimateThreshold, false, this.currentConsonantPose);
+    if (typeof this.ui.hideModeGuideBanner === 'function') {
+      this.ui.hideModeGuideBanner();
+    }
   }
 
   _getCustomEnginesMap() {
@@ -340,6 +343,9 @@ export class GameEngine {
       }
       this.ui.hideStartModal();
       this.ui.hideGameOverModal();
+      if (typeof this.ui.showModeGuideBanner === 'function') {
+        this.ui.showModeGuideBanner(this.gameMode);
+      }
       return;
     }
 
@@ -367,6 +373,9 @@ export class GameEngine {
     this.state = GameState.PLAYING;
     this.ui.hideStartModal();
     this.ui.hideGameOverModal();
+    if (typeof this.ui.showModeGuideBanner === 'function') {
+      this.ui.showModeGuideBanner(this.gameMode);
+    }
   }
 
   _pickPoseForMode() {

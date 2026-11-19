@@ -19,6 +19,9 @@ export class UIManager {
     this.healContainer = document.getElementById('heal-container');
     this.headingContainer = document.getElementById('heading-container');
     this.headingBannerText = document.getElementById('heading-banner-text');
+    this.modeGuideBanner = document.getElementById('mode-guide-banner');
+    this.modeGuideTitle = document.getElementById('mode-guide-title');
+    this.modeGuideSub = document.getElementById('mode-guide-sub');
     this.startModal = document.getElementById('start-modal');
     this.gameoverModal = document.getElementById('gameover-modal');
     this.guideModal = document.getElementById('guide-modal');
@@ -67,6 +70,7 @@ export class UIManager {
     this.healTimeout = null;
     this.headingTimeout = null;
     this.ultimateTimeout = null;
+    this.modeGuideTimeout = null;
     this.ringCircumference = 2 * Math.PI * 44;
     this.highScore = parseInt(localStorage.getItem('pose_ninja_highscore') || '0', 10);
     this.isTwoPlayer = false;
@@ -530,8 +534,74 @@ export class UIManager {
   }
 
   showStartModal() {
+    this.hideModeGuideBanner();
     this.startModal.classList.remove('hidden');
     this.gameoverModal.classList.add('hidden');
+  }
+
+  showModeGuideBanner(gameMode = 'CLASSIC', durationMs = 3800) {
+    if (!this.modeGuideBanner || !this.modeGuideTitle || !this.modeGuideSub) return;
+
+    const guides = {
+      UMBRELLA: {
+        title: '☔ 손으로 우산을 만들어주세요!',
+        sub: '손바닥 아래 안전 영역으로 아이를 학교에서 집까지 데려다주세요'
+      },
+      RED_LIGHT: {
+        title: '🏃 점프하세요!',
+        sub: '구호 중 제자리 점프/달리기 · 눈이 붉어지면 얼음!'
+      },
+      CROSSY: {
+        title: '🐔 점프하세요!',
+        sub: '제자리 점프 또는 양팔 날개짓(🪽)으로 앞으로 전진!'
+      },
+      BREAKOUT: {
+        title: '🙌 양손을 움직이세요!',
+        sub: '양손 높이 차이로 시소를 기울여 공을 정밀 반사!'
+      },
+      POOP_DODGE: {
+        title: '🙂 머리를 좌우로 움직이세요!',
+        sub: '머리를 움직여 쏟아지는 똥을 피하세요 (3초 한자리 금지)'
+      },
+      GALAGA: {
+        title: '🚀 머리를 좌우로 움직여 피하세요!',
+        sub: '자동 사격 중! 양팔 만세(🙌)로 하이퍼 윙맨 폭격!'
+      },
+      DOCTOR_STRANGE: {
+        title: '🔮 양손을 벌려 마법 광선으로 베세요!',
+        sub: '필살기 충전 시 양팔을 Y자로 펼쳐 차원 포털 개방!'
+      },
+      UFO_FISH: {
+        title: '🛸 손을 휘둘러 우주 물고기를 베세요!',
+        sub: '다양한 무중력 비행 궤적을 노려 절단하세요!'
+      },
+      CLASSIC: {
+        title: '⚔️ 손을 휘둘러 과일을 베세요!',
+        sub: '💣 폭탄은 닿으면 위험 · 머리 헤딩으로 안전 격파 (+10점)!'
+      }
+    };
+
+    const g = guides[gameMode] || guides.CLASSIC;
+    this.modeGuideTitle.textContent = g.title;
+    this.modeGuideSub.textContent = g.sub;
+
+    if (this.modeGuideTimeout) {
+      clearTimeout(this.modeGuideTimeout);
+    }
+    this.modeGuideBanner.classList.add('active');
+    this.modeGuideTimeout = setTimeout(() => {
+      this.hideModeGuideBanner();
+    }, durationMs);
+  }
+
+  hideModeGuideBanner() {
+    if (this.modeGuideTimeout) {
+      clearTimeout(this.modeGuideTimeout);
+      this.modeGuideTimeout = null;
+    }
+    if (this.modeGuideBanner) {
+      this.modeGuideBanner.classList.remove('active');
+    }
   }
 
   hideStartModal() {

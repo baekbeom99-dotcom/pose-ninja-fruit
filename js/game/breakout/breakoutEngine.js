@@ -741,6 +741,20 @@ export class BreakoutEngine {
     ctx.font = '900 17px system-ui, sans-serif';
     ctx.fillStyle = '#fde047';
     ctx.fillText(`STAGE ${this.stage} · BRICKS ${this.bricks.length}`, w - 24, h - 22);
+
+    // Contextual action guide while serving or in opening seconds
+    const hasStuck = this.balls.some((b) => b.stuckToPaddle);
+    if (this.state === 'PLAYING' && (hasStuck || this.elapsedTime < 4.0)) {
+      ctx.textAlign = 'center';
+      ctx.font = '900 20px system-ui, sans-serif';
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = 'rgba(15, 23, 42, 0.85)';
+      const tip = '🙌 양손을 움직이세요! (손목 높이 차로 각도 조절)';
+      ctx.strokeText(tip, w * 0.5, h * 0.58);
+      ctx.fillStyle = '#fde047';
+      ctx.fillText(tip, w * 0.5, h * 0.58);
+    }
+
     ctx.restore();
   }
 }

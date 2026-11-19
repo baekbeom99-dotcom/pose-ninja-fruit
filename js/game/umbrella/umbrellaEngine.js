@@ -920,8 +920,8 @@ export class UmbrellaEngine {
       tag = '✋ 손으로 가려주세요!';
       col = '#fde047';
     } else if (isCrying) {
-      tag = '😭 으앙!';
-      col = '#93c5fd';
+      tag = child.cryingReturnTime >= 1.5 ? '🌤️ 다시 우산을 씌워주세요!' : '😭 으앙!';
+      col = child.cryingReturnTime >= 1.5 ? '#fde047' : '#93c5fd';
     } else if (!isSheltered) {
       tag = '🌧️ 비 맞아요!';
       col = '#fca5a5';
@@ -975,6 +975,26 @@ export class UmbrellaEngine {
     ctx.strokeText(rightTxt, w - 24, h - 22);
     ctx.fillStyle = '#fde047';
     ctx.fillText(rightTxt, w - 24, h - 22);
+
+    // Contextual center prompt when waiting for player's hand umbrella or re-sheltering
+    const child = this.activeChild;
+    if (
+      this.state === 'PLAYING' &&
+      (this.hands.length === 0 ||
+        (child && child.state === KidState.WAITING_AT_SCHOOL) ||
+        (child && child.state === KidState.RETURNING_CRYING && child.cryingReturnTime >= 1.5))
+    ) {
+      const prompt =
+        child && child.state === KidState.RETURNING_CRYING && child.cryingReturnTime >= 1.5
+          ? '🌤️ 다시 손으로 우산을 만들어주세요!'
+          : '☔ 손으로 우산을 만들어주세요!';
+      ctx.textAlign = 'center';
+      ctx.font = '900 22px system-ui, sans-serif';
+      ctx.lineWidth = 5;
+      ctx.strokeText(prompt, w * 0.5, 178);
+      ctx.fillStyle = '#fde047';
+      ctx.fillText(prompt, w * 0.5, 178);
+    }
 
     ctx.restore();
   }

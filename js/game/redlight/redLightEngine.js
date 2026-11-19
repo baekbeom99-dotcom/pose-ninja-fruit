@@ -1027,6 +1027,14 @@ export class RedLightEngine {
       ctx.strokeText(`🟢 ${spoken}`, w * 0.5, bannerY);
       ctx.fillStyle = '#4ade80';
       ctx.fillText(`🟢 ${spoken}`, w * 0.5, bannerY);
+
+      if (this.runIntensity < 0.14) {
+        ctx.font = '900 20px system-ui, sans-serif';
+        ctx.lineWidth = 4;
+        ctx.strokeText('🏃 점프하세요! (제자리 달리기)', w * 0.5, bannerY + 36);
+        ctx.fillStyle = '#fde047';
+        ctx.fillText('🏃 점프하세요! (제자리 달리기)', w * 0.5, bannerY + 36);
+      }
     } else if (this.phase === RedLightPhase.RED_LIGHT) {
       ctx.textAlign = 'center';
       ctx.font = '900 32px system-ui, sans-serif';

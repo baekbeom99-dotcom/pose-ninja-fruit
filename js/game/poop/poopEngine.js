@@ -1359,6 +1359,16 @@ export class PoopEngine {
     ctx.fillStyle = '#fde047';
     ctx.fillText(rightText, w - 24, h - 24);
 
+    if (this.state === 'PLAYING' && this.elapsedTime < 3.5) {
+      ctx.textAlign = 'center';
+      ctx.font = '900 20px system-ui, sans-serif';
+      ctx.lineWidth = 4;
+      const tip = '🙂 머리를 좌우로 움직여 똥을 피하세요!';
+      ctx.strokeText(tip, w * 0.5, h - 104);
+      ctx.fillStyle = '#fde047';
+      ctx.fillText(tip, w * 0.5, h - 104);
+    }
+
     ctx.restore();
   }
 }

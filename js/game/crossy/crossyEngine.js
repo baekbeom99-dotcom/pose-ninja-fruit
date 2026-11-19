@@ -909,14 +909,21 @@ export class CrossyEngine {
     ctx.shadowBlur = 6;
     ctx.fillText(`ROW ${this.maxRow} · ⭐ ${this.coins}`, w - 24, h - 24);
 
-    // Idle Chase Warning Banner (center lower-middle)
-    if (this.idleTimer >= 4.5 && this.state === 'PLAYING') {
-      const blink = Math.floor(this.idleTimer * 6) % 2 === 0;
-      ctx.textAlign = 'center';
-      ctx.fillStyle = blink ? '#ef4444' : '#facc15';
-      ctx.font = '900 22px system-ui, sans-serif';
-      const remain = Math.max(0, this.idleLimit - this.idleTimer).toFixed(1);
-      ctx.fillText(`⚠️ 빨리 앞으로 점프하세요! (${remain}s)`, w * 0.5, h - 110);
+    // Idle / Action Guidance Banners (center lower-middle)
+    if (this.state === 'PLAYING') {
+      if (this.idleTimer >= 4.5) {
+        const blink = Math.floor(this.idleTimer * 6) % 2 === 0;
+        ctx.textAlign = 'center';
+        ctx.fillStyle = blink ? '#ef4444' : '#facc15';
+        ctx.font = '900 22px system-ui, sans-serif';
+        const remain = Math.max(0, this.idleLimit - this.idleTimer).toFixed(1);
+        ctx.fillText(`⚠️ 빨리 점프하세요! (${remain}s)`, w * 0.5, h - 110);
+      } else if (this.idleTimer >= 1.2 || (this.maxRow === 0 && this.idleTimer >= 0.4)) {
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#fde047';
+        ctx.font = '900 20px system-ui, sans-serif';
+        ctx.fillText('🐔 점프하세요! (또는 🪽 양팔 날개짓)', w * 0.5, h - 110);
+      }
     }
 
     ctx.restore();
