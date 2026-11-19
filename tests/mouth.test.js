@@ -63,7 +63,7 @@ function makeFace(mouthX = 640, mouthY = 360, jawOpen = 0.0, w = 1280, h = 720) 
 }
 
 function runTests() {
-  console.log('--- Testing Mouth Catch Mode (TOSS / RAIN, Mushrooms, Stains) ---');
+  console.log('--- Testing Mouth Catch Mode (TOSS / RAIN, Mushrooms, Mouth Rules) ---');
   assert(CONFIG.MODES.MOUTH_CATCH === 'MOUTH_CATCH', 'CONFIG.MODES registers MOUTH_CATCH mode');
 
   const sfxLog = [];
@@ -71,8 +71,7 @@ function runTests() {
     playMouthChomp: () => sfxLog.push('CHOMP'),
     playMouthGolden: () => sfxLog.push('GOLDEN'),
     playMouthHeal: () => sfxLog.push('HEAL'),
-    playMouthBad: () => sfxLog.push('BAD'),
-    playMouthSplat: () => sfxLog.push('SPLAT')
+    playMouthBad: () => sfxLog.push('BAD')
   };
 
   let lastScore = 0;
@@ -152,7 +151,7 @@ function runTests() {
     'Green mushroom eaten with open mouth restores +1 heart (up to maxLives)'
   );
 
-  // 5. Non-food hazard eaten deducts heart, whereas closed mouth avoids heart loss & splatters face stain
+  // 5. Non-food hazard eaten deducts heart, whereas closed mouth lets it pass cleanly without damage or stains
   const bomb = engine.spawnItem(MouthItemKind.BOMB, 640, 355);
   bomb.vx = 0;
   bomb.vy = 100;
@@ -165,38 +164,18 @@ function runTests() {
   );
 
   const livesBeforeClosed = engine.lives;
-  const shoe = engine.spawnItem(MouthItemKind.SHOE, 640, 330); // right over face cheek with closed mouth
+  const shoe = engine.spawnItem(MouthItemKind.SHOE, 640, 330);
   shoe.vx = 0;
   shoe.vy = 120;
   for (let i = 0; i < 6; i++) {
     engine.update(0.016, performance.now(), makeFace(640, 360, 0.05));
   }
   assert(
-    engine.lives === livesBeforeClosed &&
-      engine.faceStains.length >= 1 &&
-      sfxLog.includes('SPLAT'),
-    'Closed mouth avoids hazard damage while missed item on face creates sticky face stain + splat SFX'
+    engine.lives === livesBeforeClosed && shoe.isDead === false,
+    'Closed mouth lets hazards pass harmlessly past face without life loss or early splat termination'
   );
 
-  // 6. Face stain sticks relative to face movement and fades away after > 4.8s
-  engine.spawnTimer = 999; // pause spawner so no new random items create fresh stains during fade check
-  const prevFaceX = engine.face.x;
-  for (let i = 0; i < 10; i++) {
-    engine.update(0.05, performance.now(), makeFace(720, 360, 0.05));
-  }
-  assert(
-    engine.face.x > prevFaceX && engine.faceStains.length >= 1,
-    'Face stain persists while head moves across screen'
-  );
-  for (let i = 0; i < 105; i++) {
-    engine.update(0.05, performance.now(), makeFace(720, 360, 0.05));
-  }
-  assert(
-    engine.faceStains.length === 0,
-    'Face stain fades out completely after ~4.8 seconds'
-  );
-
-  // 7. Pointer + Space fallback moves face and opens mouth
+  // 6. Pointer + Space fallback moves face and opens mouth
   engine.reset();
   engine.setPointerFallback(420, 300, true);
   for (let i = 0; i < 10; i++) {
@@ -220,29 +199,19 @@ function runTests() {
     'Losing final heart to poison mushroom triggers GAMEOVER callback'
   );
 
-  // 9. Headless render check across items, mushrooms, stains, and open mouth ring
+  // 8. Headless render check across items, mushrooms, and open mouth ring
   engine.start();
   engine.spawnItem(MouthItemKind.MUSHROOM_RED, 500, 300);
   engine.spawnItem(MouthItemKind.MUSHROOM_YELLOW, 600, 300);
   engine.spawnItem(MouthItemKind.MUSHROOM_GREEN, 700, 300);
   engine.spawnItem(MouthItemKind.CAKE, 800, 300);
-  engine.faceStains.push({
-    relX: 12,
-    relY: -10,
-    color: '#ef4444',
-    radius: 20,
-    dripLen: 16,
-    blobs: [{ dx: 5, dy: 5, r: 6 }],
-    life: 3.0,
-    maxLife: 4.8
-  });
   let renderError = null;
   try {
     engine.render(makeMockCtx());
   } catch (err) {
     renderError = err;
   }
-  assert(renderError === null, 'Headless render completes without errors across mushrooms, food, mouth, and stains');
+  assert(renderError === null, 'Headless render completes without errors across mushrooms, food, and mouth ring');
 
   console.log(`\nResults: ${passed}/${total} passed`);
   if (passed !== total) process.exit(1);

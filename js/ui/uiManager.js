@@ -387,7 +387,7 @@ export class UIManager {
       }
       if (this.instructionTip1) {
         this.instructionTip1.innerHTML =
-          '🥾 <strong>비음식 조심 & 얼굴 얼룩</strong>: 음식이 아닌 것을 먹으면 -1❤️! 못 먹고 얼굴에 맞으면 얼룩이 남습니다!';
+          '🥾 <strong>비음식 조심!</strong>: 신발·폭탄·생선뼈 등 음식이 아닌 것을 먹으면 -1❤️! 입을 꼭 다물고 피하세요!';
       }
       if (this.instructionTip2) {
         this.instructionTip2.innerHTML =

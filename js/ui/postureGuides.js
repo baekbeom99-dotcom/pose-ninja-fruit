@@ -293,7 +293,7 @@ export const MODE_POSTURE_GUIDES = {
   },
   MOUTH_CATCH: {
     title: '😋 냠냠! 입 벌려 받아먹기 가이드',
-    desc: '얼굴 위치로 조준하고 입을 벌려 음식만 받아먹으세요! 못 먹으면 얼굴에 얼룩이 생깁니다.',
+    desc: '얼굴 위치로 조준하고 입을 벌려 음식만 받아먹으세요!',
     cards: [
       {
         title: '입 크게 벌려 먹기 (😮)',

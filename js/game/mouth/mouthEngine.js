@@ -8,7 +8,6 @@
  * Face & Mouth Tracking:
  *   - Driven by MediaPipe FaceLandmarker (mouthX/Y, jawOpen, face bounds) with mouse/Space fallback
  *   - Open mouth catches items: Food (+pts), Yellow Mushroom (+50), Green Mushroom (+1❤️), Red Mushroom (-1❤️), Non-Food (-1❤️)
- *   - Uneaten items colliding with face area leave sticky fading stains anchored to relative face coords!
  */
 
 import { soundManager } from '../../audio/soundManager.js';
@@ -20,23 +19,23 @@ export const MouthSubMode = {
 
 export const MouthItemKind = {
   // Tasty foods
-  BURGER: { id: 'BURGER', emoji: '🍔', category: 'FOOD', points: 15, stainColor: '#f59e0b', radius: 32 },
-  PIZZA: { id: 'PIZZA', emoji: '🍕', category: 'FOOD', points: 15, stainColor: '#ef4444', radius: 32 },
-  CAKE: { id: 'CAKE', emoji: '🍰', category: 'FOOD', points: 20, stainColor: '#fbcfe8', radius: 32 },
-  SUSHI: { id: 'SUSHI', emoji: '🍣', category: 'FOOD', points: 15, stainColor: '#fb7185', radius: 30 },
-  DONUT: { id: 'DONUT', emoji: '🍩', category: 'FOOD', points: 12, stainColor: '#92400e', radius: 30 },
-  CHICKEN: { id: 'CHICKEN', emoji: '🍗', category: 'FOOD', points: 15, stainColor: '#ea580c', radius: 32 },
+  BURGER: { id: 'BURGER', emoji: '🍔', category: 'FOOD', points: 15, fxColor: '#f59e0b', radius: 32 },
+  PIZZA: { id: 'PIZZA', emoji: '🍕', category: 'FOOD', points: 15, fxColor: '#ef4444', radius: 32 },
+  CAKE: { id: 'CAKE', emoji: '🍰', category: 'FOOD', points: 20, fxColor: '#fbcfe8', radius: 32 },
+  SUSHI: { id: 'SUSHI', emoji: '🍣', category: 'FOOD', points: 15, fxColor: '#fb7185', radius: 30 },
+  DONUT: { id: 'DONUT', emoji: '🍩', category: 'FOOD', points: 12, fxColor: '#92400e', radius: 30 },
+  CHICKEN: { id: 'CHICKEN', emoji: '🍗', category: 'FOOD', points: 15, fxColor: '#ea580c', radius: 32 },
 
   // Color-coded mushrooms (drawn crisply with distinct caps!)
-  MUSHROOM_RED: { id: 'MUSHROOM_RED', category: 'MUSHROOM_RED', color: '#ef4444', stainColor: '#dc2626', points: 0, radius: 34 },
-  MUSHROOM_YELLOW: { id: 'MUSHROOM_YELLOW', category: 'MUSHROOM_YELLOW', color: '#facc15', stainColor: '#eab308', points: 50, radius: 34 },
-  MUSHROOM_GREEN: { id: 'MUSHROOM_GREEN', category: 'MUSHROOM_GREEN', color: '#22c55e', stainColor: '#16a34a', points: 15, radius: 34 },
+  MUSHROOM_RED: { id: 'MUSHROOM_RED', category: 'MUSHROOM_RED', color: '#ef4444', fxColor: '#dc2626', points: 0, radius: 34 },
+  MUSHROOM_YELLOW: { id: 'MUSHROOM_YELLOW', category: 'MUSHROOM_YELLOW', color: '#facc15', fxColor: '#eab308', points: 50, radius: 34 },
+  MUSHROOM_GREEN: { id: 'MUSHROOM_GREEN', category: 'MUSHROOM_GREEN', color: '#22c55e', fxColor: '#16a34a', points: 15, radius: 34 },
 
   // Non-food hazards (shut mouth!)
-  SHOE: { id: 'SHOE', emoji: '🥾', category: 'TRASH', points: 0, stainColor: '#78350f', radius: 32 },
-  BOMB: { id: 'BOMB', emoji: '💣', category: 'TRASH', points: 0, stainColor: '#334155', radius: 32 },
-  FISHBONE: { id: 'FISHBONE', emoji: '🦴', category: 'TRASH', points: 0, stainColor: '#94a3b8', radius: 30 },
-  BUG: { id: 'BUG', emoji: '🪲', category: 'TRASH', points: 0, stainColor: '#3f6212', radius: 29 }
+  SHOE: { id: 'SHOE', emoji: '🥾', category: 'TRASH', points: 0, fxColor: '#78350f', radius: 32 },
+  BOMB: { id: 'BOMB', emoji: '💣', category: 'TRASH', points: 0, fxColor: '#334155', radius: 32 },
+  FISHBONE: { id: 'FISHBONE', emoji: '🦴', category: 'TRASH', points: 0, fxColor: '#94a3b8', radius: 30 },
+  BUG: { id: 'BUG', emoji: '🪲', category: 'TRASH', points: 0, fxColor: '#3f6212', radius: 29 }
 };
 
 const FOOD_KEYS = ['BURGER', 'PIZZA', 'CAKE', 'SUSHI', 'DONUT', 'CHICKEN'];
@@ -78,7 +77,6 @@ export class MouthEngine {
     this.manualOpen = false;
 
     this.items = [];
-    this.faceStains = [];
     this.particles = [];
     this.floatingTexts = [];
     this.shakeTimer = 0;
@@ -117,7 +115,6 @@ export class MouthEngine {
     this.elapsedTime = 0;
     this.spawnTimer = 0.45;
     this.items = [];
-    this.faceStains = [];
     this.particles = [];
     this.floatingTexts = [];
     this.shakeTimer = 0;
@@ -247,47 +244,6 @@ export class MouthEngine {
     return item;
   }
 
-  isPointOnFace(px, py) {
-    const f = this.face;
-    const nx = (px - f.x) / Math.max(1, f.rx);
-    const ny = (py - f.y) / Math.max(1, f.ry);
-    return nx * nx + ny * ny <= 1.0;
-  }
-
-  _addFaceStain(item) {
-    const relX = Math.max(-this.face.rx * 0.85, Math.min(this.face.rx * 0.85, item.x - this.face.x));
-    const relY = Math.max(-this.face.ry * 0.85, Math.min(this.face.ry * 0.85, item.y - this.face.y));
-    const blobs = [];
-    for (let i = 0; i < 6; i++) {
-      const ang = (Math.PI * 2 * i) / 6 + Math.random() * 0.5;
-      const dist = 6 + Math.random() * 16;
-      blobs.push({
-        dx: Math.cos(ang) * dist,
-        dy: Math.sin(ang) * dist,
-        r: 4 + Math.random() * 8
-      });
-    }
-    this.faceStains.push({
-      relX,
-      relY,
-      color: item.spec.stainColor || '#f59e0b',
-      radius: 18 + Math.random() * 8,
-      dripLen: 14 + Math.random() * 18,
-      blobs,
-      life: 4.8,
-      maxLife: 4.8
-    });
-    if (this.faceStains.length > 12) {
-      this.faceStains.shift();
-    }
-
-    this._spawnBurst(item.x, item.y, item.spec.stainColor || '#f59e0b', 10, 140);
-    this._spawnFloatingText('💦 얼굴 얼룩!', item.x, item.y - 24, '#fca5a5', 1.05);
-    if (this.sound && typeof this.sound.playMouthSplat === 'function') {
-      this.sound.playMouthSplat();
-    }
-  }
-
   _handleEatItem(item) {
     const cat = item.spec.category;
     this.chompFlashTimer = 0.22;
@@ -295,7 +251,7 @@ export class MouthEngine {
     if (cat === 'FOOD') {
       this.eatenCount++;
       this._addScore(item.spec.points);
-      this._spawnBurst(this.face.mouthX, this.face.mouthY, item.spec.stainColor, 12, 180);
+      this._spawnBurst(this.face.mouthX, this.face.mouthY, item.spec.fxColor, 12, 180);
       this._spawnFloatingText(`😋 냠냠 +${item.spec.points}`, item.x, item.y - 24, '#4ade80', 1.2);
       if (this.sound && typeof this.sound.playMouthChomp === 'function') {
         this.sound.playMouthChomp();
@@ -388,13 +344,6 @@ export class MouthEngine {
     if (this.shakeTimer > 0) this.shakeTimer = Math.max(0, this.shakeTimer - dt);
     if (this.chompFlashTimer > 0) this.chompFlashTimer = Math.max(0, this.chompFlashTimer - dt);
 
-    for (let i = this.faceStains.length - 1; i >= 0; i--) {
-      this.faceStains[i].life -= dt;
-      if (this.faceStains[i].life <= 0) {
-        this.faceStains.splice(i, 1);
-      }
-    }
-
     for (let i = this.particles.length - 1; i >= 0; i--) {
       const p = this.particles[i];
       p.x += p.vx * dt;
@@ -446,16 +395,12 @@ export class MouthEngine {
         item.vx *= -0.8;
       }
 
-      // 1. Check open mouth catch!
+      // Check open mouth catch!
       const distMouth = Math.hypot(item.x - f.mouthX, item.y - f.mouthY);
       if (f.isOpen && distMouth <= f.eatRadius + item.radius) {
         item.isDead = true;
         this._handleEatItem(item);
         if (this.state !== 'PLAYING') return;
-      } else if (item.vy >= -20 && this.isPointOnFace(item.x, item.y)) {
-        // 2. Missed eating it & item struck player's face -> leaves splat stain on face!
-        item.isDead = true;
-        this._addFaceStain(item);
       }
 
       // Cull offscreen
@@ -496,34 +441,7 @@ export class MouthEngine {
     }
     ctx.restore();
 
-    // 2. Render sticky Face Stains anchored to live face center (relX, relY)
-    for (const st of this.faceStains) {
-      const sx = f.x + st.relX;
-      const sy = f.y + st.relY;
-      const alpha = Math.min(1, st.life / 1.0) * 0.88;
-      ctx.save();
-      ctx.globalAlpha = alpha;
-      ctx.fillStyle = st.color;
-      ctx.beginPath();
-      ctx.arc(sx, sy, st.radius, 0, Math.PI * 2);
-      ctx.fill();
-      for (const b of st.blobs) {
-        ctx.beginPath();
-        ctx.arc(sx + b.dx, sy + b.dy, b.r, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      // Splat drip streak
-      ctx.lineWidth = 4;
-      ctx.lineCap = 'round';
-      ctx.strokeStyle = st.color;
-      ctx.beginPath();
-      ctx.moveTo(sx + 4, sy + st.radius * 0.5);
-      ctx.lineTo(sx + 4, sy + st.radius * 0.5 + st.dripLen);
-      ctx.stroke();
-      ctx.restore();
-    }
-
-    // 3. Render flying/falling Foods, Mushrooms & Non-Food Items
+    // 2. Render flying/falling Foods, Mushrooms & Non-Food Items
     for (const item of this.items) {
       this._renderItem(ctx, item);
     }
